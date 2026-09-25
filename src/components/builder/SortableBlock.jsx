@@ -1,9 +1,17 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Trash2 } from 'lucide-react'
+import { BLOCK_TYPES } from '../../utils/blockTypes'
 import BlockRenderer from './BlockRenderer'
 
-export default function SortableBlock({ block, isSelected, onSelect, onRemove }) {
+export default function SortableBlock({
+  block,
+  isSelected,
+  selectedBlockId,
+  onSelect,
+  onRemove,
+  onAddNestedItem,
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: block.id })
 
@@ -50,7 +58,13 @@ export default function SortableBlock({ block, isSelected, onSelect, onRemove })
         <Trash2 size={12} />
       </button>
 
-      <BlockRenderer block={block} />
+      <BlockRenderer
+        block={block}
+        interactive={block.type === BLOCK_TYPES.COLUMNS}
+        selectedId={selectedBlockId}
+        onSelectItem={onSelect}
+        onAddItem={(columnIndex, type) => onAddNestedItem(block.id, columnIndex, type)}
+      />
     </div>
   )
 }

@@ -1,20 +1,33 @@
 import { BLOCK_TYPES } from '../../utils/blockTypes'
 import { ImageIcon } from 'lucide-react'
 
+function alignClass(align) {
+  return align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
+}
+
 function textStyleClasses(block) {
   return [
     block.bold ? 'font-bold' : '',
     block.italic ? 'italic' : '',
     block.underline ? 'underline' : '',
-    block.align === 'center'
-      ? 'text-center'
-      : block.align === 'right'
-        ? 'text-right'
-        : 'text-left',
+    alignClass(block.align),
   ].join(' ')
 }
 
-export default function BlockRenderer({ block }) {
+const HEADING_SIZE_CLASSES = {
+  sm: 'text-base',
+  md: 'text-2xl',
+  lg: 'text-3xl',
+  xl: 'text-5xl',
+}
+
+export default function BlockRenderer({
+  block,
+  interactive = false,
+  selectedId = null,
+  onSelectItem,
+  onAddItem,
+}) {
   switch (block.type) {
     case BLOCK_TYPES.HEADER:
       return (
@@ -23,43 +36,103 @@ export default function BlockRenderer({ block }) {
         </div>
       )
 
+    case BLOCK_TYPES.CV_HEADER: {
+      const isStacked = block.layout === 'stacked'
+      return (
+        <div
+          className={`flex ${isStacked ? 'items-start' : 'flex-wrap items-baseline'} justify-between gap-4 border-b border-slate-200 pb-4`}
+        >
+          <div>
+            <p
+              className="whitespace-pre-line text-lg font-bold leading-tight"
+              style={{ color: block.color || undefined }}
+            >
+              {block.name}
+            </p>
+            {block.role && <p className="text-sm text-slate-500">{block.role}</p>}
+          </div>
+          {block.contacts?.length > 0 && (
+            <div
+              className={`flex text-xs text-slate-500 ${
+                isStacked ? 'flex-col items-end gap-0.5' : 'flex-wrap justify-end gap-4'
+              }`}
+            >
+              {block.contacts.map((contact, i) => (
+                <span key={i}>{contact}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
+
     case BLOCK_TYPES.HEADING: {
       const Tag = block.level || 'h1'
-      const sizeClass = Tag === 'h1' ? 'text-2xl' : 'text-lg'
+      const sizeClass = HEADING_SIZE_CLASSES[block.size] || HEADING_SIZE_CLASSES.md
       return (
-        <Tag className={`${sizeClass} ${textStyleClasses(block)}`}>
+        <Tag
+          className={`whitespace-pre-line ${sizeClass} ${textStyleClasses(block)} ${
+            block.rule ? 'border-b border-slate-200 pb-1.5' : ''
+          }`}
+          style={{ color: block.color || undefined }}
+        >
           {block.content}
         </Tag>
       )
     }
 
     case BLOCK_TYPES.TEXT:
+      if (block.list) {
+        return (
+          <ul
+            className={`list-disc space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400 ${alignClass(block.align)}`}
+            style={{ color: block.color || undefined }}
+          >
+            {block.content.split('\n').filter(Boolean).map((line, i) => (
+              <li key={i} className={textStyleClasses({ ...block, align: undefined })}>
+                {line}
+              </li>
+            ))}
+          </ul>
+        )
+      }
       return (
-        <p className={`text-sm leading-relaxed ${textStyleClasses(block)}`}>
+        <p
+          className={`whitespace-pre-line text-sm leading-relaxed ${textStyleClasses(block)}`}
+          style={{ color: block.color || undefined }}
+        >
           {block.content}
         </p>
       )
 
-    case BLOCK_TYPES.IMAGE:
+    case BLOCK_TYPES.IMAGE: {
+      const justify =
+        block.align === 'center'
+          ? 'justify-center'
+          : block.align === 'right'
+            ? 'justify-end'
+            : 'justify-start'
+      const isCircle = block.shape === 'circle'
       return (
-        <div
-          className={`flex ${
-            block.align === 'center'
-              ? 'justify-center'
-              : block.align === 'right'
-                ? 'justify-end'
-                : 'justify-start'
-          }`}
-        >
+        <div className={`flex ${justify}`}>
           {block.src ? (
-            <img src={block.src} alt={block.alt} className="max-h-40 rounded-md" />
+            <img
+              src={block.src}
+              alt={block.alt}
+              className={isCircle ? 'h-28 w-28 rounded-full object-cover' : 'max-h-40 rounded-md'}
+            />
           ) : (
-            <div className="flex h-32 w-full max-w-xs items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-300">
+            <div
+              className={`flex items-center justify-center border border-dashed border-slate-300 text-slate-300 ${
+                isCircle ? 'h-28 w-28 rounded-full' : 'h-32 w-full max-w-xs rounded-md'
+              }`}
+            >
               <ImageIcon size={28} />
             </div>
           )}
         </div>
       )
+    }
 
     case BLOCK_TYPES.DIVIDER:
       return <hr className="border-slate-200" />
@@ -68,6 +141,7 @@ export default function BlockRenderer({ block }) {
       return (
         <blockquote
           className={`border-l-4 border-primary/40 pl-3 text-sm text-slate-600 ${textStyleClasses(block)}`}
+          style={{ color: block.color || undefined }}
         >
           {block.content}
         </blockquote>
@@ -79,6 +153,69 @@ export default function BlockRenderer({ block }) {
           {block.content}
         </div>
       )
+
+    case BLOCK_TYPES.COLUMNS: {
+      const gridTemplateColumns = block.widths?.length
+        ? block.widths.join(' ')
+        : `repeat(${block.columns.length}, minmax(0, 1fr))`
+
+      return (
+        <div className="grid gap-x-8 gap-y-3" style={{ gridTemplateColumns }}>
+          {block.columns.map((column, colIndex) => (
+            <div key={colIndex} className="flex flex-col gap-3">
+              {column.items.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={
+                    interactive
+                      ? (event) => {
+                          event.stopPropagation()
+                          onSelectItem(item.id)
+                        }
+                      : undefined
+                  }
+                  className={
+                    interactive
+                      ? `-m-1 cursor-pointer rounded-md p-1 transition ${
+                          selectedId === item.id
+                            ? 'ring-2 ring-primary/40'
+                            : 'hover:bg-slate-50'
+                        }`
+                      : ''
+                  }
+                >
+                  <BlockRenderer block={item} />
+                </div>
+              ))}
+              {interactive && (
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onAddItem(colIndex, 'heading')
+                    }}
+                    className="text-[11px] font-medium text-primary hover:underline"
+                  >
+                    + Titolo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onAddItem(colIndex, 'text')
+                    }}
+                    className="text-[11px] font-medium text-primary hover:underline"
+                  >
+                    + Testo
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )
+    }
 
     default:
       return null

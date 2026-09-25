@@ -6,7 +6,8 @@ import SortableBlock from './SortableBlock'
 export const CANVAS_DROPPABLE_ID = 'canvas'
 
 export default function Canvas() {
-  const { blocks, selectedBlockId, selectBlock, removeBlock } = useBuilder()
+  const { blocks, selectedBlockId, selectBlock, removeBlock, addNestedItem, globalStyle } =
+    useBuilder()
   const { setNodeRef, isOver } = useDroppable({ id: CANVAS_DROPPABLE_ID })
 
   return (
@@ -14,6 +15,7 @@ export default function Canvas() {
       <div
         ref={setNodeRef}
         onClick={() => selectBlock(null)}
+        style={{ fontFamily: globalStyle.fontFamily, color: globalStyle.textColor }}
         className={`min-h-[1123px] w-[794px] max-w-full rounded-sm bg-white p-12 shadow-lg transition ${
           isOver ? 'ring-2 ring-primary/40' : ''
         }`}
@@ -30,8 +32,10 @@ export default function Canvas() {
                   key={block.id}
                   block={block}
                   isSelected={block.id === selectedBlockId}
+                  selectedBlockId={selectedBlockId}
                   onSelect={selectBlock}
                   onRemove={removeBlock}
+                  onAddNestedItem={addNestedItem}
                 />
               ))}
             </div>

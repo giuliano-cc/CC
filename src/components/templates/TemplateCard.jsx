@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Copy, FileText, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Copy, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import TemplateThumbnail from './TemplateThumbnail'
 
 export default function TemplateCard({ template, onDuplicate, onDelete }) {
   const navigate = useNavigate()
@@ -17,9 +18,9 @@ export default function TemplateCard({ template, onDuplicate, onDelete }) {
       <button
         type="button"
         onClick={() => navigate(`/templates/${template.id}`)}
-        className="flex h-40 w-full items-center justify-center bg-slate-50 text-slate-300"
+        className="block w-full"
       >
-        <FileText size={40} />
+        <TemplateThumbnail template={template} />
       </button>
 
       <div className="flex items-start justify-between gap-2 p-4">

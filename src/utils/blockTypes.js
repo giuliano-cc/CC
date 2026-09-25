@@ -1,5 +1,7 @@
 import {
+  Columns3,
   Heading1,
+  IdCard,
   Image as ImageIcon,
   Minus,
   Quote as QuoteIcon,
@@ -16,6 +18,8 @@ export const BLOCK_TYPES = {
   DIVIDER: 'divider',
   QUOTE: 'quote',
   FOOTER: 'footer',
+  CV_HEADER: 'cv_header',
+  COLUMNS: 'columns',
 }
 
 export const BLOCK_DEFINITIONS = [
@@ -32,6 +36,18 @@ export const BLOCK_DEFINITIONS = [
     },
   },
   {
+    type: BLOCK_TYPES.CV_HEADER,
+    label: 'Intestazione CV',
+    icon: IdCard,
+    defaultProps: {
+      name: 'Nome Cognome',
+      role: '',
+      contacts: ['sito.com', 'email@esempio.com', '000-000-0000'],
+      layout: 'row',
+      color: null,
+    },
+  },
+  {
     type: BLOCK_TYPES.HEADING,
     label: 'Heading',
     icon: Heading1,
@@ -42,6 +58,9 @@ export const BLOCK_DEFINITIONS = [
       bold: true,
       italic: false,
       underline: false,
+      size: 'md',
+      color: null,
+      rule: false,
     },
   },
   {
@@ -54,6 +73,8 @@ export const BLOCK_DEFINITIONS = [
       bold: false,
       italic: false,
       underline: false,
+      list: false,
+      color: null,
     },
   },
   {
@@ -64,6 +85,7 @@ export const BLOCK_DEFINITIONS = [
       src: '',
       alt: 'Immagine',
       align: 'center',
+      shape: 'rect',
     },
   },
   {
@@ -82,6 +104,7 @@ export const BLOCK_DEFINITIONS = [
       italic: true,
       bold: false,
       underline: false,
+      color: null,
     },
   },
   {
@@ -96,16 +119,29 @@ export const BLOCK_DEFINITIONS = [
       underline: false,
     },
   },
+  {
+    type: BLOCK_TYPES.COLUMNS,
+    label: 'Colonne',
+    icon: Columns3,
+    defaultProps: {
+      widths: null,
+      columns: [{ items: [] }, { items: [] }],
+    },
+  },
 ]
 
 export function getBlockDefinition(type) {
   return BLOCK_DEFINITIONS.find((def) => def.type === type)
 }
 
+function generateId() {
+  return `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
 export function createBlockInstance(type) {
   const definition = getBlockDefinition(type)
   return {
-    id: `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: generateId(),
     type,
     ...structuredClone(definition.defaultProps),
   }

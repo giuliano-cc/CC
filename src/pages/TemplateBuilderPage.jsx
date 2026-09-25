@@ -8,16 +8,23 @@ import BlockPalette from '../components/builder/BlockPalette'
 import Canvas, { CANVAS_DROPPABLE_ID } from '../components/builder/Canvas'
 import PropertiesPanel from '../components/builder/PropertiesPanel'
 import Toolbar from '../components/builder/Toolbar'
+import LoadingSpinner from '../components/common/LoadingSpinner'
+import ErrorMessage from '../components/common/ErrorMessage'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
-import { createTemplate, renderTemplate, updateTemplate } from '../services/templatesService'
+import {
+  createTemplate,
+  getTemplateById,
+  renderTemplate,
+  updateTemplate,
+} from '../services/templatesService'
 
-function BuilderContent() {
+function BuilderContent({ initialTitle }) {
   const navigate = useNavigate()
   const { id } = useParams()
   const isNew = !id || id === 'new'
   const { blocks, addBlock, reorderBlocks } = useBuilder()
 
-  const [title, setTitle] = useState('Nuovo Template')
+  const [title, setTitle] = useState(initialTitle)
   const [isSaving, setIsSaving] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
 
@@ -155,9 +162,60 @@ function BuilderContent() {
 }
 
 export default function TemplateBuilderPage() {
+  const { id } = useParams()
+  const isNew = !id || id === 'new'
+
+  const [template, setTemplate] = useState(isNew ? { title: 'Nuovo Template' } : null)
+  const [isLoading, setIsLoading] = useState(!isNew)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (isNew) return
+
+    let cancelled = false
+    setIsLoading(true)
+    setError(null)
+
+    getTemplateById(id)
+      .then((data) => {
+        if (cancelled) return
+        if (!data) {
+          setError(new Error('Template non trovato'))
+        } else {
+          setTemplate(data)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err)
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [id, isNew])
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
+  }
+
+  if (error || !template) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background p-6">
+        <ErrorMessage message="Impossibile caricare questo template." />
+      </div>
+    )
+  }
+
   return (
-    <BuilderProvider>
-      <BuilderContent />
+    <BuilderProvider initialBlocks={template.blocks} initialGlobalStyle={template.globalStyle}>
+      <BuilderContent initialTitle={template.title} />
     </BuilderProvider>
   )
 }

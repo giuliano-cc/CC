@@ -1,14 +1,10 @@
 import apiClient from './apiClient'
+import { CV_TEMPLATES } from '../utils/cvTemplates'
 
 // Dati di esempio usati finché il backend reale non è disponibile.
 // Il backend, tramite il token inviato dall'interceptor di apiClient,
 // filtrerà autonomamente i risultati in base all'utente autenticato.
-const MOCK_TEMPLATES = [
-  { id: '1', title: 'Fattura Standard', category: 'Fatture', updatedAt: '2026-09-20T10:00:00Z' },
-  { id: '2', title: 'Report Mensile', category: 'Report', updatedAt: '2026-09-18T09:30:00Z' },
-  { id: '3', title: 'Curriculum Moderno', category: 'Curriculum', updatedAt: '2026-09-15T14:00:00Z' },
-  { id: '4', title: 'Contratto di Servizio', category: 'Contratti', updatedAt: '2026-09-10T11:20:00Z' },
-]
+const MOCK_TEMPLATES = structuredClone(CV_TEMPLATES)
 
 const USE_MOCK = true
 
@@ -24,7 +20,9 @@ export async function getTemplates() {
 export async function getTemplateById(id) {
   if (USE_MOCK) {
     const template = MOCK_TEMPLATES.find((t) => t.id === id)
-    return new Promise((resolve) => setTimeout(() => resolve(template ?? null), 300))
+    return new Promise((resolve) =>
+      setTimeout(() => resolve(template ? structuredClone(template) : null), 300),
+    )
   }
 
   const { data } = await apiClient.get(`/templates/${id}`)
@@ -45,7 +43,15 @@ export async function createTemplate(payload) {
 
 export async function updateTemplate(id, payload) {
   if (USE_MOCK) {
-    return new Promise((resolve) => setTimeout(() => resolve({ id, ...payload }), 300))
+    const index = MOCK_TEMPLATES.findIndex((t) => t.id === id)
+    const updated = {
+      ...(index !== -1 ? MOCK_TEMPLATES[index] : {}),
+      ...payload,
+      id,
+      updatedAt: new Date().toISOString(),
+    }
+    if (index !== -1) MOCK_TEMPLATES[index] = updated
+    return new Promise((resolve) => setTimeout(() => resolve(structuredClone(updated)), 300))
   }
 
   const { data } = await apiClient.put(`/templates/${id}`, payload)

@@ -1,6 +1,7 @@
 import { arrayMove } from '@dnd-kit/sortable'
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { createBlockInstance } from '../utils/blockTypes'
+import { findBlockById, removeBlockById, updateBlockById } from '../utils/blockTree'
 
 const DEFAULT_GLOBAL_STYLE = {
   primaryColor: '#2563eb',
@@ -10,13 +11,16 @@ const DEFAULT_GLOBAL_STYLE = {
 
 const BuilderContext = createContext(null)
 
-export function BuilderProvider({ children, initialBlocks = [] }) {
+export function BuilderProvider({ children, initialBlocks = [], initialGlobalStyle }) {
   const [blocks, setBlocks] = useState(initialBlocks)
   const [selectedBlockId, setSelectedBlockId] = useState(null)
-  const [globalStyle, setGlobalStyle] = useState(DEFAULT_GLOBAL_STYLE)
+  const [globalStyle, setGlobalStyle] = useState({
+    ...DEFAULT_GLOBAL_STYLE,
+    ...initialGlobalStyle,
+  })
 
   const selectedBlock = useMemo(
-    () => blocks.find((block) => block.id === selectedBlockId) ?? null,
+    () => findBlockById(blocks, selectedBlockId),
     [blocks, selectedBlockId],
   )
 
@@ -32,19 +36,32 @@ export function BuilderProvider({ children, initialBlocks = [] }) {
     return newBlock
   }, [])
 
-  const updateBlock = useCallback((id, patch) => {
+  // Aggiunge un blocco semplice (titolo/testo) dentro una colonna di un
+  // blocco COLUMNS: le colonne non sono riordinabili via drag-and-drop, ma
+  // i loro elementi restano modificabili/selezionabili come tutti gli altri.
+  const addNestedItem = useCallback((columnsBlockId, columnIndex, type) => {
+    const newItem = createBlockInstance(type)
     setBlocks((prev) =>
-      prev.map((block) => (block.id === id ? { ...block, ...patch } : block)),
+      updateBlockById(prev, columnsBlockId, (block) => ({
+        ...block,
+        columns: block.columns.map((column, index) =>
+          index === columnIndex
+            ? { ...column, items: [...column.items, newItem] }
+            : column,
+        ),
+      })),
     )
+    setSelectedBlockId(newItem.id)
   }, [])
 
-  const removeBlock = useCallback(
-    (id) => {
-      setBlocks((prev) => prev.filter((block) => block.id !== id))
-      setSelectedBlockId((current) => (current === id ? null : current))
-    },
-    [],
-  )
+  const updateBlock = useCallback((id, patch) => {
+    setBlocks((prev) => updateBlockById(prev, id, patch))
+  }, [])
+
+  const removeBlock = useCallback((id) => {
+    setBlocks((prev) => removeBlockById(prev, id))
+    setSelectedBlockId((current) => (current === id ? null : current))
+  }, [])
 
   const reorderBlocks = useCallback((activeId, overId) => {
     setBlocks((prev) => {
@@ -66,6 +83,7 @@ export function BuilderProvider({ children, initialBlocks = [] }) {
     selectedBlockId,
     selectBlock,
     addBlock,
+    addNestedItem,
     updateBlock,
     removeBlock,
     reorderBlocks,
