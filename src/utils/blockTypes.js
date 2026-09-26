@@ -402,6 +402,21 @@ export function getBlockDefinition(type) {
   return BLOCK_DEFINITIONS.find((def) => def.type === type)
 }
 
+// Block types that can be added *inside* a Columns block's column (via its
+// "+ Add block" control), i.e. every ordinary block except Columns itself
+// (no nesting columns-in-columns) and the page-level Header/Footer/Resume
+// Header, which assume they sit directly on the sheet. This is everything
+// BLOCK_DEFINITIONS lists, including the Content Library-backed blocks
+// (Technical Skills, Languages, Contact Info, Leisure, Experience,
+// Education, Social Icons, QR Code) — the built-in templates already nest
+// these (e.g. a template's Experience/Education sidebar section), so the
+// data model and renderer already support it; only the "add" UI needs to
+// offer them.
+const NON_NESTABLE_TYPES = [BLOCK_TYPES.COLUMNS, BLOCK_TYPES.HEADER, BLOCK_TYPES.FOOTER, BLOCK_TYPES.CV_HEADER]
+export const NESTABLE_BLOCK_DEFINITIONS = BLOCK_DEFINITIONS.filter(
+  (def) => !NON_NESTABLE_TYPES.includes(def.type),
+)
+
 function generateId() {
   return `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }

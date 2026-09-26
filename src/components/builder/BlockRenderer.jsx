@@ -1,4 +1,4 @@
-import { BLOCK_TYPES, CHART_STYLES, HEADING_SIZE_PX } from '../../utils/blockTypes'
+import { BLOCK_TYPES, CHART_STYLES, HEADING_SIZE_PX, NESTABLE_BLOCK_DEFINITIONS } from '../../utils/blockTypes'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
 import { parseChecklist, parseEntries, parseLanguages } from '../../utils/contentLists'
@@ -576,27 +576,24 @@ export default function BlockRenderer({
                 </div>
               ))}
               {interactive && (
-                <div className="pdf-ignore flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      onAddItem(colIndex, 'heading')
+                <div className="pdf-ignore pt-1">
+                  <select
+                    value=""
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) => {
+                      const type = event.target.value
+                      event.target.value = ''
+                      if (type) onAddItem(colIndex, type)
                     }}
-                    className="text-[11px] font-medium text-primary hover:underline"
+                    className="rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] font-medium text-primary outline-none"
                   >
-                    + Heading
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      onAddItem(colIndex, 'text')
-                    }}
-                    className="text-[11px] font-medium text-primary hover:underline"
-                  >
-                    + Text
-                  </button>
+                    <option value="">+ Add block</option>
+                    {NESTABLE_BLOCK_DEFINITIONS.map((def) => (
+                      <option key={def.type} value={def.type}>
+                        {def.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
             </div>
