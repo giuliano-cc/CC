@@ -402,6 +402,61 @@ export function getBlockDefinition(type) {
   return BLOCK_DEFINITIONS.find((def) => def.type === type)
 }
 
+// Block types whose "title" (Contact Info, Leisure, Experience, Education,
+// Technical Skills, Languages) is rendered as a section heading — see
+// sectionTitleStyle in BlockRenderer.jsx — but isn't itself a HEADING
+// block, so it needs `titleSize`/`titleColor`/`fontFamily`/`fontSize`
+// fields of its own instead of the usual level/size/color/fontFamily ones.
+export const SECTION_TITLE_TYPES = [
+  BLOCK_TYPES.CONTACT_INFO,
+  BLOCK_TYPES.LEISURE,
+  BLOCK_TYPES.EXPERIENCE,
+  BLOCK_TYPES.EDUCATION,
+  BLOCK_TYPES.SKILLS_CHART,
+  BLOCK_TYPES.LANGUAGES_CHART,
+]
+
+// A freshly added nested item (via a Columns column's "+ Add block") gets
+// its type's own hardcoded default title size — 'md', the page-section
+// size — regardless of what its new siblings in that same Columns block
+// actually look like. In a sidebar-style column, every existing heading/
+// section title is typically smaller ('sm'), so the new one visibly
+// doesn't match. This scans every item across all of a Columns block's
+// columns (not just the target one, so an empty column still matches the
+// other column's convention) for the first HEADING or section-title
+// block, and returns its size/level so the new item can be made to match
+// instead of defaulting.
+function inferSiblingTitleStyle(columnsBlock) {
+  for (const column of columnsBlock.columns || []) {
+    for (const item of column.items || []) {
+      if (item.type === BLOCK_TYPES.HEADING) {
+        return { size: item.size || 'md', level: item.level || 'h1' }
+      }
+      if (SECTION_TITLE_TYPES.includes(item.type) && item.title) {
+        return { size: item.titleSize || 'md', level: null }
+      }
+    }
+  }
+  return null
+}
+
+// Applies that inferred sibling style to a newly created nested item,
+// before it's added to the column — a HEADING gets a matching level/size,
+// a section-title block (Contact Info, Leisure, Experience, Education,
+// Technical Skills, Languages) gets a matching titleSize. Anything else is
+// left untouched.
+export function matchNestedItemToSiblings(newItem, columnsBlock) {
+  const style = inferSiblingTitleStyle(columnsBlock)
+  if (!style) return newItem
+  if (newItem.type === BLOCK_TYPES.HEADING) {
+    return { ...newItem, size: style.size, level: style.level || newItem.level }
+  }
+  if (SECTION_TITLE_TYPES.includes(newItem.type)) {
+    return { ...newItem, titleSize: style.size }
+  }
+  return newItem
+}
+
 // Block types that can be added *inside* a Columns block's column (via its
 // "+ Add block" control), i.e. every ordinary block except Columns itself
 // (no nesting columns-in-columns) and the page-level Header/Footer/Resume
@@ -450,20 +505,6 @@ export function createNestedBlockInstance(type) {
     ...structuredClone(definition.defaultProps),
   }
 }
-
-// Block types whose "title" (Contact Info, Leisure, Experience, Education,
-// Technical Skills, Languages) is rendered as a section heading — see
-// sectionTitleStyle in BlockRenderer.jsx — but isn't itself a HEADING
-// block, so it needs `titleSize`/`titleColor`/`fontFamily`/`fontSize`
-// fields of its own instead of the usual level/size/color/fontFamily ones.
-export const SECTION_TITLE_TYPES = [
-  BLOCK_TYPES.CONTACT_INFO,
-  BLOCK_TYPES.LEISURE,
-  BLOCK_TYPES.EXPERIENCE,
-  BLOCK_TYPES.EDUCATION,
-  BLOCK_TYPES.SKILLS_CHART,
-  BLOCK_TYPES.LANGUAGES_CHART,
-]
 
 // A reference list of the distinct text styles actually in use across a
 // template — one row per (block type, heading level/size, or paragraph)

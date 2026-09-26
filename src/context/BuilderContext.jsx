@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, useRef, useState } from 'react'
-import { createBlockInstance, createNestedBlockInstance } from '../utils/blockTypes'
+import { createBlockInstance, createNestedBlockInstance, matchNestedItemToSiblings } from '../utils/blockTypes'
 import { findBlockById, removeBlockById, updateBlockById } from '../utils/blockTree'
 import { clamp, seedFreeLayout, SHEET_HEIGHT, SHEET_WIDTH } from '../utils/layout'
 import { alignToPage, alignToSelection, distribute } from '../utils/align'
@@ -114,7 +114,7 @@ export function BuilderProvider({
         ...block,
         columns: block.columns.map((column, index) =>
           index === columnIndex
-            ? { ...column, items: [...column.items, newItem] }
+            ? { ...column, items: [...column.items, matchNestedItemToSiblings(newItem, block)] }
             : column,
         ),
       }))
