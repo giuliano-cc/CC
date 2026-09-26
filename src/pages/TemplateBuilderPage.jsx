@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { ArrowLeft, FileText, Loader2, Save, Wand2 } from 'lucide-react'
+import { ArrowLeft, FileText, Loader2, RotateCcw, Save, Wand2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { BuilderProvider, useBuilder } from '../context/BuilderContext'
 import { useContentLibrary } from '../context/ContentLibraryContext'
@@ -15,7 +15,7 @@ import ErrorMessage from '../components/common/ErrorMessage'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { BLOCK_TYPES } from '../utils/blockTypes'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../utils/layout'
-import { TEMPLATE_CONTENT_MAPS } from '../utils/cvTemplates'
+import { CV_TEMPLATES, TEMPLATE_CONTENT_MAPS } from '../utils/cvTemplates'
 import { parseSocialLinks } from '../utils/socialIcons'
 import { generatePdfBlob } from '../utils/pdfExport'
 import {
@@ -29,7 +29,8 @@ function BuilderContent({ initialTitle }) {
   const navigate = useNavigate()
   const { id } = useParams()
   const isNew = !id || id === 'new'
-  const { blocks, addBlock, updateBlock, pageCount, globalStyle, selectBlock } = useBuilder()
+  const { blocks, addBlock, updateBlock, pageCount, globalStyle, selectBlock, resetTo } = useBuilder()
+  const builtInTemplate = CV_TEMPLATES.find((t) => t.id === id)
   const { library } = useContentLibrary()
 
   const [title, setTitle] = useState(initialTitle)
@@ -162,6 +163,20 @@ function BuilderContent({ initialTitle }) {
     }
   }
 
+  // Restores one of the 5 built-in templates to its shipped defaults,
+  // discarding any accumulated blocks/edits — the escape hatch for a
+  // template that's picked up stray or overlapping blocks over many
+  // editing sessions (templates persist across reloads, so anything odd
+  // stays until explicitly reset or fixed by hand).
+  function handleResetToDefault() {
+    if (!builtInTemplate) return
+    if (!window.confirm(`Reset "${builtInTemplate.title}" to its default content? This discards all edits made to it.`)) {
+      return
+    }
+    resetTo(builtInTemplate.blocks, builtInTemplate.globalStyle, builtInTemplate.pageCount)
+    toast.success('Template reset to default')
+  }
+
   function closePdfPreview() {
     if (pdfState?.blobUrl) URL.revokeObjectURL(pdfState.blobUrl)
     setPdfState(null)
@@ -217,6 +232,17 @@ function BuilderContent({ initialTitle }) {
                 <Loader2 size={14} className="animate-spin" />
                 Updating preview...
               </span>
+            )}
+            {builtInTemplate && (
+              <button
+                type="button"
+                onClick={handleResetToDefault}
+                title="Discard all edits and restore this template's shipped defaults"
+                className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:border-red-300 hover:text-red-600"
+              >
+                <RotateCcw size={15} />
+                Reset to default
+              </button>
             )}
             <button
               type="button"

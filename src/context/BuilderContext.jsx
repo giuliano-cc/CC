@@ -245,8 +245,20 @@ export function BuilderProvider({
     globalStyle,
     setGlobalStyle,
     pageCount,
+    setPageCount,
     addPage,
     removeLastPage,
+    // Replaces the whole sheet at once (blocks/style/page count) — used to
+    // restore a built-in template to its shipped defaults, discarding
+    // whatever's accumulated in it (including from an older, buggier
+    // version of the app, since templates persist across reloads).
+    resetTo: (nextBlocks, nextGlobalStyle, nextPageCount) => {
+      pushHistory(blocksRef.current)
+      setBlocks(seedFreeLayout(nextBlocks))
+      setGlobalStyle(nextGlobalStyle)
+      setPageCount(nextPageCount)
+      setSelectedIds([])
+    },
   }
 
   return (
