@@ -51,13 +51,15 @@ function useResolvedContent(block) {
   return block.content
 }
 
-// Best-effort icon for a contact line (email/phone/website); returns null
-// rather than guessing wrong for anything else (e.g. a plain address).
+// Best-effort icon for a contact line: email/phone/website get their own
+// icon, and anything else (a city, a street address, ...) falls back to a
+// pin, since that's virtually always what's left in a resume header's
+// contact line.
 function guessContactIcon(text) {
   if (/@/.test(text)) return Mail
   if (/^[+()]?[\d\s().-]{6,}$/.test(text)) return Phone
   if (/^(https?:\/\/|www\.)|\.[a-z]{2,}(\/|$)/i.test(text)) return Globe
-  return null
+  return MapPin
 }
 
 function SkillBar({ label, level, color }) {
