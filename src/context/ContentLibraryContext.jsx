@@ -27,6 +27,10 @@ export const CONTENT_SLOTS = [
   { key: 'education', label: 'Education', multiline: true },
   { key: 'skills', label: 'Technical Skills', type: 'checklist' },
   { key: 'languages', label: 'Languages', type: 'languages' },
+  { key: 'certifications', label: 'Certifications', type: 'checklist' },
+  { key: 'publications', label: 'Publications', type: 'checklist' },
+  { key: 'references', label: 'References', multiline: true },
+  { key: 'additionalInfo', label: 'Additional Information (other notes worth mentioning)', multiline: true },
   { key: 'quote', label: 'Quote', multiline: false },
   { key: 'quoteAuthor', label: 'Quote Author (name, position)', multiline: false },
   // 'contact' itself holds the composed, newline-joined text (auto-derived
