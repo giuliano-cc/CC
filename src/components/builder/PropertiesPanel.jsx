@@ -9,6 +9,7 @@ import {
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
   AlignVerticalJustifyStart,
+  Maximize2,
   Upload,
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
@@ -108,6 +109,7 @@ const BLOCK_LABELS = {
   [BLOCK_TYPES.SOCIAL_ICONS]: 'Social Icons',
   [BLOCK_TYPES.CONTACT_INFO]: 'Contact Info',
   [BLOCK_TYPES.LEISURE]: 'Leisure',
+  [BLOCK_TYPES.LANGUAGES_CHART]: 'Languages',
 }
 
 // Generic "pick a Content Library slot" select, used for fields that bind
@@ -283,6 +285,18 @@ function SkillsChartProperties({ block, onChange }) {
           <option value="tags">Tags</option>
         </select>
       </Field>
+      {block.chartStyle === 'dots' && (
+        <Field label={`Dot size (${block.dotSize ?? 10}px)`}>
+          <input
+            type="range"
+            min={4}
+            max={24}
+            value={block.dotSize ?? 10}
+            onChange={(e) => onChange({ dotSize: Number(e.target.value) })}
+            className="w-full"
+          />
+        </Field>
+      )}
       {!block.useLibrarySkills && (
         <Field label="Skills (one per line: Label|Level 0-100)">
           <textarea
@@ -290,6 +304,85 @@ function SkillsChartProperties({ block, onChange }) {
             value={linesValue}
             onChange={(e) => handleLinesChange(e.target.value)}
             placeholder="Photoshop|85"
+            className={`${inputClasses} resize-none font-mono`}
+          />
+        </Field>
+      )}
+      <Field label="Bar color">
+        <input
+          type="color"
+          value={block.color || '#2563eb'}
+          onChange={(e) => onChange({ color: e.target.value })}
+          className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
+        />
+      </Field>
+    </div>
+  )
+}
+
+function LanguagesChartProperties({ block, onChange }) {
+  const linesValue = (block.items || []).map((i) => `${i.label}|${i.level}`).join('\n')
+
+  function handleLinesChange(text) {
+    const items = text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [label, level] = line.split('|')
+        return { label: (label || '').trim(), level: Number(level) || 50 }
+      })
+    onChange({ items })
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={!!block.useLibraryLanguages}
+          onChange={(e) => onChange({ useLibraryLanguages: e.target.checked })}
+        />
+        Use my Languages from the library
+      </label>
+      <Field label="Chart title">
+        <input
+          type="text"
+          value={block.title}
+          onChange={(e) => onChange({ title: e.target.value })}
+          className={inputClasses}
+        />
+      </Field>
+      <Field label="Style">
+        <select
+          value={block.chartStyle || 'bars'}
+          onChange={(e) => onChange({ chartStyle: e.target.value })}
+          className={inputClasses}
+        >
+          <option value="bars">Bars</option>
+          <option value="dots">Dots</option>
+          <option value="tags">Tags</option>
+        </select>
+      </Field>
+      {block.chartStyle === 'dots' && (
+        <Field label={`Dot size (${block.dotSize ?? 10}px)`}>
+          <input
+            type="range"
+            min={4}
+            max={24}
+            value={block.dotSize ?? 10}
+            onChange={(e) => onChange({ dotSize: Number(e.target.value) })}
+            className="w-full"
+          />
+        </Field>
+      )}
+      {!block.useLibraryLanguages && (
+        <Field label="Languages (one per line: Label|Level 0-100)">
+          <textarea
+            rows={5}
+            value={linesValue}
+            onChange={(e) => handleLinesChange(e.target.value)}
+            placeholder="English|90"
             className={`${inputClasses} resize-none font-mono`}
           />
         </Field>
@@ -700,6 +793,17 @@ function MultiSelectPanel({ count }) {
 function PositionSizeFields({ block, onChange }) {
   if (typeof block.x !== 'number') return null
 
+  // Measures the block's own rendered content (see FreeBlock.jsx's
+  // data-block-content wrapper) and sets the block's height to match, so
+  // it grows or shrinks to fit the text exactly instead of leaving empty
+  // space or clipping it.
+  function fitToContent() {
+    const node = document.querySelector(`[data-block-content="${block.id}"]`)
+    const natural = node?.scrollHeight
+    if (!natural) return
+    onChange({ height: Math.min(SHEET_HEIGHT, Math.max(20, natural)) })
+  }
+
   return (
     <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
       <PageAlignField />
@@ -731,14 +835,24 @@ function PositionSizeFields({ block, onChange }) {
           />
         </Field>
         <Field label="Height (px)">
-          <input
-            type="number"
-            min={20}
-            max={SHEET_HEIGHT}
-            value={Math.round(block.height)}
-            onChange={(e) => onChange({ height: Number(e.target.value) })}
-            className={inputClasses}
-          />
+          <div className="flex gap-1.5">
+            <input
+              type="number"
+              min={20}
+              max={SHEET_HEIGHT}
+              value={Math.round(block.height)}
+              onChange={(e) => onChange({ height: Number(e.target.value) })}
+              className={`${inputClasses} min-w-0 flex-1`}
+            />
+            <button
+              type="button"
+              onClick={fitToContent}
+              title="Fit height to content"
+              className="flex shrink-0 items-center justify-center rounded-md border border-slate-300 px-2 text-slate-500 transition hover:border-primary hover:text-primary"
+            >
+              <Maximize2 size={14} />
+            </button>
+          </div>
         </Field>
       </div>
     </div>
@@ -777,6 +891,18 @@ function BlockPropertiesPanel({ block, onChange }) {
           Block: {BLOCK_LABELS[block.type]}
         </h3>
         <SkillsChartProperties block={block} onChange={onChange} />
+        <PositionSizeFields block={block} onChange={onChange} />
+      </div>
+    )
+  }
+
+  if (block.type === BLOCK_TYPES.LANGUAGES_CHART) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold text-slate-800">
+          Block: {BLOCK_LABELS[block.type]}
+        </h3>
+        <LanguagesChartProperties block={block} onChange={onChange} />
         <PositionSizeFields block={block} onChange={onChange} />
       </div>
     )
@@ -838,7 +964,8 @@ function BlockPropertiesPanel({ block, onChange }) {
   const hasTypography = [BLOCK_TYPES.HEADING, BLOCK_TYPES.TEXT, BLOCK_TYPES.QUOTE].includes(
     block.type,
   )
-  const canBindContent = hasTypography
+  const canBindContent =
+    hasTypography || block.type === BLOCK_TYPES.HEADER || block.type === BLOCK_TYPES.FOOTER
 
   return (
     <div className="flex flex-col gap-4">

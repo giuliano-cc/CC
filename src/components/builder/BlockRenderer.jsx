@@ -79,7 +79,7 @@ function SkillBar({ label, level, color }) {
   )
 }
 
-function SkillDots({ label, level, color }) {
+function SkillDots({ label, level, color, dotSize = 10 }) {
   const filled = Math.round((Math.max(0, Math.min(100, level)) / 100) * 5)
   return (
     <div className="flex items-center justify-between text-xs">
@@ -88,11 +88,61 @@ function SkillDots({ label, level, color }) {
         {Array.from({ length: 5 }).map((_, i) => (
           <span
             key={i}
-            className="h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: i < filled ? color || '#2563eb' : '#e2e8f0' }}
+            className="shrink-0 rounded-full"
+            style={{
+              width: dotSize,
+              height: dotSize,
+              backgroundColor: i < filled ? color || '#2563eb' : '#e2e8f0',
+            }}
           />
         ))}
       </div>
+    </div>
+  )
+}
+
+// Shared by the Technical Skills and Languages chart blocks: same three
+// styles (bars/dots/tags), same "cycle style" hover button, same dot-size
+// control — only the underlying items differ.
+function Chart({ block, items, onUpdateBlock }) {
+  const chartStyle = block.chartStyle || 'bars'
+  return (
+    <div className="group/chart flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        {block.title && <p className="text-sm font-semibold text-slate-800">{block.title}</p>}
+        {onUpdateBlock && (
+          <button
+            type="button"
+            data-no-drag
+            title="Switch chart style"
+            onClick={(event) => {
+              event.stopPropagation()
+              const next = CHART_STYLES[(CHART_STYLES.indexOf(chartStyle) + 1) % CHART_STYLES.length]
+              onUpdateBlock({ chartStyle: next })
+            }}
+            className="invisible flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-primary group-hover/chart:visible"
+          >
+            <RefreshCw size={13} />
+          </button>
+        )}
+      </div>
+      {chartStyle === 'tags' ? (
+        <div className="flex flex-wrap gap-2">
+          {items.map((item, i) => (
+            <SkillTag key={i} label={item.label} color={block.color} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {items.map((item, i) =>
+            chartStyle === 'dots' ? (
+              <SkillDots key={i} label={item.label} level={item.level} color={block.color} dotSize={block.dotSize} />
+            ) : (
+              <SkillBar key={i} label={item.label} level={item.level} color={block.color} />
+            ),
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -146,7 +196,7 @@ export default function BlockRenderer({
     case BLOCK_TYPES.HEADER:
       return (
         <div className={`border-b border-slate-200 pb-3 text-lg ${textStyleClasses(block)}`}>
-          {block.content}
+          {resolvedContent}
         </div>
       )
 
@@ -283,7 +333,7 @@ export default function BlockRenderer({
     case BLOCK_TYPES.FOOTER:
       return (
         <div className={`border-t border-slate-200 pt-3 text-xs text-slate-500 ${textStyleClasses(block)}`}>
-          {block.content}
+          {resolvedContent}
         </div>
       )
 
@@ -297,47 +347,16 @@ export default function BlockRenderer({
               .filter((i) => i.visible && i.text?.trim())
               .map((i) => ({ label: i.text, level: 75 }))
         : block.items
-      const chartStyle = block.chartStyle || 'bars'
+      return <Chart block={block} items={items} onUpdateBlock={onUpdateBlock} />
+    }
 
-      return (
-        <div className="group/chart flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            {block.title && <p className="text-sm font-semibold text-slate-800">{block.title}</p>}
-            {onUpdateBlock && (
-              <button
-                type="button"
-                data-no-drag
-                title="Switch chart style"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  const next = CHART_STYLES[(CHART_STYLES.indexOf(chartStyle) + 1) % CHART_STYLES.length]
-                  onUpdateBlock({ chartStyle: next })
-                }}
-                className="invisible flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-primary group-hover/chart:visible"
-              >
-                <RefreshCw size={13} />
-              </button>
-            )}
-          </div>
-          {chartStyle === 'tags' ? (
-            <div className="flex flex-wrap gap-2">
-              {items.map((item, i) => (
-                <SkillTag key={i} label={item.label} color={block.color} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {items.map((item, i) =>
-                chartStyle === 'dots' ? (
-                  <SkillDots key={i} label={item.label} level={item.level} color={block.color} />
-                ) : (
-                  <SkillBar key={i} label={item.label} level={item.level} color={block.color} />
-                ),
-              )}
-            </div>
-          )}
-        </div>
-      )
+    case BLOCK_TYPES.LANGUAGES_CHART: {
+      const items = block.useLibraryLanguages
+        ? parseLanguages(library.languagesItems, library.languages)
+            .filter((i) => i.name?.trim())
+            .map((i) => ({ label: i.name, level: i.level }))
+        : block.items
+      return <Chart block={block} items={items} onUpdateBlock={onUpdateBlock} />
     }
 
     case BLOCK_TYPES.QR_CODE: {

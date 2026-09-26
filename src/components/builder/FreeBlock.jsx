@@ -167,6 +167,7 @@ export default function FreeBlock({
       className="group"
     >
       <div
+        data-block-content={block.id}
         className={`h-full w-full overflow-auto rounded-md border p-2 transition ${
           isSelected
             ? 'cursor-move border-primary ring-2 ring-primary/20'

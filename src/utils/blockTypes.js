@@ -5,6 +5,7 @@ import {
   Heading1,
   IdCard,
   Image as ImageIcon,
+  Languages as LanguagesIcon,
   Minus,
   QrCode,
   Quote as QuoteIcon,
@@ -30,6 +31,7 @@ export const BLOCK_TYPES = {
   SOCIAL_ICONS: 'social_icons',
   CONTACT_INFO: 'contact_info',
   LEISURE: 'leisure',
+  LANGUAGES_CHART: 'languages_chart',
 }
 
 // Fonts available in the font-family selectors (toolbar and properties panel).
@@ -68,6 +70,7 @@ export const DEFAULT_BLOCK_SIZE = {
   [BLOCK_TYPES.FOOTER]: { width: 698, height: 40 },
   [BLOCK_TYPES.COLUMNS]: { width: 698, height: 340 },
   [BLOCK_TYPES.SKILLS_CHART]: { width: 340, height: 180 },
+  [BLOCK_TYPES.LANGUAGES_CHART]: { width: 340, height: 160 },
   [BLOCK_TYPES.QR_CODE]: { width: 140, height: 160 },
   [BLOCK_TYPES.SOCIAL_ICONS]: { width: 300, height: 50 },
   [BLOCK_TYPES.CONTACT_INFO]: { width: 300, height: 130 },
@@ -90,6 +93,7 @@ export const BLOCK_DEFINITIONS = [
       bold: true,
       italic: false,
       underline: false,
+      contentSlot: null,
     },
   },
   {
@@ -201,6 +205,7 @@ export const BLOCK_DEFINITIONS = [
       bold: false,
       italic: false,
       underline: false,
+      contentSlot: null,
     },
   },
   {
@@ -214,10 +219,10 @@ export const BLOCK_DEFINITIONS = [
   },
   {
     type: BLOCK_TYPES.SKILLS_CHART,
-    label: 'Skills Chart',
+    label: 'Technical Skills',
     icon: BarChart3,
     defaultProps: {
-      title: 'Skills',
+      title: 'Technical Skills',
       items: [
         { label: 'Skill 1', level: 90 },
         { label: 'Skill 2', level: 75 },
@@ -227,6 +232,23 @@ export const BLOCK_DEFINITIONS = [
       librarySource: 'skills',
       color: null,
       chartStyle: 'bars',
+      dotSize: 10,
+    },
+  },
+  {
+    type: BLOCK_TYPES.LANGUAGES_CHART,
+    label: 'Languages',
+    icon: LanguagesIcon,
+    defaultProps: {
+      title: 'Languages',
+      items: [
+        { label: 'English', level: 90 },
+        { label: 'Italian', level: 100 },
+      ],
+      useLibraryLanguages: false,
+      color: null,
+      chartStyle: 'bars',
+      dotSize: 10,
     },
   },
   {
