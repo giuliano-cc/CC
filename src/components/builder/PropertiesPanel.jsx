@@ -464,7 +464,7 @@ function SocialIconsProperties({ block, onChange }) {
               <select
                 value={item.platform}
                 onChange={(e) => updateItem(i, { platform: e.target.value })}
-                className={`${inputClasses} w-28 shrink-0`}
+                className={`${inputClasses} !w-28 shrink-0`}
               >
                 {SOCIAL_PLATFORMS.map((p) => (
                   <option key={p.key} value={p.key}>
@@ -477,7 +477,7 @@ function SocialIconsProperties({ block, onChange }) {
                 value={item.url}
                 onChange={(e) => updateItem(i, { url: e.target.value })}
                 placeholder="url or handle"
-                className={inputClasses}
+                className={`${inputClasses} min-w-0 flex-1`}
               />
               <button
                 type="button"

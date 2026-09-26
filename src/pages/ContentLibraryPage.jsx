@@ -89,7 +89,7 @@ function SocialLinksField({ value, onChange }) {
           <select
             value={item.platform}
             onChange={(e) => updateItem(i, { platform: e.target.value })}
-            className={`${inputClasses} w-28 shrink-0`}
+            className={`${inputClasses} !w-28 shrink-0`}
           >
             {SOCIAL_PLATFORMS.map((p) => (
               <option key={p.key} value={p.key}>
@@ -102,7 +102,7 @@ function SocialLinksField({ value, onChange }) {
             value={item.url}
             onChange={(e) => updateItem(i, { url: e.target.value })}
             placeholder="url or handle"
-            className={inputClasses}
+            className={`${inputClasses} min-w-0 flex-1`}
           />
           <button
             type="button"
@@ -185,7 +185,7 @@ function ChecklistField({ itemsJson, fallbackText, onUpdate }) {
             value={item.text}
             onChange={(e) => updateItem(i, { text: e.target.value })}
             placeholder="Item"
-            className={inputClasses}
+            className={`${inputClasses} min-w-0 flex-1`}
           />
           <button
             type="button"
@@ -231,12 +231,12 @@ function LanguagesField({ itemsJson, fallbackText, onUpdate }) {
             value={item.name}
             onChange={(e) => updateItem(i, { name: e.target.value })}
             placeholder="Language"
-            className={inputClasses}
+            className={`${inputClasses} min-w-0 flex-1`}
           />
           <select
             value={item.level}
             onChange={(e) => updateItem(i, { level: Number(e.target.value) })}
-            className={`${inputClasses} w-36 shrink-0`}
+            className={`${inputClasses} !w-36 shrink-0`}
           >
             {LANGUAGE_LEVELS.map((l) => (
               <option key={l.level} value={l.level}>
@@ -251,7 +251,7 @@ function LanguagesField({ itemsJson, fallbackText, onUpdate }) {
             value={item.level}
             onChange={(e) => updateItem(i, { level: Math.max(0, Math.min(100, Number(e.target.value))) })}
             title="Exact percentage (used by the Skills Chart block)"
-            className={`${inputClasses} w-16 shrink-0`}
+            className={`${inputClasses} !w-16 shrink-0`}
           />
           <button
             type="button"
