@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AlignHorizontalDistributeCenter,
@@ -9,6 +9,7 @@ import {
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
   AlignVerticalJustifyStart,
+  Crop,
   Maximize2,
   Upload,
 } from 'lucide-react'
@@ -17,6 +18,7 @@ import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryCo
 import { BLOCK_TYPES, FONT_FAMILY_OPTIONS } from '../../utils/blockTypes'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import { SOCIAL_PLATFORMS } from '../../utils/socialIcons'
+import ImageCropModal from './ImageCropModal'
 
 function Field({ label, children }) {
   return (
@@ -692,6 +694,42 @@ function ImageUploadField({ onChange }) {
   )
 }
 
+// Crops whichever image is actually showing (an uploaded/URL src, or the
+// Content Library photo when imageSlot is bound) and writes the cropped
+// result back to wherever it came from.
+function ImageCropButton({ block, onChange }) {
+  const { library, updateSlot } = useContentLibrary()
+  const [isCropping, setIsCropping] = useState(false)
+  const currentSrc = block.imageSlot ? library[block.imageSlot] : block.src
+  if (!currentSrc) return null
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setIsCropping(true)}
+        className="flex items-center justify-center gap-1.5 rounded-md border border-slate-300 py-1.5 text-sm text-slate-600 transition hover:border-primary hover:text-primary"
+      >
+        <Crop size={14} />
+        Crop image
+      </button>
+      {isCropping && (
+        <ImageCropModal
+          imageSrc={currentSrc}
+          initialAspect={block.width && block.height ? block.width / block.height : 1}
+          initialShape={block.shape}
+          onCancel={() => setIsCropping(false)}
+          onApply={(dataUrl) => {
+            if (block.imageSlot) updateSlot(block.imageSlot, dataUrl)
+            else onChange({ src: dataUrl })
+            setIsCropping(false)
+          }}
+        />
+      )}
+    </>
+  )
+}
+
 function AlignIconButton({ icon: Icon, label, onClick }) {
   return (
     <button
@@ -1043,6 +1081,7 @@ function BlockPropertiesPanel({ block, onChange }) {
               </Field>
             </>
           )}
+          <ImageCropButton block={block} onChange={onChange} />
           <Field label="Shape">
             <select
               value={block.shape}

@@ -1,7 +1,8 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Download, Trash2, Upload, User } from 'lucide-react'
+import { Crop, Download, Trash2, Upload, User } from 'lucide-react'
 import { CONTENT_SLOTS, useContentLibrary } from '../context/ContentLibraryContext'
+import ImageCropModal from '../components/builder/ImageCropModal'
 import { formatSocialLinks, parseSocialLinks, SOCIAL_PLATFORMS } from '../utils/socialIcons'
 import {
   composeChecklistText,
@@ -17,6 +18,7 @@ const inputClasses =
 
 function PhotoField({ value, onChange }) {
   const fileInputRef = useRef(null)
+  const [isCropping, setIsCropping] = useState(false)
 
   function handleFile(event) {
     const file = event.target.files?.[0]
@@ -49,14 +51,37 @@ function PhotoField({ value, onChange }) {
         Upload photo
       </button>
       {value && (
-        <button
-          type="button"
-          onClick={() => onChange('')}
-          className="flex items-center gap-1 text-xs text-red-500 hover:underline"
-        >
-          <Trash2 size={13} />
-          Remove
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() => setIsCropping(true)}
+            className="flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+          >
+            <Crop size={13} />
+            Crop
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="flex items-center gap-1 text-xs text-red-500 hover:underline"
+          >
+            <Trash2 size={13} />
+            Remove
+          </button>
+        </>
+      )}
+      {isCropping && (
+        <ImageCropModal
+          imageSrc={value}
+          initialAspect={1}
+          initialShape="circle"
+          onCancel={() => setIsCropping(false)}
+          onApply={(dataUrl) => {
+            onChange(dataUrl)
+            setIsCropping(false)
+            toast.success('Photo saved', { id: 'content-library-save' })
+          }}
+        />
       )}
     </div>
   )
