@@ -104,12 +104,16 @@ function SkillDots({ label, level, color, dotSize = 10 }) {
 // Shared by the Technical Skills and Languages chart blocks: same three
 // styles (bars/dots/tags), same "cycle style" hover button, same dot-size
 // control — only the underlying items differ.
-function Chart({ block, items, onUpdateBlock }) {
+function Chart({ block, items, onUpdateBlock, accentColor }) {
   const chartStyle = block.chartStyle || 'bars'
   return (
     <div className="group/chart flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        {block.title && <p className="text-sm font-semibold text-slate-800">{block.title}</p>}
+        {block.title && (
+          <p className="text-sm font-semibold" style={{ color: block.titleColor || accentColor }}>
+            {block.title}
+          </p>
+        )}
         {onUpdateBlock && (
           <button
             type="button"
@@ -188,6 +192,7 @@ export default function BlockRenderer({
   onSelectItem,
   onAddItem,
   onUpdateBlock,
+  globalStyle = {},
 }) {
   const resolvedContent = useResolvedContent(block)
   const { library } = useContentLibrary()
@@ -348,7 +353,7 @@ export default function BlockRenderer({
             .filter((i) => i.visible && i.text?.trim())
             .map((i) => ({ label: i.text, level: 75 }))
         : block.items
-      return <Chart block={block} items={items} onUpdateBlock={onUpdateBlock} />
+      return <Chart block={block} items={items} onUpdateBlock={onUpdateBlock} accentColor={globalStyle.primaryColor} />
     }
 
     case BLOCK_TYPES.LANGUAGES_CHART: {
@@ -357,7 +362,7 @@ export default function BlockRenderer({
             .filter((i) => i.name?.trim())
             .map((i) => ({ label: i.name, level: i.level }))
         : block.items
-      return <Chart block={block} items={items} onUpdateBlock={onUpdateBlock} />
+      return <Chart block={block} items={items} onUpdateBlock={onUpdateBlock} accentColor={globalStyle.primaryColor} />
     }
 
     case BLOCK_TYPES.QR_CODE: {
@@ -402,13 +407,23 @@ export default function BlockRenderer({
       const visible = fields.filter((f) => f.value?.trim())
       const alignItems = block.align === 'center' ? 'items-center' : block.align === 'right' ? 'items-end' : 'items-start'
       return (
-        <div className={`flex flex-col gap-1.5 text-sm text-slate-600 ${alignItems}`}>
-          {visible.map((f) => (
-            <span key={f.key} className="flex items-center gap-2">
-              {block.showIcons && <f.Icon size={14} className="shrink-0 text-slate-400" />}
-              {f.value}
-            </span>
-          ))}
+        <div className={`flex flex-col gap-1.5 ${alignItems}`}>
+          {block.title && (
+            <p
+              className="mb-0.5 text-sm font-semibold"
+              style={{ color: block.titleColor || globalStyle.primaryColor }}
+            >
+              {block.title}
+            </p>
+          )}
+          <div className={`flex flex-col gap-1.5 text-sm text-slate-600 ${alignItems}`}>
+            {visible.map((f) => (
+              <span key={f.key} className="flex items-center gap-2">
+                {block.showIcons && <f.Icon size={14} className="shrink-0 text-slate-400" />}
+                {f.value}
+              </span>
+            ))}
+          </div>
         </div>
       )
     }
@@ -421,7 +436,11 @@ export default function BlockRenderer({
         : block.items
       return (
         <div className={`flex flex-col gap-2 ${alignClass(block.align)}`}>
-          {block.title && <p className="text-sm font-semibold text-slate-800">{block.title}</p>}
+          {block.title && (
+            <p className="text-sm font-semibold" style={{ color: block.titleColor || globalStyle.primaryColor }}>
+              {block.title}
+            </p>
+          )}
           <ul className="list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400">
             {items.map((item, i) => (
               <li key={i}>{item}</li>
@@ -461,7 +480,7 @@ export default function BlockRenderer({
                       : ''
                   }
                 >
-                  <BlockRenderer block={item} />
+                  <BlockRenderer block={item} globalStyle={globalStyle} />
                 </div>
               ))}
               {interactive && (

@@ -529,6 +529,15 @@ function ContactInfoProperties({ block, onChange }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <Field label="Title (optional)">
+        <input
+          type="text"
+          value={block.title || ''}
+          onChange={(e) => onChange({ title: e.target.value })}
+          placeholder="e.g. Contact Info"
+          className={inputClasses}
+        />
+      </Field>
       <Field label="Content from library">
         <select
           value={block.useLibraryContact ? 'contact' : ''}

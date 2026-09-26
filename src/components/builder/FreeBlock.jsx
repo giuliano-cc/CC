@@ -64,6 +64,7 @@ export default function FreeBlock({
   selectedBlockId,
   margin = 0,
   siblings = [],
+  globalStyle,
   onSelect,
   onRemove,
   onAddNestedItem,
@@ -234,6 +235,7 @@ export default function FreeBlock({
           onSelectItem={onSelect}
           onAddItem={(columnIndex, type) => onAddNestedItem(block.id, columnIndex, type)}
           onUpdateBlock={onChangeGeometry}
+          globalStyle={globalStyle}
         />
       </div>
 

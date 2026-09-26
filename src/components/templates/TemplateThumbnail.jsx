@@ -57,7 +57,7 @@ export default function TemplateThumbnail({ template }) {
                 overflow: 'hidden',
               }}
             >
-              <BlockRenderer block={block} />
+              <BlockRenderer block={block} globalStyle={template.globalStyle} />
             </div>
           ))}
         </div>

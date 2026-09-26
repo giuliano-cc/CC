@@ -279,6 +279,8 @@ export const BLOCK_DEFINITIONS = [
     label: 'Contact Info',
     icon: Contact,
     defaultProps: {
+      title: 'Contact Info',
+      titleColor: null,
       address: 'City, Country',
       phone: '+00 000 000 0000',
       email: 'you@example.com',
