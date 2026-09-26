@@ -11,6 +11,7 @@ import {
   AlignVerticalJustifyStart,
   Crop,
   Maximize2,
+  Trash2,
   Upload,
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
@@ -1586,17 +1587,34 @@ function BlockPropertiesPanel({ block, onChange }) {
 }
 
 export default function PropertiesPanel() {
-  const { selectedBlock, selectedIds, updateBlock } = useBuilder()
+  const { selectedBlock, selectedIds, updateBlock, removeBlock } = useBuilder()
 
   return (
     <aside className="w-72 shrink-0 overflow-y-auto border-l border-slate-200 bg-white p-4">
       {selectedIds.length > 1 ? (
         <MultiSelectPanel count={selectedIds.length} />
       ) : selectedBlock ? (
-        <BlockPropertiesPanel
-          block={selectedBlock}
-          onChange={(patch) => updateBlock(selectedBlock.id, patch)}
-        />
+        <div className="flex flex-col gap-4">
+          <BlockPropertiesPanel
+            block={selectedBlock}
+            onChange={(patch) => updateBlock(selectedBlock.id, patch)}
+          />
+          {/* The only way to remove a block nested inside a Columns column
+              — its delete handle only exists on a top-level FreeBlock (the
+              hover trash icon on the sheet), so a nested item had no way to
+              be deleted at all once added. Works the same for a top-level
+              block too, as a second way to do the same thing. */}
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm('Delete this block?')) removeBlock(selectedBlock.id)
+            }}
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3.5 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+          >
+            <Trash2 size={15} />
+            Delete block
+          </button>
+        </div>
       ) : (
         <GlobalStylePanel />
       )}
