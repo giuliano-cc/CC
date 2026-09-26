@@ -22,10 +22,13 @@ export const CONTENT_SLOTS = [
   { key: 'coreCompetencies', label: 'Core Competencies', type: 'checklist' },
   { key: 'achievements', label: 'Achievements', type: 'checklist' },
   { key: 'keywords', label: 'Keywords', multiline: true, isList: true },
-  { key: 'experience', label: 'Work Experience', multiline: true },
+  // 'entries' slots: a repeatable row with title/subtitle/location/dates
+  // (see utils/contentLists.js parseEntries/composeEntriesText) — library[key]
+  // stays the plain-text, derived version every existing binding expects.
+  { key: 'experience', label: 'Work Experience', type: 'entries' },
   { key: 'selectedWorks', label: 'Selected Works', multiline: true, isList: true },
   { key: 'selectedClients', label: 'Selected Clients', multiline: true, isList: true },
-  { key: 'education', label: 'Education', multiline: true },
+  { key: 'education', label: 'Education', type: 'entries' },
   { key: 'skills', label: 'Technical Skills', type: 'checklist' },
   { key: 'languages', label: 'Languages', type: 'languages' },
   { key: 'certifications', label: 'Certifications', type: 'checklist' },
@@ -52,9 +55,9 @@ export const CONTENT_SLOTS = [
 // Checklist/languages slots also keep a JSON-encoded "*Items" key (the
 // full editable row list, including unchecked/hidden items) alongside
 // the plain-text one already covered by CONTENT_SLOTS above.
-const STRUCTURED_LIST_KEYS = CONTENT_SLOTS.filter((s) => s.type === 'checklist' || s.type === 'languages').map(
-  (s) => s.key,
-)
+const STRUCTURED_LIST_KEYS = CONTENT_SLOTS.filter((s) =>
+  ['checklist', 'languages', 'entries'].includes(s.type),
+).map((s) => s.key)
 
 const DEFAULT_LIBRARY = {
   ...Object.fromEntries(CONTENT_SLOTS.map((slot) => [slot.key, ''])),

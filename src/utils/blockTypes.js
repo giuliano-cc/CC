@@ -1,7 +1,9 @@
 import {
   BarChart3,
+  Briefcase,
   Columns3,
   Contact,
+  GraduationCap,
   Heading1,
   IdCard,
   Image as ImageIcon,
@@ -32,6 +34,8 @@ export const BLOCK_TYPES = {
   CONTACT_INFO: 'contact_info',
   LEISURE: 'leisure',
   LANGUAGES_CHART: 'languages_chart',
+  EXPERIENCE: 'experience_entries',
+  EDUCATION: 'education_entries',
 }
 
 // Fonts available in the font-family selectors (toolbar and properties panel).
@@ -82,6 +86,8 @@ export const DEFAULT_BLOCK_SIZE = {
   [BLOCK_TYPES.SOCIAL_ICONS]: { width: 300, height: 50 },
   [BLOCK_TYPES.CONTACT_INFO]: { width: 300, height: 130 },
   [BLOCK_TYPES.LEISURE]: { width: 300, height: 150 },
+  [BLOCK_TYPES.EXPERIENCE]: { width: 400, height: 320 },
+  [BLOCK_TYPES.EDUCATION]: { width: 400, height: 220 },
 }
 
 // Interchangeable visual styles for the Skills Chart block — click the
@@ -303,6 +309,62 @@ export const BLOCK_DEFINITIONS = [
     },
   },
   {
+    type: BLOCK_TYPES.EXPERIENCE,
+    label: 'Experience',
+    icon: Briefcase,
+    defaultProps: {
+      title: 'Experience',
+      titleColor: null,
+      items: [
+        {
+          id: 'exp-default-1',
+          title: 'Job Role',
+          subtitle: 'Company Name',
+          location: '',
+          startDate: 'January Year',
+          endDate: '',
+          current: true,
+          description: 'Description of the work experience, responsibilities and results achieved.',
+        },
+        {
+          id: 'exp-default-2',
+          title: 'Job Role',
+          subtitle: 'Company Name',
+          location: '',
+          startDate: 'January Year',
+          endDate: 'January Year',
+          current: false,
+          description: 'Description of the work experience, responsibilities and results achieved.',
+        },
+      ],
+      useLibraryExperience: false,
+      align: 'left',
+    },
+  },
+  {
+    type: BLOCK_TYPES.EDUCATION,
+    label: 'Education',
+    icon: GraduationCap,
+    defaultProps: {
+      title: 'Education',
+      titleColor: null,
+      items: [
+        {
+          id: 'edu-default-1',
+          title: 'Degree in Subject',
+          subtitle: 'Institution Name',
+          location: '',
+          startDate: 'Year',
+          endDate: 'Year',
+          current: false,
+          description: '',
+        },
+      ],
+      useLibraryEducation: false,
+      align: 'left',
+    },
+  },
+  {
     type: BLOCK_TYPES.LEISURE,
     label: 'Leisure',
     icon: Sparkles,
@@ -361,7 +423,11 @@ export function createNestedBlockInstance(type) {
 export function getTemplateTypographyStyles(template) {
   const rows = new Map()
 
-  function addRow(key, label, block, sizePx) {
+  // `matchType`/`level`/`size` identify every block this row stands for
+  // (see matchesTypographyRow below), so the row can be edited in place —
+  // changing its size/weight/color re-applies to every block sharing that
+  // identity, not just the one instance that happened to be walked first.
+  function addRow(key, label, block, sizePx, matchType, level, size) {
     if (rows.has(key)) return
     rows.set(key, {
       key,
@@ -370,6 +436,9 @@ export function getTemplateTypographyStyles(template) {
       bold: !!block.bold,
       italic: !!block.italic,
       color: block.color || null,
+      matchType,
+      level,
+      size,
     })
   }
 
@@ -379,11 +448,11 @@ export function getTemplateTypographyStyles(template) {
         const level = block.level || 'h1'
         const size = block.size || 'md'
         const sizePx = block.fontSize || HEADING_SIZE_PX[size] || HEADING_SIZE_PX.md
-        addRow(`heading-${level}-${size}`, `${level.toUpperCase()} (${size})`, block, sizePx)
+        addRow(`heading-${level}-${size}`, `${level.toUpperCase()} (${size})`, block, sizePx, BLOCK_TYPES.HEADING, level, size)
       } else if (block.type === BLOCK_TYPES.TEXT) {
-        addRow('text', 'Body text (P)', block, block.fontSize || 14)
+        addRow('text', 'Body text (P)', block, block.fontSize || 14, BLOCK_TYPES.TEXT)
       } else if (block.type === BLOCK_TYPES.QUOTE) {
-        addRow('quote', 'Quote', block, block.fontSize || 14)
+        addRow('quote', 'Quote', block, block.fontSize || 14, BLOCK_TYPES.QUOTE)
       }
       if (block.type === BLOCK_TYPES.COLUMNS) {
         block.columns?.forEach((column) => walk(column.items))
@@ -393,6 +462,17 @@ export function getTemplateTypographyStyles(template) {
   walk(template.blocks)
 
   return [...rows.values()].sort((a, b) => b.sizePx - a.sizePx)
+}
+
+// Whether `block` is one of the instances a typography row (from
+// getTemplateTypographyStyles) stands for — used to re-apply an edit made
+// on the row to every matching block across the template.
+export function matchesTypographyRow(block, row) {
+  if (block.type !== row.matchType) return false
+  if (row.matchType === BLOCK_TYPES.HEADING) {
+    return (block.level || 'h1') === row.level && (block.size || 'md') === row.size
+  }
+  return true
 }
 
 // The distinct fonts actually used by a template: its global font plus any

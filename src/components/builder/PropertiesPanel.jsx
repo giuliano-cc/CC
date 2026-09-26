@@ -15,7 +15,13 @@ import {
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
-import { BLOCK_TYPES, FONT_FAMILY_OPTIONS, getTemplateTypographyStyles } from '../../utils/blockTypes'
+import {
+  BLOCK_TYPES,
+  FONT_FAMILY_OPTIONS,
+  getTemplateTypographyStyles,
+  matchesTypographyRow,
+} from '../../utils/blockTypes'
+import { emptyEntry } from '../../utils/contentLists'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import { SOCIAL_PLATFORMS } from '../../utils/socialIcons'
 import ImageCropModal from './ImageCropModal'
@@ -33,8 +39,24 @@ const inputClasses =
   'w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20'
 
 function GlobalStylePanel() {
-  const { globalStyle, setGlobalStyle, blocks } = useBuilder()
+  const { globalStyle, setGlobalStyle, blocks, updateBlock } = useBuilder()
   const typographyRows = getTemplateTypographyStyles({ blocks })
+
+  // Applies an edit made on a typography row to every block across the
+  // template that shares that row's identity (same heading level+size, or
+  // every Text/Quote block), including nested inside a Columns block —
+  // so "change the H2 style" changes every H2, not just one instance.
+  function applyTypographyChange(row, patch) {
+    function walk(list) {
+      list.forEach((block) => {
+        if (matchesTypographyRow(block, row)) updateBlock(block.id, patch)
+        if (block.type === BLOCK_TYPES.COLUMNS) {
+          block.columns?.forEach((column) => walk(column.items))
+        }
+      })
+    }
+    walk(blocks)
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -95,11 +117,11 @@ function GlobalStylePanel() {
         <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-4">
           <h4 className="text-xs font-semibold text-slate-600">Text styles used in this template</h4>
           <p className="-mt-1 text-xs text-slate-400">
-            What to look for on the sheet if you want to change one of these.
+            Editing one applies to every block using that style across the template.
           </p>
           <div className="flex flex-col divide-y divide-slate-100 rounded-md border border-slate-200">
             {typographyRows.map((row) => (
-              <div key={row.key} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs">
+              <div key={row.key} className="flex flex-col gap-1.5 px-2.5 py-2 text-xs">
                 <span
                   className="truncate"
                   style={{
@@ -110,9 +132,32 @@ function GlobalStylePanel() {
                 >
                   {row.label}
                 </span>
-                <span className="shrink-0 text-slate-400">
-                  {row.sizePx}px{row.bold ? ' · bold' : ''}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min={8}
+                    max={96}
+                    value={row.sizePx}
+                    onChange={(e) => applyTypographyChange(row, { fontSize: Number(e.target.value) })}
+                    className={`${inputClasses} !w-16 shrink-0 py-1`}
+                    title="Size (px)"
+                  />
+                  <label className="flex shrink-0 items-center gap-1 text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={row.bold}
+                      onChange={(e) => applyTypographyChange(row, { bold: e.target.checked })}
+                    />
+                    Bold
+                  </label>
+                  <input
+                    type="color"
+                    value={row.color || globalStyle.textColor}
+                    onChange={(e) => applyTypographyChange(row, { color: e.target.value })}
+                    className="h-7 w-7 shrink-0 cursor-pointer rounded-md border border-slate-300"
+                    title="Color"
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -142,6 +187,8 @@ const BLOCK_LABELS = {
   [BLOCK_TYPES.CONTACT_INFO]: 'Contact Info',
   [BLOCK_TYPES.LEISURE]: 'Leisure',
   [BLOCK_TYPES.LANGUAGES_CHART]: 'Languages',
+  [BLOCK_TYPES.EXPERIENCE]: 'Experience',
+  [BLOCK_TYPES.EDUCATION]: 'Education',
 }
 
 // Generic "pick a Content Library slot" select, used for fields that bind
@@ -663,6 +710,137 @@ function LeisureProperties({ block, onChange }) {
   )
 }
 
+// Shared editor for the Experience/Education blocks: a repeatable entry
+// (title/subtitle/location/dates/description) either typed directly on
+// the block or read from the matching Content Library slot (kept in sync
+// there via ContentLibraryPage's own entry editor).
+function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlotLabel }) {
+  const items = block.items || []
+
+  function updateItem(index, patch) {
+    onChange({ items: items.map((item, i) => (i === index ? { ...item, ...patch } : item)) })
+  }
+
+  function addItem() {
+    onChange({ items: [...items, emptyEntry()] })
+  }
+
+  function removeItem(index) {
+    onChange({ items: items.filter((_, i) => i !== index) })
+  }
+
+  const usesLibrary = !!block[libraryToggleKey]
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Field label="Title (optional)">
+        <input
+          type="text"
+          value={block.title || ''}
+          onChange={(e) => onChange({ title: e.target.value })}
+          className={inputClasses}
+        />
+      </Field>
+      <Field label="Content from library">
+        <select
+          value={usesLibrary ? 'library' : ''}
+          onChange={(e) => onChange({ [libraryToggleKey]: e.target.value === 'library' })}
+          className={inputClasses}
+        >
+          <option value="">— none (edit entries below) —</option>
+          <option value="library">{librarySlotLabel}</option>
+        </select>
+      </Field>
+      {!usesLibrary && (
+        <div className="flex flex-col gap-3">
+          {items.map((item, i) => (
+            <div key={item.id || i} className="flex flex-col gap-1.5 rounded-md border border-slate-200 p-2.5">
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={item.title}
+                  onChange={(e) => updateItem(i, { title: e.target.value })}
+                  placeholder="Job Role / Degree"
+                  className={`${inputClasses} min-w-0 flex-1`}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeItem(i)}
+                  className="shrink-0 rounded-md px-2 py-1.5 text-xs text-red-500 hover:bg-red-50"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={item.subtitle}
+                  onChange={(e) => updateItem(i, { subtitle: e.target.value })}
+                  placeholder="Company / Institution"
+                  className={`${inputClasses} min-w-0 flex-1`}
+                />
+                <input
+                  type="text"
+                  value={item.location}
+                  onChange={(e) => updateItem(i, { location: e.target.value })}
+                  placeholder="City, Country"
+                  className={`${inputClasses} min-w-0 flex-1`}
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={item.startDate}
+                  onChange={(e) => updateItem(i, { startDate: e.target.value })}
+                  placeholder="Start"
+                  className={`${inputClasses} min-w-0 flex-1`}
+                />
+                <input
+                  type="text"
+                  value={item.endDate}
+                  onChange={(e) => updateItem(i, { endDate: e.target.value })}
+                  placeholder="End"
+                  disabled={item.current}
+                  className={`${inputClasses} min-w-0 flex-1 disabled:bg-slate-50 disabled:text-slate-400`}
+                />
+                <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={item.current}
+                    onChange={(e) => updateItem(i, { current: e.target.checked })}
+                  />
+                  Present
+                </label>
+              </div>
+              <textarea
+                rows={2}
+                value={item.description}
+                onChange={(e) => updateItem(i, { description: e.target.value })}
+                placeholder="Description"
+                className={inputClasses}
+              />
+            </div>
+          ))}
+          <button type="button" onClick={addItem} className="self-start text-xs font-medium text-primary hover:underline">
+            + Add entry
+          </button>
+        </div>
+      )}
+      <Field label="Alignment">
+        <select
+          value={block.align}
+          onChange={(e) => onChange({ align: e.target.value })}
+          className={inputClasses}
+        >
+          <option value="left">Left</option>
+          <option value="center">Center</option>
+          <option value="right">Right</option>
+        </select>
+      </Field>
+    </div>
+  )
+}
+
 // Links the block's content to one of the Content Library slots: from
 // then on the displayed text is read from there, so the content stays the
 // same when switching from one template to another.
@@ -1037,6 +1215,40 @@ function BlockPropertiesPanel({ block, onChange }) {
           Block: {BLOCK_LABELS[block.type]}
         </h3>
         <LeisureProperties block={block} onChange={onChange} />
+        <PositionSizeFields block={block} onChange={onChange} />
+      </div>
+    )
+  }
+
+  if (block.type === BLOCK_TYPES.EXPERIENCE) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold text-slate-800">
+          Block: {BLOCK_LABELS[block.type]}
+        </h3>
+        <EntriesBlockProperties
+          block={block}
+          onChange={onChange}
+          libraryToggleKey="useLibraryExperience"
+          librarySlotLabel="Work Experience"
+        />
+        <PositionSizeFields block={block} onChange={onChange} />
+      </div>
+    )
+  }
+
+  if (block.type === BLOCK_TYPES.EDUCATION) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold text-slate-800">
+          Block: {BLOCK_LABELS[block.type]}
+        </h3>
+        <EntriesBlockProperties
+          block={block}
+          onChange={onChange}
+          libraryToggleKey="useLibraryEducation"
+          librarySlotLabel="Education"
+        />
         <PositionSizeFields block={block} onChange={onChange} />
       </div>
     )

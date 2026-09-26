@@ -61,3 +61,52 @@ export function composeLanguagesText(items) {
     .map((item) => `${item.name} (${languageLevelLabel(item.level)})`)
     .join('\n')
 }
+
+// Entry items (Work Experience, Education): a repeatable row with a
+// title (Job Role / Degree), a subtitle (Company / Institution), an
+// optional location, a date range (free text, with a "current" flag for
+// "Present"/"Ongoing"), and a description shown as bullet lines.
+export function emptyEntry() {
+  return {
+    id: `entry-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title: '',
+    subtitle: '',
+    location: '',
+    startDate: '',
+    endDate: '',
+    current: false,
+    description: '',
+  }
+}
+
+export function parseEntries(itemsJson, fallbackText) {
+  try {
+    const parsed = JSON.parse(itemsJson)
+    if (Array.isArray(parsed) && parsed.length) return parsed
+  } catch {
+    // not valid JSON yet (empty, or a legacy plain-text value) — fall through
+  }
+  if (!fallbackText?.trim()) return []
+  // A legacy plain-text value becomes a single entry's description, so
+  // nothing already written is lost — it can be split into proper rows
+  // from the Content Library editor afterwards.
+  return [{ ...emptyEntry(), description: fallbackText }]
+}
+
+function entryDateRange(entry) {
+  const end = entry.current ? 'Present' : entry.endDate
+  const range = [entry.startDate, end].filter((v) => v?.trim()).join(' – ')
+  return range
+}
+
+export function composeEntriesText(items) {
+  return items
+    .filter((item) => item.title?.trim() || item.subtitle?.trim() || item.description?.trim())
+    .map((item) => {
+      const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
+      const dateRange = entryDateRange(item)
+      const header = [item.title, [subLine, dateRange].filter(Boolean).join(' / ')].filter((v) => v?.trim())
+      return [header.join('\n'), item.description].filter((v) => v?.trim()).join('\n')
+    })
+    .join('\n\n')
+}

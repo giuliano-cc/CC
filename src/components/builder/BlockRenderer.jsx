@@ -1,7 +1,7 @@
 import { BLOCK_TYPES, CHART_STYLES, HEADING_SIZE_PX } from '../../utils/blockTypes'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
-import { parseChecklist, parseLanguages } from '../../utils/contentLists'
+import { parseChecklist, parseEntries, parseLanguages } from '../../utils/contentLists'
 import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
 
@@ -486,6 +486,52 @@ export default function BlockRenderer({
               <li key={i}>{item}</li>
             ))}
           </ul>
+        </div>
+      )
+    }
+
+    case BLOCK_TYPES.EXPERIENCE:
+    case BLOCK_TYPES.EDUCATION: {
+      const isExperience = block.type === BLOCK_TYPES.EXPERIENCE
+      const librarySlot = isExperience ? 'experience' : 'education'
+      const usesLibrary = isExperience ? block.useLibraryExperience : block.useLibraryEducation
+      const items = usesLibrary
+        ? parseEntries(library[`${librarySlot}Items`], library[librarySlot])
+        : block.items || []
+      return (
+        <div className={`flex flex-col gap-3 ${alignClass(block.align)}`}>
+          {block.title && (
+            <p
+              className="border-b border-slate-200 pb-1.5"
+              style={sectionTitleStyle(block.titleColor || globalStyle.primaryColor)}
+            >
+              {block.title}
+            </p>
+          )}
+          {items.map((item, i) => {
+            const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
+            const dateRange = [item.startDate, item.current ? 'Present' : item.endDate]
+              .filter((v) => v?.trim())
+              .join(' – ')
+            const descriptionLines = (item.description || '').split('\n').filter(Boolean)
+            return (
+              <div key={item.id || i} className="flex flex-col gap-0.5">
+                {item.title && <p className="text-base font-bold">{item.title}</p>}
+                {(subLine || dateRange) && (
+                  <p className="text-sm text-slate-500">
+                    {[subLine, dateRange].filter(Boolean).join(' / ')}
+                  </p>
+                )}
+                {descriptionLines.length > 0 && (
+                  <ul className="mt-0.5 list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400">
+                    {descriptionLines.map((line, li) => (
+                      <li key={li}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )
+          })}
         </div>
       )
     }

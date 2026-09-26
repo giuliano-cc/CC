@@ -6,9 +6,12 @@ import ImageCropModal from '../components/builder/ImageCropModal'
 import { formatSocialLinks, parseSocialLinks, SOCIAL_PLATFORMS } from '../utils/socialIcons'
 import {
   composeChecklistText,
+  composeEntriesText,
   composeLanguagesText,
+  emptyEntry,
   LANGUAGE_LEVELS,
   parseChecklist,
+  parseEntries,
   parseLanguages,
 } from '../utils/contentLists'
 
@@ -294,6 +297,106 @@ function LanguagesField({ itemsJson, fallbackText, onUpdate }) {
   )
 }
 
+// Repeatable Work Experience / Education entry: title (Job Role / Degree),
+// subtitle (Company / Institution), an optional location, a date range
+// with a "current/ongoing" flag, and a description (rendered as bullet
+// lines by the matching builder block — see BLOCK_TYPES.EXPERIENCE/EDUCATION).
+function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, onUpdate }) {
+  const items = parseEntries(itemsJson, fallbackText)
+
+  function set(next) {
+    onUpdate(next)
+  }
+
+  function updateItem(index, patch) {
+    set(items.map((item, i) => (i === index ? { ...item, ...patch } : item)))
+  }
+
+  function addItem() {
+    set([...items, emptyEntry()])
+  }
+
+  function removeItem(index) {
+    set(items.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((item, i) => (
+        <div key={item.id || i} className="flex flex-col gap-1.5 rounded-md border border-slate-200 p-2.5">
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              value={item.title}
+              onChange={(e) => updateItem(i, { title: e.target.value })}
+              placeholder={titleLabel}
+              className={`${inputClasses} min-w-0 flex-1`}
+            />
+            <button
+              type="button"
+              onClick={() => removeItem(i)}
+              className="shrink-0 rounded-md px-2 py-1.5 text-xs text-red-500 hover:bg-red-50"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              value={item.subtitle}
+              onChange={(e) => updateItem(i, { subtitle: e.target.value })}
+              placeholder={subtitleLabel}
+              className={`${inputClasses} min-w-0 flex-1`}
+            />
+            <input
+              type="text"
+              value={item.location}
+              onChange={(e) => updateItem(i, { location: e.target.value })}
+              placeholder="City, Country"
+              className={`${inputClasses} min-w-0 flex-1`}
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              value={item.startDate}
+              onChange={(e) => updateItem(i, { startDate: e.target.value })}
+              placeholder="Start (e.g. Jan 2022)"
+              className={`${inputClasses} min-w-0 flex-1`}
+            />
+            <input
+              type="text"
+              value={item.endDate}
+              onChange={(e) => updateItem(i, { endDate: e.target.value })}
+              placeholder="End (e.g. Jan 2024)"
+              disabled={item.current}
+              className={`${inputClasses} min-w-0 flex-1 disabled:bg-slate-50 disabled:text-slate-400`}
+            />
+            <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={item.current}
+                onChange={(e) => updateItem(i, { current: e.target.checked })}
+              />
+              Present
+            </label>
+          </div>
+          <textarea
+            rows={2}
+            value={item.description}
+            onChange={(e) => updateItem(i, { description: e.target.value })}
+            placeholder="Description, responsibilities and results achieved"
+            className={inputClasses}
+          />
+        </div>
+      ))}
+      <button type="button" onClick={addItem} className="self-start text-xs font-medium text-primary hover:underline">
+        + Add entry
+      </button>
+    </div>
+  )
+}
+
 export default function ContentLibraryPage() {
   const { library, updateSlot, exportLibrary, importLibrary } = useContentLibrary()
   const importInputRef = useRef(null)
@@ -416,6 +519,20 @@ export default function ContentLibraryPage() {
                 onUpdate={(items) => {
                   handleChange(`${slot.key}Items`, JSON.stringify(items))
                   handleChange(slot.key, composeLanguagesText(items))
+                  toast.success('Content saved', { id: 'content-library-save' })
+                }}
+              />
+            )}
+
+            {slot.type === 'entries' && (
+              <EntriesField
+                itemsJson={library[`${slot.key}Items`]}
+                fallbackText={library[slot.key]}
+                titleLabel={slot.key === 'education' ? 'Degree' : 'Job Role'}
+                subtitleLabel={slot.key === 'education' ? 'Institution Name' : 'Company Name'}
+                onUpdate={(items) => {
+                  handleChange(`${slot.key}Items`, JSON.stringify(items))
+                  handleChange(slot.key, composeEntriesText(items))
                   toast.success('Content saved', { id: 'content-library-save' })
                 }}
               />

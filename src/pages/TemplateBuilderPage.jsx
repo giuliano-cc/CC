@@ -117,21 +117,30 @@ function BuilderContent({ initialTitle }) {
       updateBlock(social.id, { useLibraryLinks: true })
     }
 
-    // Any Contact Info / Technical Skills / Languages / Leisure block
-    // already on the sheet (dragged in manually, not just the ones baked
-    // into the built-in templates) gets switched to read from the
-    // library too, instead of only wiring the blocks TEMPLATE_CONTENT_MAPS
-    // knows about.
+    // Any Contact Info / Technical Skills / Languages / Leisure / Experience
+    // / Education block already on the sheet (dragged in manually, not just
+    // the ones baked into the built-in templates — including nested inside
+    // a Columns block, e.g. the built-in templates' own Experience/Education
+    // sections) gets switched to read from the library too, instead of only
+    // wiring the blocks TEMPLATE_CONTENT_MAPS knows about.
     const LIBRARY_TOGGLE_BY_TYPE = {
       [BLOCK_TYPES.CONTACT_INFO]: 'useLibraryContact',
       [BLOCK_TYPES.SKILLS_CHART]: 'useLibrarySkills',
       [BLOCK_TYPES.LANGUAGES_CHART]: 'useLibraryLanguages',
       [BLOCK_TYPES.LEISURE]: 'useLibraryHobbies',
+      [BLOCK_TYPES.EXPERIENCE]: 'useLibraryExperience',
+      [BLOCK_TYPES.EDUCATION]: 'useLibraryEducation',
     }
-    blocks.forEach((b) => {
-      const toggleKey = LIBRARY_TOGGLE_BY_TYPE[b.type]
-      if (toggleKey) updateBlock(b.id, { [toggleKey]: true })
-    })
+    function walk(list) {
+      list.forEach((b) => {
+        const toggleKey = LIBRARY_TOGGLE_BY_TYPE[b.type]
+        if (toggleKey) updateBlock(b.id, { [toggleKey]: true })
+        if (b.type === BLOCK_TYPES.COLUMNS) {
+          b.columns?.forEach((column) => walk(column.items))
+        }
+      })
+    }
+    walk(blocks)
 
     toast.success('Content applied from your library')
   }
