@@ -1,9 +1,9 @@
 import { BLOCK_TYPES } from './blockTypes'
 
-// I blocchi di tipo COLUMNS contengono a loro volta un array di blocchi
-// (uno per colonna). Questi helper cercano/aggiornano/rimuovono un blocco
-// ovunque si trovi nell'albero, senza che il resto dell'app debba sapere
-// se un blocco è annidato o di primo livello.
+// COLUMNS blocks in turn contain an array of blocks (one per column).
+// These helpers find/update/remove a block wherever it is in the tree,
+// without the rest of the app needing to know whether a block is nested
+// or top-level.
 
 export function findBlockById(blocks, id) {
   for (const block of blocks) {

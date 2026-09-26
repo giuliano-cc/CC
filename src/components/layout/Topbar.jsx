@@ -32,7 +32,7 @@ export default function Topbar() {
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Cerca template, documenti..."
+            placeholder="Search templates, documents..."
             className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
           />
         </div>
@@ -44,7 +44,7 @@ export default function Topbar() {
         className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
       >
         <Plus size={16} />
-        Nuovo Template
+        New Template
       </button>
 
       <div className="relative shrink-0">
@@ -63,7 +63,7 @@ export default function Topbar() {
           <>
             <button
               type="button"
-              aria-label="Chiudi menu"
+              aria-label="Close menu"
               className="fixed inset-0 z-10 cursor-default"
               onClick={() => setIsMenuOpen(false)}
             />
@@ -83,7 +83,7 @@ export default function Topbar() {
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
               >
                 <User size={15} />
-                Profilo
+                Profile
               </button>
               <button
                 type="button"
@@ -91,7 +91,7 @@ export default function Topbar() {
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 transition hover:bg-red-50"
               >
                 <LogOut size={15} />
-                Logout
+                Log out
               </button>
             </div>
           </>

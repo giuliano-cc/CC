@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user))
     setToken(data.token)
     setUser(data.user)
-    toast.success('Login riuscito')
+    toast.success('Signed in successfully')
     return data.user
   }
 
@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user))
     setToken(data.token)
     setUser(data.user)
-    toast.success('Registrazione completata')
+    toast.success('Registration completed')
     return data.user
   }
 
@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(AUTH_USER_KEY)
     setToken(null)
     setUser(null)
-    toast.success('Logout effettuato')
+    toast.success('Signed out')
   }
 
   const value = {
@@ -73,7 +73,7 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) {
-    throw new Error('useAuth deve essere usato dentro un AuthProvider')
+    throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
 }

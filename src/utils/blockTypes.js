@@ -22,13 +22,40 @@ export const BLOCK_TYPES = {
   COLUMNS: 'columns',
 }
 
+// Fonts available in the font-family selectors (toolbar and properties panel).
+export const FONT_FAMILY_OPTIONS = [
+  { value: '', label: 'Inherit from global style' },
+  { value: 'Inter, system-ui, sans-serif', label: 'Inter' },
+  { value: "'Segoe UI', Arial, sans-serif", label: 'Segoe UI' },
+  { value: 'Arial, Helvetica, sans-serif', label: 'Arial' },
+  { value: 'Georgia, serif', label: 'Georgia' },
+  { value: "Georgia, 'Times New Roman', serif", label: 'Georgia (serif)' },
+  { value: "'Times New Roman', Times, serif", label: 'Times New Roman' },
+  { value: "'Courier New', monospace", label: 'Courier New' },
+]
+
+// Default size (in px, on the 794x1123 sheet) for each block type: used
+// both when a block is dragged from the palette and to "seed" a free
+// position for legacy blocks missing x/y/w/h (see utils/layout.js).
+export const DEFAULT_BLOCK_SIZE = {
+  [BLOCK_TYPES.HEADER]: { width: 698, height: 70 },
+  [BLOCK_TYPES.CV_HEADER]: { width: 698, height: 90 },
+  [BLOCK_TYPES.HEADING]: { width: 698, height: 70 },
+  [BLOCK_TYPES.TEXT]: { width: 698, height: 90 },
+  [BLOCK_TYPES.IMAGE]: { width: 300, height: 160 },
+  [BLOCK_TYPES.DIVIDER]: { width: 698, height: 20 },
+  [BLOCK_TYPES.QUOTE]: { width: 698, height: 70 },
+  [BLOCK_TYPES.FOOTER]: { width: 698, height: 40 },
+  [BLOCK_TYPES.COLUMNS]: { width: 698, height: 340 },
+}
+
 export const BLOCK_DEFINITIONS = [
   {
     type: BLOCK_TYPES.HEADER,
     label: 'Header',
     icon: RectangleHorizontal,
     defaultProps: {
-      content: 'La tua azienda',
+      content: 'Your Company',
       align: 'left',
       bold: true,
       italic: false,
@@ -37,12 +64,12 @@ export const BLOCK_DEFINITIONS = [
   },
   {
     type: BLOCK_TYPES.CV_HEADER,
-    label: 'Intestazione CV',
+    label: 'Resume Header',
     icon: IdCard,
     defaultProps: {
-      name: 'Nome Cognome',
+      name: 'Your Name',
       role: '',
-      contacts: ['sito.com', 'email@esempio.com', '000-000-0000'],
+      contacts: ['site.com', 'email@example.com', '000-000-0000'],
       layout: 'row',
       color: null,
     },
@@ -52,7 +79,7 @@ export const BLOCK_DEFINITIONS = [
     label: 'Heading',
     icon: Heading1,
     defaultProps: {
-      content: 'Titolo sezione',
+      content: 'Section title',
       level: 'h1',
       align: 'left',
       bold: true,
@@ -61,6 +88,12 @@ export const BLOCK_DEFINITIONS = [
       size: 'md',
       color: null,
       rule: false,
+      fontFamily: null,
+      fontSize: null,
+      letterSpacing: null,
+      lineHeight: null,
+      bgColor: null,
+      contentSlot: null,
     },
   },
   {
@@ -68,13 +101,20 @@ export const BLOCK_DEFINITIONS = [
     label: 'Text',
     icon: TextIcon,
     defaultProps: {
-      content: 'Inserisci qui il testo del paragrafo.',
+      content: 'Enter the paragraph text here.',
       align: 'left',
       bold: false,
       italic: false,
       underline: false,
       list: false,
+      ordered: false,
       color: null,
+      fontFamily: null,
+      fontSize: null,
+      letterSpacing: null,
+      lineHeight: null,
+      bgColor: null,
+      contentSlot: null,
     },
   },
   {
@@ -83,7 +123,7 @@ export const BLOCK_DEFINITIONS = [
     icon: ImageIcon,
     defaultProps: {
       src: '',
-      alt: 'Immagine',
+      alt: 'Image',
       align: 'center',
       shape: 'rect',
     },
@@ -99,12 +139,18 @@ export const BLOCK_DEFINITIONS = [
     label: 'Quote',
     icon: QuoteIcon,
     defaultProps: {
-      content: 'Una citazione significativa.',
+      content: 'A meaningful quote.',
       align: 'left',
       italic: true,
       bold: false,
       underline: false,
       color: null,
+      fontFamily: null,
+      fontSize: null,
+      letterSpacing: null,
+      lineHeight: null,
+      bgColor: null,
+      contentSlot: null,
     },
   },
   {
@@ -112,7 +158,7 @@ export const BLOCK_DEFINITIONS = [
     label: 'Footer',
     icon: PanelBottom,
     defaultProps: {
-      content: '© 2026 La tua azienda. Tutti i diritti riservati.',
+      content: '© 2026 Your Company. All rights reserved.',
       align: 'center',
       bold: false,
       italic: false,
@@ -121,7 +167,7 @@ export const BLOCK_DEFINITIONS = [
   },
   {
     type: BLOCK_TYPES.COLUMNS,
-    label: 'Colonne',
+    label: 'Columns',
     icon: Columns3,
     defaultProps: {
       widths: null,
@@ -138,7 +184,27 @@ function generateId() {
   return `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+// Creates a top-level block, free to move on the sheet: it gets a default
+// position/size right away (overridden by the caller, typically at drop
+// time, with the cursor position).
 export function createBlockInstance(type) {
+  const definition = getBlockDefinition(type)
+  const size = DEFAULT_BLOCK_SIZE[type] || { width: 698, height: 80 }
+  return {
+    id: generateId(),
+    type,
+    x: 48,
+    y: 48,
+    width: size.width,
+    height: size.height,
+    zIndex: 1,
+    ...structuredClone(definition.defaultProps),
+  }
+}
+
+// Creates a "nested" block (inside a column): these stay in vertical flow
+// within their column, so they don't need their own x/y/width/height.
+export function createNestedBlockInstance(type) {
   const definition = getBlockDefinition(type)
   return {
     id: generateId(),

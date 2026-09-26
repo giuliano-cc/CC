@@ -1,14 +1,8 @@
 import { useRef } from 'react'
 import { FileText } from 'lucide-react'
 import { useElementWidth } from '../../hooks/useElementWidth'
+import { seedFreeLayout, SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import BlockRenderer from '../builder/BlockRenderer'
-
-// Dimensioni del "foglio" usate come sorgente nel Canvas del builder
-// (vedi components/builder/Canvas.jsx): la miniatura riproduce lo stesso
-// foglio scalato in base alla larghezza reale della card.
-const SHEET_WIDTH = 794
-const SHEET_HEIGHT = 1123
-const SHEET_PADDING = 48
 
 export default function TemplateThumbnail({ template }) {
   const containerRef = useRef(null)
@@ -26,6 +20,12 @@ export default function TemplateThumbnail({ template }) {
     )
   }
 
+  // Blocks are positioned exactly like on the real builder canvas (see
+  // components/builder/Canvas.jsx): the thumbnail reproduces the same
+  // sheet, scaled down to the card's actual width. `seedFreeLayout` gives
+  // legacy blocks without x/y/width/height a stacked position too.
+  const positionedBlocks = seedFreeLayout(template.blocks)
+
   return (
     <div
       ref={containerRef}
@@ -37,15 +37,26 @@ export default function TemplateThumbnail({ template }) {
           style={{
             width: SHEET_WIDTH,
             height: SHEET_HEIGHT,
-            padding: SHEET_PADDING,
             transform: `scale(${scale})`,
             transformOrigin: 'top left',
             background: 'white',
           }}
-          className="pointer-events-none flex flex-col gap-4"
+          className="pointer-events-none relative"
         >
-          {template.blocks.map((block) => (
-            <BlockRenderer key={block.id} block={block} />
+          {positionedBlocks.map((block) => (
+            <div
+              key={block.id}
+              style={{
+                position: 'absolute',
+                left: block.x,
+                top: block.y,
+                width: block.width,
+                height: block.height,
+                overflow: 'hidden',
+              }}
+            >
+              <BlockRenderer block={block} />
+            </div>
           ))}
         </div>
       )}

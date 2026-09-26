@@ -1,7 +1,7 @@
 import { AlertTriangle, RotateCw } from 'lucide-react'
 
 export default function ErrorMessage({
-  message = 'Si è verificato un errore. Riprova.',
+  message = 'Something went wrong. Please try again.',
   onRetry,
 }) {
   return (
@@ -15,7 +15,7 @@ export default function ErrorMessage({
           className="inline-flex items-center gap-2 rounded-md bg-red-100 px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-200"
         >
           <RotateCw size={14} />
-          Riprova
+          Retry
         </button>
       )}
     </div>

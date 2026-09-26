@@ -7,7 +7,7 @@ export default function TemplateCard({ template, onDuplicate, onDelete }) {
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  const formattedDate = new Date(template.updatedAt).toLocaleDateString('it-IT', {
+  const formattedDate = new Date(template.updatedAt).toLocaleDateString('en-US', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -38,7 +38,7 @@ export default function TemplateCard({ template, onDuplicate, onDelete }) {
             type="button"
             onClick={() => setIsMenuOpen((open) => !open)}
             className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-            aria-label="Azioni template"
+            aria-label="Template actions"
           >
             <MoreVertical size={16} />
           </button>
@@ -47,7 +47,7 @@ export default function TemplateCard({ template, onDuplicate, onDelete }) {
             <>
               <button
                 type="button"
-                aria-label="Chiudi menu"
+                aria-label="Close menu"
                 className="fixed inset-0 z-10 cursor-default"
                 onClick={() => setIsMenuOpen(false)}
               />
@@ -61,7 +61,7 @@ export default function TemplateCard({ template, onDuplicate, onDelete }) {
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                 >
                   <Pencil size={14} />
-                  Modifica
+                  Edit
                 </button>
                 <button
                   type="button"
@@ -72,7 +72,7 @@ export default function TemplateCard({ template, onDuplicate, onDelete }) {
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                 >
                   <Copy size={14} />
-                  Duplica
+                  Duplicate
                 </button>
                 <button
                   type="button"
@@ -83,7 +83,7 @@ export default function TemplateCard({ template, onDuplicate, onDelete }) {
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                 >
                   <Trash2 size={14} />
-                  Elimina
+                  Delete
                 </button>
               </div>
             </>

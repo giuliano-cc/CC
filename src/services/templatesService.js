@@ -1,9 +1,9 @@
 import apiClient from './apiClient'
 import { CV_TEMPLATES } from '../utils/cvTemplates'
 
-// Dati di esempio usati finché il backend reale non è disponibile.
-// Il backend, tramite il token inviato dall'interceptor di apiClient,
-// filtrerà autonomamente i risultati in base all'utente autenticato.
+// Sample data used until the real backend is available.
+// The backend, via the token sent by apiClient's interceptor, will
+// automatically filter results based on the authenticated user.
 const MOCK_TEMPLATES = structuredClone(CV_TEMPLATES)
 
 const USE_MOCK = true
@@ -36,7 +36,7 @@ export async function createTemplate(payload) {
     return new Promise((resolve) => setTimeout(() => resolve(newTemplate), 300))
   }
 
-  // Il backend associa il template all'utente autenticato tramite il token JWT.
+  // The backend associates the template with the authenticated user via the JWT token.
   const { data } = await apiClient.post('/templates', payload)
   return data
 }
@@ -64,7 +64,7 @@ export async function duplicateTemplate(id) {
     const copy = {
       ...original,
       id: String(Date.now()),
-      title: `${original.title} (copia)`,
+      title: `${original.title} (copy)`,
       updatedAt: new Date().toISOString(),
     }
     MOCK_TEMPLATES.unshift(copy)

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 
 /**
- * Esegue una funzione asincrona (tipicamente una chiamata API) e ne traccia
- * gli stati di loading/error/data, in modo uniforme in tutta l'app.
+ * Runs an async function (typically an API call) and tracks its
+ * loading/error/data state, consistently across the whole app.
  */
 export function useApi(apiFn, deps = []) {
   const [data, setData] = useState(null)

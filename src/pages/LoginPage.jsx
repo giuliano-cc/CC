@@ -32,7 +32,7 @@ export default function LoginPage() {
       navigate(from, { replace: true })
     } catch (err) {
       const message =
-        err.response?.data?.message || 'Email o password non validi.'
+        err.response?.data?.message || 'Invalid email or password.'
       setError(message)
       toast.error(message)
     } finally {
@@ -49,7 +49,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-xl font-semibold text-slate-900">{APP_NAME}</h1>
           <p className="text-sm text-slate-500">
-            Accedi per gestire i tuoi template
+            Sign in to manage your templates
           </p>
         </div>
 
@@ -67,7 +67,7 @@ export default function LoginPage() {
                 required
                 value={form.email}
                 onChange={handleChange}
-                placeholder="tu@esempio.com"
+                placeholder="you@example.com"
                 className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
@@ -103,14 +103,14 @@ export default function LoginPage() {
             className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-medium text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSubmitting && <LoadingSpinner size="sm" className="text-white" />}
-            Accedi
+            Sign in
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          Non hai un account?{' '}
+          Don't have an account?{' '}
           <Link to="/register" className="font-medium text-primary hover:underline">
-            Registrati
+            Sign up
           </Link>
         </p>
       </div>

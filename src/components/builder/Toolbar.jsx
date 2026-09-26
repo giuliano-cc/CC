@@ -7,10 +7,11 @@ import {
   Heading2,
   Italic,
   List,
+  ListOrdered,
   Underline,
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
-import { BLOCK_TYPES } from '../../utils/blockTypes'
+import { BLOCK_TYPES, FONT_FAMILY_OPTIONS } from '../../utils/blockTypes'
 
 function ToolbarButton({ active, onClick, disabled, children, label }) {
   return (
@@ -20,7 +21,7 @@ function ToolbarButton({ active, onClick, disabled, children, label }) {
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={`flex h-8 w-8 items-center justify-center rounded-md transition disabled:cursor-not-allowed disabled:opacity-30 ${
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition disabled:cursor-not-allowed disabled:opacity-30 ${
         active ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-100'
       }`}
     >
@@ -29,10 +30,23 @@ function ToolbarButton({ active, onClick, disabled, children, label }) {
   )
 }
 
+const TEXTUAL_TYPES = [
+  BLOCK_TYPES.HEADING,
+  BLOCK_TYPES.TEXT,
+  BLOCK_TYPES.QUOTE,
+  BLOCK_TYPES.HEADER,
+  BLOCK_TYPES.FOOTER,
+]
+
 export default function Toolbar() {
   const { selectedBlock, updateBlock } = useBuilder()
-  const disabled = !selectedBlock || selectedBlock.type === BLOCK_TYPES.DIVIDER
+  const isTextual = !!selectedBlock && TEXTUAL_TYPES.includes(selectedBlock.type)
+  const disabled = !isTextual
   const isHeading = selectedBlock?.type === BLOCK_TYPES.HEADING
+  const isText = selectedBlock?.type === BLOCK_TYPES.TEXT
+  const hasTypography = [BLOCK_TYPES.HEADING, BLOCK_TYPES.TEXT, BLOCK_TYPES.QUOTE].includes(
+    selectedBlock?.type,
+  )
 
   function toggle(prop) {
     if (!selectedBlock) return
@@ -49,10 +63,57 @@ export default function Toolbar() {
     updateBlock(selectedBlock.id, { level })
   }
 
+  function toggleList(ordered) {
+    if (!selectedBlock) return
+    const alreadyThisMode = selectedBlock.list && selectedBlock.ordered === ordered
+    updateBlock(selectedBlock.id, { list: !alreadyThisMode, ordered })
+  }
+
   return (
-    <div className="flex h-12 shrink-0 items-center gap-1 border-b border-slate-200 bg-white px-4">
+    <div className="flex h-12 shrink-0 items-center gap-1 overflow-x-auto border-b border-slate-200 bg-white px-4">
+      {hasTypography && (
+        <>
+          <select
+            value={selectedBlock.fontFamily || ''}
+            onChange={(e) => updateBlock(selectedBlock.id, { fontFamily: e.target.value || null })}
+            className="h-8 shrink-0 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-600 outline-none focus:border-primary"
+          >
+            {FONT_FAMILY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            min={8}
+            max={120}
+            placeholder="px"
+            value={selectedBlock.fontSize || ''}
+            onChange={(e) =>
+              updateBlock(selectedBlock.id, {
+                fontSize: e.target.value ? Number(e.target.value) : null,
+              })
+            }
+            title="Font size (px)"
+            className="h-8 w-14 shrink-0 rounded-md border border-slate-200 px-2 text-xs text-slate-600 outline-none focus:border-primary"
+          />
+
+          <input
+            type="color"
+            value={selectedBlock.color || '#1e293b'}
+            onChange={(e) => updateBlock(selectedBlock.id, { color: e.target.value })}
+            title="Text color"
+            className="h-8 w-8 shrink-0 cursor-pointer rounded-md border border-slate-200"
+          />
+
+          <div className="mx-2 h-5 w-px shrink-0 bg-slate-200" />
+        </>
+      )}
+
       <ToolbarButton
-        label="Grassetto"
+        label="Bold"
         active={!!selectedBlock?.bold}
         disabled={disabled}
         onClick={() => toggle('bold')}
@@ -60,7 +121,7 @@ export default function Toolbar() {
         <Bold size={16} />
       </ToolbarButton>
       <ToolbarButton
-        label="Corsivo"
+        label="Italic"
         active={!!selectedBlock?.italic}
         disabled={disabled}
         onClick={() => toggle('italic')}
@@ -68,7 +129,7 @@ export default function Toolbar() {
         <Italic size={16} />
       </ToolbarButton>
       <ToolbarButton
-        label="Sottolineato"
+        label="Underline"
         active={!!selectedBlock?.underline}
         disabled={disabled}
         onClick={() => toggle('underline')}
@@ -76,10 +137,10 @@ export default function Toolbar() {
         <Underline size={16} />
       </ToolbarButton>
 
-      <div className="mx-2 h-5 w-px bg-slate-200" />
+      <div className="mx-2 h-5 w-px shrink-0 bg-slate-200" />
 
       <ToolbarButton
-        label="Titolo H1"
+        label="Heading 1"
         active={isHeading && selectedBlock?.level === 'h1'}
         disabled={!isHeading}
         onClick={() => setLevel('h1')}
@@ -87,7 +148,7 @@ export default function Toolbar() {
         <Heading1 size={16} />
       </ToolbarButton>
       <ToolbarButton
-        label="Titolo H2"
+        label="Heading 2"
         active={isHeading && selectedBlock?.level === 'h2'}
         disabled={!isHeading}
         onClick={() => setLevel('h2')}
@@ -95,10 +156,10 @@ export default function Toolbar() {
         <Heading2 size={16} />
       </ToolbarButton>
 
-      <div className="mx-2 h-5 w-px bg-slate-200" />
+      <div className="mx-2 h-5 w-px shrink-0 bg-slate-200" />
 
       <ToolbarButton
-        label="Allinea a sinistra"
+        label="Align left"
         active={selectedBlock?.align === 'left'}
         disabled={disabled}
         onClick={() => setAlign('left')}
@@ -106,7 +167,7 @@ export default function Toolbar() {
         <AlignLeft size={16} />
       </ToolbarButton>
       <ToolbarButton
-        label="Allinea al centro"
+        label="Align center"
         active={selectedBlock?.align === 'center'}
         disabled={disabled}
         onClick={() => setAlign('center')}
@@ -114,7 +175,7 @@ export default function Toolbar() {
         <AlignCenter size={16} />
       </ToolbarButton>
       <ToolbarButton
-        label="Allinea a destra"
+        label="Align right"
         active={selectedBlock?.align === 'right'}
         disabled={disabled}
         onClick={() => setAlign('right')}
@@ -122,10 +183,23 @@ export default function Toolbar() {
         <AlignRight size={16} />
       </ToolbarButton>
 
-      <div className="mx-2 h-5 w-px bg-slate-200" />
+      <div className="mx-2 h-5 w-px shrink-0 bg-slate-200" />
 
-      <ToolbarButton label="Elenco puntato" disabled onClick={() => {}}>
+      <ToolbarButton
+        label="Bulleted list"
+        active={isText && !!selectedBlock?.list && !selectedBlock?.ordered}
+        disabled={!isText}
+        onClick={() => toggleList(false)}
+      >
         <List size={16} />
+      </ToolbarButton>
+      <ToolbarButton
+        label="Numbered list"
+        active={isText && !!selectedBlock?.list && !!selectedBlock?.ordered}
+        disabled={!isText}
+        onClick={() => toggleList(true)}
+      >
+        <ListOrdered size={16} />
       </ToolbarButton>
     </div>
   )

@@ -1,7 +1,7 @@
-import { arrayMove } from '@dnd-kit/sortable'
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
-import { createBlockInstance } from '../utils/blockTypes'
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
+import { createBlockInstance, createNestedBlockInstance } from '../utils/blockTypes'
 import { findBlockById, removeBlockById, updateBlockById } from '../utils/blockTree'
+import { seedFreeLayout } from '../utils/layout'
 
 const DEFAULT_GLOBAL_STYLE = {
   primaryColor: '#2563eb',
@@ -12,35 +12,38 @@ const DEFAULT_GLOBAL_STYLE = {
 const BuilderContext = createContext(null)
 
 export function BuilderProvider({ children, initialBlocks = [], initialGlobalStyle }) {
-  const [blocks, setBlocks] = useState(initialBlocks)
+  const [blocks, setBlocks] = useState(() => seedFreeLayout(initialBlocks))
   const [selectedBlockId, setSelectedBlockId] = useState(null)
   const [globalStyle, setGlobalStyle] = useState({
     ...DEFAULT_GLOBAL_STYLE,
     ...initialGlobalStyle,
   })
+  const zCounter = useRef(Math.max(1, ...blocks.map((b) => b.zIndex || 0)) + 1)
 
   const selectedBlock = useMemo(
     () => findBlockById(blocks, selectedBlockId),
     [blocks, selectedBlockId],
   )
 
-  const addBlock = useCallback((type, index) => {
+  // Creates a free block on the sheet, at a given position (typically the
+  // cursor position at drop time from the palette).
+  const addBlock = useCallback((type, position) => {
     const newBlock = createBlockInstance(type)
-    setBlocks((prev) => {
-      const next = [...prev]
-      const insertAt = index === undefined ? next.length : index
-      next.splice(insertAt, 0, newBlock)
-      return next
-    })
+    if (position) {
+      newBlock.x = position.x
+      newBlock.y = position.y
+    }
+    newBlock.zIndex = zCounter.current++
+    setBlocks((prev) => [...prev, newBlock])
     setSelectedBlockId(newBlock.id)
     return newBlock
   }, [])
 
-  // Aggiunge un blocco semplice (titolo/testo) dentro una colonna di un
-  // blocco COLUMNS: le colonne non sono riordinabili via drag-and-drop, ma
-  // i loro elementi restano modificabili/selezionabili come tutti gli altri.
+  // Adds a simple block (heading/text) inside a column of a COLUMNS
+  // block: a column's items stay in vertical flow (they aren't free on the
+  // sheet), but they're still selectable/editable like all the others.
   const addNestedItem = useCallback((columnsBlockId, columnIndex, type) => {
-    const newItem = createBlockInstance(type)
+    const newItem = createNestedBlockInstance(type)
     setBlocks((prev) =>
       updateBlockById(prev, columnsBlockId, (block) => ({
         ...block,
@@ -63,18 +66,20 @@ export function BuilderProvider({ children, initialBlocks = [], initialGlobalSty
     setSelectedBlockId((current) => (current === id ? null : current))
   }, [])
 
-  const reorderBlocks = useCallback((activeId, overId) => {
-    setBlocks((prev) => {
-      const oldIndex = prev.findIndex((b) => b.id === activeId)
-      const newIndex = prev.findIndex((b) => b.id === overId)
-      if (oldIndex === -1 || newIndex === -1) return prev
-      return arrayMove(prev, oldIndex, newIndex)
-    })
+  // Brings a block to the front when selected/dragged, so two overlapping
+  // blocks on the sheet behave predictably.
+  const bringToFront = useCallback((id) => {
+    const nextZ = zCounter.current++
+    setBlocks((prev) => updateBlockById(prev, id, { zIndex: nextZ }))
   }, [])
 
-  const selectBlock = useCallback((id) => {
-    setSelectedBlockId(id)
-  }, [])
+  const selectBlock = useCallback(
+    (id) => {
+      setSelectedBlockId(id)
+      if (id) bringToFront(id)
+    },
+    [bringToFront],
+  )
 
   const value = {
     blocks,
@@ -86,7 +91,7 @@ export function BuilderProvider({ children, initialBlocks = [], initialGlobalSty
     addNestedItem,
     updateBlock,
     removeBlock,
-    reorderBlocks,
+    bringToFront,
     globalStyle,
     setGlobalStyle,
   }
@@ -99,7 +104,7 @@ export function BuilderProvider({ children, initialBlocks = [], initialGlobalSty
 export function useBuilder() {
   const context = useContext(BuilderContext)
   if (!context) {
-    throw new Error('useBuilder deve essere usato dentro un BuilderProvider')
+    throw new Error('useBuilder must be used within a BuilderProvider')
   }
   return context
 }

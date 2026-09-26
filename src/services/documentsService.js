@@ -1,10 +1,10 @@
 import apiClient from './apiClient'
 
 const MOCK_DOCUMENTS = [
-  { id: 'd1', name: 'Fattura_2026_001.pdf', type: 'Fattura', createdAt: '2026-09-22T08:00:00Z', status: 'completed' },
-  { id: 'd2', name: 'Report_Settembre.pdf', type: 'Report', createdAt: '2026-09-20T16:45:00Z', status: 'completed' },
-  { id: 'd3', name: 'CV_Candidato.pdf', type: 'Curriculum', createdAt: '2026-09-19T12:10:00Z', status: 'processing' },
-  { id: 'd4', name: 'Contratto_Fornitore.pdf', type: 'Contratto', createdAt: '2026-09-17T09:00:00Z', status: 'failed' },
+  { id: 'd1', name: 'Invoice_2026_001.pdf', type: 'Invoice', createdAt: '2026-09-22T08:00:00Z', status: 'completed' },
+  { id: 'd2', name: 'Report_September.pdf', type: 'Report', createdAt: '2026-09-20T16:45:00Z', status: 'completed' },
+  { id: 'd3', name: 'CV_Candidate.pdf', type: 'Resume', createdAt: '2026-09-19T12:10:00Z', status: 'processing' },
+  { id: 'd4', name: 'Vendor_Contract.pdf', type: 'Contract', createdAt: '2026-09-17T09:00:00Z', status: 'failed' },
 ]
 
 const USE_MOCK = true

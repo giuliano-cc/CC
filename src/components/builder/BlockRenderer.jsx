@@ -1,4 +1,5 @@
 import { BLOCK_TYPES } from '../../utils/blockTypes'
+import { useContentLibrary } from '../../context/ContentLibraryContext'
 import { ImageIcon } from 'lucide-react'
 
 function alignClass(align) {
@@ -14,11 +15,37 @@ function textStyleClasses(block) {
   ].join(' ')
 }
 
+// Stile inline condiviso dai blocchi testuali "ricchi" (heading/text/quote):
+// font, dimensione in px, spaziatura lettere, altezza riga, colore testo e
+// di sfondo. `null`/`undefined` lasciano il valore ereditato dal foglio.
+function typographyStyle(block) {
+  return {
+    color: block.color || undefined,
+    fontFamily: block.fontFamily || undefined,
+    fontSize: block.fontSize ? `${block.fontSize}px` : undefined,
+    letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : undefined,
+    lineHeight: block.lineHeight || undefined,
+    backgroundColor: block.bgColor || undefined,
+  }
+}
+
 const HEADING_SIZE_CLASSES = {
   sm: 'text-base',
   md: 'text-2xl',
   lg: 'text-3xl',
   xl: 'text-5xl',
+}
+
+// A block can be "linked" to a Content Library entry (block.contentSlot):
+// in that case the displayed text is read from the library instead of
+// block.content, so the same content can be tried on different templates
+// without having to rewrite it.
+function useResolvedContent(block) {
+  const { library } = useContentLibrary()
+  if (block.contentSlot && block.contentSlot in library) {
+    return library[block.contentSlot]
+  }
+  return block.content
 }
 
 export default function BlockRenderer({
@@ -28,6 +55,8 @@ export default function BlockRenderer({
   onSelectItem,
   onAddItem,
 }) {
+  const resolvedContent = useResolvedContent(block)
+
   switch (block.type) {
     case BLOCK_TYPES.HEADER:
       return (
@@ -68,40 +97,41 @@ export default function BlockRenderer({
 
     case BLOCK_TYPES.HEADING: {
       const Tag = block.level || 'h1'
-      const sizeClass = HEADING_SIZE_CLASSES[block.size] || HEADING_SIZE_CLASSES.md
+      const sizeClass = block.fontSize ? '' : HEADING_SIZE_CLASSES[block.size] || HEADING_SIZE_CLASSES.md
       return (
         <Tag
           className={`whitespace-pre-line ${sizeClass} ${textStyleClasses(block)} ${
             block.rule ? 'border-b border-slate-200 pb-1.5' : ''
           }`}
-          style={{ color: block.color || undefined }}
+          style={typographyStyle(block)}
         >
-          {block.content}
+          {resolvedContent}
         </Tag>
       )
     }
 
     case BLOCK_TYPES.TEXT:
       if (block.list) {
+        const ListTag = block.ordered ? 'ol' : 'ul'
         return (
-          <ul
-            className={`list-disc space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400 ${alignClass(block.align)}`}
-            style={{ color: block.color || undefined }}
+          <ListTag
+            className={`${block.ordered ? 'list-decimal' : 'list-disc'} space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400 ${alignClass(block.align)}`}
+            style={typographyStyle(block)}
           >
-            {block.content.split('\n').filter(Boolean).map((line, i) => (
+            {resolvedContent.split('\n').filter(Boolean).map((line, i) => (
               <li key={i} className={textStyleClasses({ ...block, align: undefined })}>
                 {line}
               </li>
             ))}
-          </ul>
+          </ListTag>
         )
       }
       return (
         <p
           className={`whitespace-pre-line text-sm leading-relaxed ${textStyleClasses(block)}`}
-          style={{ color: block.color || undefined }}
+          style={typographyStyle(block)}
         >
-          {block.content}
+          {resolvedContent}
         </p>
       )
 
@@ -141,9 +171,9 @@ export default function BlockRenderer({
       return (
         <blockquote
           className={`border-l-4 border-primary/40 pl-3 text-sm text-slate-600 ${textStyleClasses(block)}`}
-          style={{ color: block.color || undefined }}
+          style={typographyStyle(block)}
         >
-          {block.content}
+          {resolvedContent}
         </blockquote>
       )
 
@@ -197,7 +227,7 @@ export default function BlockRenderer({
                     }}
                     className="text-[11px] font-medium text-primary hover:underline"
                   >
-                    + Titolo
+                    + Heading
                   </button>
                   <button
                     type="button"
@@ -207,7 +237,7 @@ export default function BlockRenderer({
                     }}
                     className="text-[11px] font-medium text-primary hover:underline"
                   >
-                    + Testo
+                    + Text
                   </button>
                 </div>
               )}

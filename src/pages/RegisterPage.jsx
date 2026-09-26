@@ -29,7 +29,7 @@ export default function RegisterPage() {
       navigate('/templates', { replace: true })
     } catch (err) {
       const message =
-        err.response?.data?.message || 'Impossibile completare la registrazione.'
+        err.response?.data?.message || 'Unable to complete registration.'
       setError(message)
       toast.error(message)
     } finally {
@@ -45,12 +45,12 @@ export default function RegisterPage() {
             <LayoutTemplate size={24} />
           </div>
           <h1 className="text-xl font-semibold text-slate-900">{APP_NAME}</h1>
-          <p className="text-sm text-slate-500">Crea il tuo account gratuito</p>
+          <p className="text-sm text-slate-500">Create your free account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-slate-700">Nome</span>
+            <span className="text-sm font-medium text-slate-700">Name</span>
             <div className="relative">
               <User
                 size={16}
@@ -62,7 +62,7 @@ export default function RegisterPage() {
                 required
                 value={form.name}
                 onChange={handleChange}
-                placeholder="Mario Rossi"
+                placeholder="Jane Doe"
                 className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
@@ -81,7 +81,7 @@ export default function RegisterPage() {
                 required
                 value={form.email}
                 onChange={handleChange}
-                placeholder="tu@esempio.com"
+                placeholder="you@example.com"
                 className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
@@ -117,14 +117,14 @@ export default function RegisterPage() {
             className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-medium text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSubmitting && <LoadingSpinner size="sm" className="text-white" />}
-            Crea account
+            Create account
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          Hai già un account?{' '}
+          Already have an account?{' '}
           <Link to="/login" className="font-medium text-primary hover:underline">
-            Accedi
+            Sign in
           </Link>
         </p>
       </div>

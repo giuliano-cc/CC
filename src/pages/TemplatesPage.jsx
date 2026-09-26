@@ -22,22 +22,22 @@ export default function TemplatesPage() {
     try {
       const copy = await duplicateTemplate(id)
       setData((prev) => [copy, ...(prev ?? [])])
-      toast.success('Template duplicato')
+      toast.success('Template duplicated')
     } catch {
-      toast.error('Impossibile duplicare il template')
+      toast.error('Unable to duplicate the template')
     }
   }
 
   async function handleDelete(id) {
-    const confirmed = window.confirm('Eliminare definitivamente questo template?')
+    const confirmed = window.confirm('Permanently delete this template?')
     if (!confirmed) return
 
     try {
       await deleteTemplate(id)
       setData((prev) => (prev ?? []).filter((t) => t.id !== id))
-      toast.success('Template eliminato')
+      toast.success('Template deleted')
     } catch {
-      toast.error('Impossibile eliminare il template')
+      toast.error('Unable to delete the template')
     }
   }
 
@@ -45,9 +45,9 @@ export default function TemplatesPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">I tuoi template</h1>
+          <h1 className="text-xl font-semibold text-slate-900">Your templates</h1>
           <p className="text-sm text-slate-500">
-            Gestisci i layout che hai creato per fatture, report e altro.
+            Manage the layouts you've created for invoices, reports and more.
           </p>
         </div>
         <button
@@ -56,7 +56,7 @@ export default function TemplatesPage() {
           className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
         >
           <Plus size={16} />
-          Nuovo Template
+          New Template
         </button>
       </div>
 
@@ -70,14 +70,14 @@ export default function TemplatesPage() {
 
       {!isLoading && error && (
         <ErrorMessage
-          message="Impossibile caricare i template."
+          message="Unable to load templates."
           onRetry={refetch}
         />
       )}
 
       {!isLoading && !error && templates?.length === 0 && (
         <div className="rounded-xl border border-dashed border-slate-300 p-12 text-center text-sm text-slate-500">
-          Nessun template ancora. Creane uno per iniziare.
+          No templates yet. Create one to get started.
         </div>
       )}
 

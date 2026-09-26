@@ -10,7 +10,7 @@ const apiClient = axios.create({
   },
 })
 
-// Inietta automaticamente il token JWT su ogni richiesta, se presente.
+// Automatically injects the JWT token on every request, when present.
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem(AUTH_TOKEN_KEY)
   if (token) {
@@ -19,7 +19,7 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
-// Gestisce centralmente sessione scaduta (401) e accessi non autorizzati (403).
+// Centrally handles expired sessions (401) and unauthorized access (403).
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -27,14 +27,14 @@ apiClient.interceptors.response.use(
 
     if (status === 401) {
       localStorage.removeItem(AUTH_TOKEN_KEY)
-      toast.error('Sessione scaduta. Effettua di nuovo il login.')
+      toast.error('Your session has expired. Please sign in again.')
       if (window.location.pathname !== '/login') {
         window.location.assign('/login')
       }
     } else if (status === 403) {
-      toast.error('Non hai i permessi per eseguire questa azione.')
+      toast.error("You don't have permission to perform this action.")
     } else if (!error.response) {
-      toast.error('Impossibile contattare il server. Riprova più tardi.')
+      toast.error('Unable to reach the server. Please try again later.')
     }
 
     return Promise.reject(error)

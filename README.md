@@ -1,18 +1,18 @@
 # PrintFlow — Frontend
 
-Frontend SaaS multi-utente per creare, gestire e stampare layout personalizzati
-(fatture, report, CV) tramite un editor visuale drag-and-drop. Progetto
-"production-ready" nel frontend: nessun backend è incluso, ma tutto è già
-predisposto per collegarsi a una vera API RESTful (autenticazione JWT,
-gestione errori 401/403, variabili d'ambiente).
+Multi-user SaaS frontend for creating, managing and printing custom layouts
+(invoices, reports, resumes) through a visual drag-and-drop editor.
+"Production-ready" frontend project: no backend is included, but everything
+is already set up to connect to a real RESTful API (JWT authentication,
+401/403 error handling, environment variables).
 
 ## Stack
 
 - Vite + React (JSX)
 - TailwindCSS
 - react-router-dom
-- @dnd-kit (core, sortable, utilities) per il drag-and-drop
-- axios (con interceptor per JWT e gestione errori)
+- @dnd-kit (core, sortable, utilities) for drag-and-drop
+- axios (with interceptors for JWT and error handling)
 - react-hot-toast, lucide-react
 
 ## Setup
@@ -23,32 +23,42 @@ cp .env.example .env
 npm run dev
 ```
 
-Variabili d'ambiente (`.env`):
+Environment variables (`.env`):
 
-- `VITE_API_BASE_URL`: base URL dell'API RESTful del backend
-- `VITE_APP_NAME`: nome mostrato in UI
+- `VITE_API_BASE_URL`: base URL of the backend's RESTful API
+- `VITE_APP_NAME`: name shown in the UI
 
-## Struttura del progetto
+## Project structure
 
 ```
 src/
-  components/   # componenti riutilizzabili (layout, builder, common, templates)
-  pages/        # pagine/route dell'app
-  context/      # AuthContext (sessione utente) e BuilderContext (editor)
-  hooks/        # hook riutilizzabili (useApi, useDebouncedValue)
-  services/     # client API e servizi (apiClient, authService, templatesService...)
-  utils/        # utility e definizioni condivise (blockTypes)
+  components/   # reusable components (layout, builder, common, templates)
+  pages/        # app pages/routes
+  context/      # AuthContext (user session), BuilderContext (editor) and
+                # ContentLibraryContext (reusable resume content)
+  hooks/        # reusable hooks (useApi, useDebouncedValue, useElementWidth)
+  services/     # API client and services (apiClient, authService, templatesService...)
+  utils/        # shared utilities and definitions (blockTypes, layout, cvTemplates)
 ```
 
-## Note
+## Notes
 
-- L'autenticazione è attualmente simulata (token fittizio salvato in
-  `localStorage`), ma con la stessa struttura di una chiamata API reale
-  (`src/services/authService.js`): basterà sostituire il mock con la vera
-  chiamata `apiClient.post(...)` quando il backend sarà disponibile.
-- Le chiamate a `templatesService` e `documentsService` seguono lo stesso
-  pattern: un flag `USE_MOCK` isola i dati di esempio dalla vera chiamata
-  REST già scritta e pronta all'uso.
-- L'header `Authorization: Bearer <token>` viene iniettato automaticamente
-  su ogni richiesta da `apiClient.js`; le risposte 401 forzano il logout e
-  il redirect al login, le 403 mostrano un toast di errore.
+- Authentication is currently simulated (a fake token saved in
+  `localStorage`), but with the same structure as a real API call
+  (`src/services/authService.js`): swap the mock for the real
+  `apiClient.post(...)` call once the backend is available.
+- Calls in `templatesService` and `documentsService` follow the same
+  pattern: a `USE_MOCK` flag isolates the sample data from the real REST
+  call, already written and ready to use.
+- The `Authorization: Bearer <token>` header is automatically injected on
+  every request by `apiClient.js`; 401 responses force logout and redirect
+  to login, 403 responses show an error toast.
+- The template builder uses a free-form canvas: every top-level block has
+  its own `x/y/width/height` and can be dragged and resized on the sheet.
+  Text blocks support rich formatting (font, size, color, spacing, lists)
+  via the toolbar and the properties panel.
+- The Content Library (`/content-library`) holds 9 reusable resume content
+  slots (title, profile summary, core competencies, keywords, experience,
+  education, skills, quote, contact). Linking a block to a slot (see
+  `contentSlot` in PropertiesPanel) lets the same content be tried out
+  across different templates without rewriting it.

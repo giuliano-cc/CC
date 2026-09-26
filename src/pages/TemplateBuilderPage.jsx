@@ -22,7 +22,7 @@ function BuilderContent({ initialTitle }) {
   const navigate = useNavigate()
   const { id } = useParams()
   const isNew = !id || id === 'new'
-  const { blocks, addBlock, reorderBlocks } = useBuilder()
+  const { blocks, addBlock } = useBuilder()
 
   const [title, setTitle] = useState(initialTitle)
   const [isSaving, setIsSaving] = useState(false)
@@ -35,7 +35,7 @@ function BuilderContent({ initialTitle }) {
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   )
 
-  // Anteprima: invia i blocchi al backend 800ms dopo l'ultima modifica.
+  // Preview: sends the blocks to the backend 800ms after the last change.
   useEffect(() => {
     if (!hasRenderedOnce.current) {
       hasRenderedOnce.current = true
@@ -49,7 +49,7 @@ function BuilderContent({ initialTitle }) {
       try {
         await renderTemplate(id ?? 'draft', debouncedBlocks)
       } catch {
-        if (!cancelled) toast.error("Impossibile generare l'anteprima")
+        if (!cancelled) toast.error("Unable to generate the preview")
       } finally {
         if (!cancelled) setIsRendering(false)
       }
@@ -61,29 +61,28 @@ function BuilderContent({ initialTitle }) {
     }
   }, [debouncedBlocks, id])
 
+  // Dragging a block from the palette places it on the sheet at the exact
+  // point where it was dropped (relative to the sheet's own corner).
   const handleDragEnd = useCallback(
     (event) => {
       const { active, over } = event
-      if (!over) return
+      if (!over || over.id !== CANVAS_DROPPABLE_ID) return
+      if (active.data.current?.source !== 'palette') return
 
-      const isFromPalette = active.data.current?.source === 'palette'
+      const blockType = active.data.current.blockType
+      const draggedRect = active.rect.current.translated
+      const canvasRect = over.rect
 
-      if (isFromPalette) {
-        const blockType = active.data.current.blockType
-        const overIndex = blocks.findIndex((b) => b.id === over.id)
-        const insertIndex =
-          over.id === CANVAS_DROPPABLE_ID || overIndex === -1
-            ? blocks.length
-            : overIndex + 1
-        addBlock(blockType, insertIndex)
-        return
-      }
+      const position = draggedRect
+        ? {
+            x: Math.max(0, draggedRect.left - canvasRect.left),
+            y: Math.max(0, draggedRect.top - canvasRect.top),
+          }
+        : undefined
 
-      if (active.id !== over.id) {
-        reorderBlocks(active.id, over.id)
-      }
+      addBlock(blockType, position)
     },
-    [blocks, addBlock, reorderBlocks],
+    [addBlock],
   )
 
   async function handleSave() {
@@ -91,19 +90,19 @@ function BuilderContent({ initialTitle }) {
     try {
       const payload = { title, blocks }
       if (isNew) {
-        const created = await createTemplate({ ...payload, category: 'Personalizzato' })
-        toast.success('Template salvato')
+        const created = await createTemplate({ ...payload, category: 'Custom' })
+        toast.success('Template saved')
         navigate(`/templates/${created.id}`, { replace: true })
       } else {
         await updateTemplate(id, payload)
-        toast.success('Template salvato')
+        toast.success('Template saved')
       }
     } catch (err) {
       const status = err.response?.status
       if (status === 401 || status === 403) {
-        toast.error('Non sei autorizzato a salvare questo template.')
+        toast.error("You're not authorized to save this template.")
       } else {
-        toast.error('Impossibile salvare il template.')
+        toast.error('Unable to save the template.')
       }
     } finally {
       setIsSaving(false)
@@ -119,7 +118,7 @@ function BuilderContent({ initialTitle }) {
               type="button"
               onClick={() => navigate('/templates')}
               className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"
-              aria-label="Torna ai template"
+              aria-label="Back to templates"
             >
               <ArrowLeft size={18} />
             </button>
@@ -134,7 +133,7 @@ function BuilderContent({ initialTitle }) {
             {isRendering && (
               <span className="flex items-center gap-1.5 text-xs text-slate-400">
                 <Loader2 size={14} className="animate-spin" />
-                Aggiornamento anteprima...
+                Updating preview...
               </span>
             )}
             <button
@@ -144,7 +143,7 @@ function BuilderContent({ initialTitle }) {
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-70"
             >
               {isSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-              Salva
+              Save
             </button>
           </div>
         </header>
@@ -165,7 +164,7 @@ export default function TemplateBuilderPage() {
   const { id } = useParams()
   const isNew = !id || id === 'new'
 
-  const [template, setTemplate] = useState(isNew ? { title: 'Nuovo Template' } : null)
+  const [template, setTemplate] = useState(isNew ? { title: 'New Template' } : null)
   const [isLoading, setIsLoading] = useState(!isNew)
   const [error, setError] = useState(null)
 
@@ -180,7 +179,7 @@ export default function TemplateBuilderPage() {
       .then((data) => {
         if (cancelled) return
         if (!data) {
-          setError(new Error('Template non trovato'))
+          setError(new Error('Template not found'))
         } else {
           setTemplate(data)
         }
@@ -208,7 +207,7 @@ export default function TemplateBuilderPage() {
   if (error || !template) {
     return (
       <div className="flex h-screen items-center justify-center bg-background p-6">
-        <ErrorMessage message="Impossibile caricare questo template." />
+        <ErrorMessage message="Unable to load this template." />
       </div>
     )
   }

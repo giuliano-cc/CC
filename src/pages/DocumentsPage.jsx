@@ -12,9 +12,9 @@ const STATUS_STYLES = {
 }
 
 const STATUS_LABELS = {
-  completed: 'Completato',
-  processing: 'In elaborazione',
-  failed: 'Fallito',
+  completed: 'Completed',
+  processing: 'Processing',
+  failed: 'Failed',
 }
 
 export default function DocumentsPage() {
@@ -24,24 +24,24 @@ export default function DocumentsPage() {
   )
 
   async function handleDelete(id) {
-    const confirmed = window.confirm('Eliminare questo documento?')
+    const confirmed = window.confirm('Delete this document?')
     if (!confirmed) return
 
     try {
       await deleteDocument(id)
       setData((prev) => (prev ?? []).filter((d) => d.id !== id))
-      toast.success('Documento eliminato')
+      toast.success('Document deleted')
     } catch {
-      toast.error('Impossibile eliminare il documento')
+      toast.error('Unable to delete the document')
     }
   }
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-900">Documenti</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Documents</h1>
         <p className="text-sm text-slate-500">
-          Storico dei documenti generati dai tuoi template.
+          History of documents generated from your templates.
         </p>
       </div>
 
@@ -54,7 +54,7 @@ export default function DocumentsPage() {
       )}
 
       {!isLoading && error && (
-        <ErrorMessage message="Impossibile caricare i documenti." onRetry={refetch} />
+        <ErrorMessage message="Unable to load documents." onRetry={refetch} />
       )}
 
       {!isLoading && !error && (
@@ -62,18 +62,18 @@ export default function DocumentsPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
               <tr>
-                <th className="px-4 py-3 font-medium">Nome</th>
-                <th className="px-4 py-3 font-medium">Tipo</th>
-                <th className="px-4 py-3 font-medium">Data</th>
-                <th className="px-4 py-3 font-medium">Stato</th>
-                <th className="px-4 py-3 font-medium text-right">Azioni</th>
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Type</th>
+                <th className="px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {documents?.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                    Nessun documento generato finora.
+                    No documents generated yet.
                   </td>
                 </tr>
               )}
@@ -82,7 +82,7 @@ export default function DocumentsPage() {
                   <td className="px-4 py-3 font-medium text-slate-800">{doc.name}</td>
                   <td className="px-4 py-3 text-slate-600">{doc.type}</td>
                   <td className="px-4 py-3 text-slate-600">
-                    {new Date(doc.createdAt).toLocaleDateString('it-IT', {
+                    {new Date(doc.createdAt).toLocaleDateString('en-US', {
                       day: '2-digit',
                       month: 'short',
                       year: 'numeric',
@@ -100,7 +100,7 @@ export default function DocumentsPage() {
                       <button
                         type="button"
                         className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-primary"
-                        aria-label="Scarica"
+                        aria-label="Download"
                       >
                         <Download size={16} />
                       </button>
@@ -108,7 +108,7 @@ export default function DocumentsPage() {
                         type="button"
                         onClick={() => handleDelete(doc.id)}
                         className="rounded-md p-1.5 text-slate-500 transition hover:bg-red-50 hover:text-red-600"
-                        aria-label="Elimina"
+                        aria-label="Delete"
                       >
                         <Trash2 size={16} />
                       </button>

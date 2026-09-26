@@ -1,13 +1,14 @@
 import { NavLink } from 'react-router-dom'
-import { FileText, Image, LayoutTemplate, Tag } from 'lucide-react'
+import { BookOpen, FileText, Image, LayoutTemplate, Tag } from 'lucide-react'
 
 const WORKSPACE_ITEMS = [
   { to: '/templates', label: 'Templates', icon: LayoutTemplate },
-  { to: '/documents', label: 'Documenti', icon: FileText },
-  { to: '/images', label: 'Immagini', icon: Image },
+  { to: '/documents', label: 'Documents', icon: FileText },
+  { to: '/images', label: 'Images', icon: Image },
+  { to: '/content-library', label: 'Content Library', icon: BookOpen },
 ]
 
-const CATEGORIES = ['Fatture', 'Report', 'Curriculum', 'Contratti', 'Lettere']
+const CATEGORIES = ['Invoices', 'Reports', 'Resumes', 'Contracts', 'Letters']
 
 function navLinkClasses({ isActive }) {
   return [
@@ -42,7 +43,7 @@ export default function Sidebar() {
 
       <nav className="flex flex-col gap-1 px-3 py-4">
         <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Categorie
+          Categories
         </p>
         {CATEGORIES.map((category) => (
           <button

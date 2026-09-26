@@ -1,10 +1,9 @@
 import apiClient, { AUTH_TOKEN_KEY } from './apiClient'
 
-// NOTA: finché il backend non è disponibile, la chiamata reale viene
-// sostituita da una simulazione locale che restituisce la stessa forma di
-// risposta che ci si aspetta da `POST /auth/login` e `POST /auth/register`.
-// Quando il backend sarà pronto basterà rimuovere `mockRequest` e lasciare
-// solo la chiamata `apiClient`.
+// NOTE: until the real backend is available, the real call is replaced by
+// a local simulation that returns the same response shape expected from
+// `POST /auth/login` and `POST /auth/register`. Once the backend is ready,
+// just remove `mockRequest` and keep the `apiClient` call.
 const MOCK_LATENCY_MS = 500
 
 function mockRequest(payload) {
@@ -25,14 +24,14 @@ function mockRequest(payload) {
 }
 
 export async function loginRequest({ email, password }) {
-  // Chiamata reale (quando il backend sarà disponibile):
+  // Real call (once the backend is available):
   // const { data } = await apiClient.post('/auth/login', { email, password })
   const { data } = await mockRequest({ email, password })
   return data
 }
 
 export async function registerRequest({ name, email, password }) {
-  // Chiamata reale (quando il backend sarà disponibile):
+  // Real call (once the backend is available):
   // const { data } = await apiClient.post('/auth/register', { name, email, password })
   const { data } = await mockRequest({ name, email, password })
   return data
