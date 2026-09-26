@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { ArrowLeft, Loader2, Save } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Wand2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { BuilderProvider, useBuilder } from '../context/BuilderContext'
+import { useContentLibrary } from '../context/ContentLibraryContext'
 import BlockPalette from '../components/builder/BlockPalette'
 import Canvas, { CANVAS_DROPPABLE_ID } from '../components/builder/Canvas'
 import PropertiesPanel from '../components/builder/PropertiesPanel'
@@ -11,6 +12,10 @@ import Toolbar from '../components/builder/Toolbar'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { BLOCK_TYPES } from '../utils/blockTypes'
+import { SHEET_HEIGHT, SHEET_WIDTH } from '../utils/layout'
+import { TEMPLATE_CONTENT_MAPS } from '../utils/cvTemplates'
+import { parseSocialLinks } from '../utils/socialIcons'
 import {
   createTemplate,
   getTemplateById,
@@ -22,7 +27,8 @@ function BuilderContent({ initialTitle }) {
   const navigate = useNavigate()
   const { id } = useParams()
   const isNew = !id || id === 'new'
-  const { blocks, addBlock } = useBuilder()
+  const { blocks, addBlock, updateBlock } = useBuilder()
+  const { library } = useContentLibrary()
 
   const [title, setTitle] = useState(initialTitle)
   const [isSaving, setIsSaving] = useState(false)
@@ -85,6 +91,30 @@ function BuilderContent({ initialTitle }) {
     [addBlock],
   )
 
+  // Binds this template's known blocks to the matching Content Library
+  // slots (see TEMPLATE_CONTENT_MAPS), and adds a QR code / social icons
+  // block reading from the library if one isn't already present. One
+  // click fills the whole template with whatever you wrote in the library.
+  function handleFillWithContent() {
+    const map = TEMPLATE_CONTENT_MAPS[id] || []
+    map.forEach(({ blockId, field, slot }) => {
+      updateBlock(blockId, { [field]: slot })
+    })
+
+    if (library.qrValue?.trim() && !blocks.some((b) => b.type === BLOCK_TYPES.QR_CODE)) {
+      const qr = addBlock(BLOCK_TYPES.QR_CODE, { x: SHEET_WIDTH - 188, y: SHEET_HEIGHT - 208 })
+      updateBlock(qr.id, { useLibraryValue: true })
+    }
+
+    const hasSocialLinks = parseSocialLinks(library.socialLinks).some((i) => i.url)
+    if (hasSocialLinks && !blocks.some((b) => b.type === BLOCK_TYPES.SOCIAL_ICONS)) {
+      const social = addBlock(BLOCK_TYPES.SOCIAL_ICONS, { x: 48, y: SHEET_HEIGHT - 90 })
+      updateBlock(social.id, { useLibraryLinks: true })
+    }
+
+    toast.success('Content applied from your library')
+  }
+
   async function handleSave() {
     setIsSaving(true)
     try {
@@ -136,6 +166,14 @@ function BuilderContent({ initialTitle }) {
                 Updating preview...
               </span>
             )}
+            <button
+              type="button"
+              onClick={handleFillWithContent}
+              className="flex items-center gap-1.5 rounded-lg border border-primary/30 px-3.5 py-2 text-sm font-medium text-primary transition hover:bg-primary/5"
+            >
+              <Wand2 size={15} />
+              Fill with my content
+            </button>
             <button
               type="button"
               onClick={handleSave}

@@ -21,6 +21,7 @@ const RESIZE_HANDLES = [
 export default function FreeBlock({
   block,
   isSelected,
+  isOnlySelected,
   selectedBlockId,
   onSelect,
   onRemove,
@@ -39,6 +40,14 @@ export default function FreeBlock({
 
       event.preventDefault()
       event.stopPropagation()
+
+      // Shift-click only adds/removes this block from the selection (to
+      // build a multi-selection for aligning/distributing); it doesn't
+      // also start dragging it.
+      if (event.shiftKey) {
+        onSelect(block.id, { additive: true })
+        return
+      }
       onSelect(block.id)
 
       dragState.current = {
@@ -163,7 +172,7 @@ export default function FreeBlock({
         <Trash2 size={12} />
       </button>
 
-      {isSelected &&
+      {isOnlySelected &&
         RESIZE_HANDLES.map((handle) => (
           <div
             key={handle.key}

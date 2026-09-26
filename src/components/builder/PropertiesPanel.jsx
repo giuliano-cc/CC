@@ -1,8 +1,21 @@
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  AlignHorizontalDistributeCenter,
+  AlignHorizontalJustifyCenter,
+  AlignHorizontalJustifyEnd,
+  AlignHorizontalJustifyStart,
+  AlignVerticalDistributeCenter,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
+  AlignVerticalJustifyStart,
+  Upload,
+} from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { BLOCK_TYPES, FONT_FAMILY_OPTIONS } from '../../utils/blockTypes'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
+import { SOCIAL_PLATFORMS } from '../../utils/socialIcons'
 
 function Field({ label, children }) {
   return (
@@ -74,19 +87,49 @@ const BLOCK_LABELS = {
   [BLOCK_TYPES.QUOTE]: 'Quote',
   [BLOCK_TYPES.FOOTER]: 'Footer',
   [BLOCK_TYPES.COLUMNS]: 'Columns',
+  [BLOCK_TYPES.SKILLS_CHART]: 'Skills Chart',
+  [BLOCK_TYPES.QR_CODE]: 'QR Code',
+  [BLOCK_TYPES.SOCIAL_ICONS]: 'Social Icons',
+}
+
+// Generic "pick a Content Library slot" select, used for fields that bind
+// to the library outside the usual `contentSlot` mechanism (a resume
+// header's name/contacts, an image's source, etc).
+function LibrarySlotSelect({ value, onChange, filter, placeholder = '— none —' }) {
+  const slots = filter ? CONTENT_SLOTS.filter(filter) : CONTENT_SLOTS
+  return (
+    <select value={value || ''} onChange={(e) => onChange(e.target.value || null)} className={inputClasses}>
+      <option value="">{placeholder}</option>
+      {slots.map((slot) => (
+        <option key={slot.key} value={slot.key}>
+          {slot.label}
+        </option>
+      ))}
+    </select>
+  )
 }
 
 function CvHeaderProperties({ block, onChange }) {
   return (
     <div className="flex flex-col gap-4">
-      <Field label="Name">
-        <textarea
-          rows={2}
-          value={block.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          className={`${inputClasses} resize-none`}
+      <Field label="Name from library">
+        <LibrarySlotSelect
+          value={block.nameSlot}
+          onChange={(v) => onChange({ nameSlot: v })}
+          filter={(s) => s.key === 'name'}
+          placeholder="— none (type below) —"
         />
       </Field>
+      {!block.nameSlot && (
+        <Field label="Name">
+          <textarea
+            rows={2}
+            value={block.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            className={`${inputClasses} resize-none`}
+          />
+        </Field>
+      )}
       <Field label="Role / subtitle">
         <input
           type="text"
@@ -95,14 +138,32 @@ function CvHeaderProperties({ block, onChange }) {
           className={inputClasses}
         />
       </Field>
-      <Field label="Contacts (one per line)">
-        <textarea
-          rows={3}
-          value={(block.contacts || []).join('\n')}
-          onChange={(e) => onChange({ contacts: e.target.value.split('\n') })}
-          className={`${inputClasses} resize-none`}
+      <Field label="Contacts from library">
+        <LibrarySlotSelect
+          value={block.contactsSlot}
+          onChange={(v) => onChange({ contactsSlot: v })}
+          filter={(s) => s.key === 'contact'}
+          placeholder="— none (type below) —"
         />
       </Field>
+      {!block.contactsSlot && (
+        <Field label="Contacts (one per line)">
+          <textarea
+            rows={3}
+            value={(block.contacts || []).join('\n')}
+            onChange={(e) => onChange({ contacts: e.target.value.split('\n') })}
+            className={`${inputClasses} resize-none`}
+          />
+        </Field>
+      )}
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={!!block.showContactIcons}
+          onChange={(e) => onChange({ showContactIcons: e.target.checked })}
+        />
+        Show icons next to email/phone/website
+      </label>
       <Field label="Layout">
         <select
           value={block.layout}
@@ -129,6 +190,175 @@ function ColumnsProperties({ block }) {
   )
 }
 
+function SkillsChartProperties({ block, onChange }) {
+  const linesValue = (block.items || []).map((i) => `${i.label}|${i.level}`).join('\n')
+
+  function handleLinesChange(text) {
+    const items = text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [label, level] = line.split('|')
+        return { label: (label || '').trim(), level: Number(level) || 50 }
+      })
+    onChange({ items })
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={!!block.useLibrarySkills}
+          onChange={(e) => onChange({ useLibrarySkills: e.target.checked })}
+        />
+        Use my Technical Skills from the library (fixed level)
+      </label>
+      <Field label="Chart title">
+        <input
+          type="text"
+          value={block.title}
+          onChange={(e) => onChange({ title: e.target.value })}
+          className={inputClasses}
+        />
+      </Field>
+      {!block.useLibrarySkills && (
+        <Field label="Skills (one per line: Label|Level 0-100)">
+          <textarea
+            rows={5}
+            value={linesValue}
+            onChange={(e) => handleLinesChange(e.target.value)}
+            placeholder="Photoshop|85"
+            className={`${inputClasses} resize-none font-mono`}
+          />
+        </Field>
+      )}
+      <Field label="Bar color">
+        <input
+          type="color"
+          value={block.color || '#2563eb'}
+          onChange={(e) => onChange({ color: e.target.value })}
+          className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
+        />
+      </Field>
+    </div>
+  )
+}
+
+function QrCodeProperties({ block, onChange }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={!!block.useLibraryValue}
+          onChange={(e) => onChange({ useLibraryValue: e.target.checked })}
+        />
+        Use the "QR Code Link" from the library
+      </label>
+      {!block.useLibraryValue && (
+        <Field label="Link or text to encode">
+          <input
+            type="text"
+            value={block.value}
+            onChange={(e) => onChange({ value: e.target.value })}
+            placeholder="https://..."
+            className={inputClasses}
+          />
+        </Field>
+      )}
+      <Field label="Caption (optional)">
+        <input
+          type="text"
+          value={block.caption}
+          onChange={(e) => onChange({ caption: e.target.value })}
+          className={inputClasses}
+        />
+      </Field>
+    </div>
+  )
+}
+
+function SocialIconsProperties({ block, onChange }) {
+  function updateItem(index, patch) {
+    const items = block.items.map((item, i) => (i === index ? { ...item, ...patch } : item))
+    onChange({ items })
+  }
+
+  function addItem() {
+    onChange({ items: [...block.items, { platform: 'linkedin', url: '' }] })
+  }
+
+  function removeItem(index) {
+    onChange({ items: block.items.filter((_, i) => i !== index) })
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={!!block.useLibraryLinks}
+          onChange={(e) => onChange({ useLibraryLinks: e.target.checked })}
+        />
+        Use my Social Links from the library
+      </label>
+      {!block.useLibraryLinks && (
+        <div className="flex flex-col gap-2">
+          {block.items.map((item, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <select
+                value={item.platform}
+                onChange={(e) => updateItem(i, { platform: e.target.value })}
+                className={`${inputClasses} w-28 shrink-0`}
+              >
+                {SOCIAL_PLATFORMS.map((p) => (
+                  <option key={p.key} value={p.key}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={item.url}
+                onChange={(e) => updateItem(i, { url: e.target.value })}
+                placeholder="url or handle"
+                className={inputClasses}
+              />
+              <button
+                type="button"
+                onClick={() => removeItem(i)}
+                className="shrink-0 rounded-md px-2 py-1.5 text-xs text-red-500 hover:bg-red-50"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addItem}
+            className="self-start text-xs font-medium text-primary hover:underline"
+          >
+            + Add link
+          </button>
+        </div>
+      )}
+      <Field label="Alignment">
+        <select
+          value={block.align}
+          onChange={(e) => onChange({ align: e.target.value })}
+          className={inputClasses}
+        >
+          <option value="left">Left</option>
+          <option value="center">Center</option>
+          <option value="right">Right</option>
+        </select>
+      </Field>
+    </div>
+  )
+}
+
 // Links the block's content to one of the Content Library slots: from
 // then on the displayed text is read from there, so the content stays the
 // same when switching from one template to another.
@@ -143,7 +373,7 @@ function ContentSlotBinder({ block, onChange }) {
         className={inputClasses}
       >
         <option value="">— none (free text) —</option>
-        {CONTENT_SLOTS.map((slot) => (
+        {CONTENT_SLOTS.filter((s) => !s.type).map((slot) => (
           <option key={slot.key} value={slot.key}>
             {slot.label}
           </option>
@@ -162,47 +392,190 @@ function ContentSlotBinder({ block, onChange }) {
   )
 }
 
+function ImageUploadField({ onChange }) {
+  const fileInputRef = useRef(null)
+
+  function handleFile(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => onChange({ src: reader.result, imageSlot: null })
+    reader.readAsDataURL(file)
+    event.target.value = ''
+  }
+
+  return (
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFile}
+      />
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        className="flex items-center justify-center gap-1.5 rounded-md border border-slate-300 py-1.5 text-sm text-slate-600 transition hover:border-primary hover:text-primary"
+      >
+        <Upload size={14} />
+        Upload from computer
+      </button>
+    </>
+  )
+}
+
+function AlignIconButton({ icon: Icon, label, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className="flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-primary"
+    >
+      <Icon size={16} />
+    </button>
+  )
+}
+
+const PAGE_ALIGN_MODES = {
+  left: 'page-left',
+  centerH: 'page-center-h',
+  right: 'page-right',
+  top: 'page-top',
+  middle: 'page-middle',
+  bottom: 'page-bottom',
+}
+
+const SELECTION_ALIGN_MODES = {
+  left: 'left',
+  centerH: 'center-h',
+  right: 'right',
+  top: 'top',
+  middle: 'middle',
+  bottom: 'bottom',
+}
+
+// One row of align buttons: left/center/right relative to the horizontal
+// axis, then top/middle/bottom relative to the vertical one. `modes` picks
+// whether "center"/"page" targets the sheet or the selection's own
+// bounding box (see utils/align.js).
+function AlignRow({ modes, onAlign }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      <AlignIconButton icon={AlignHorizontalJustifyStart} label="Align left" onClick={() => onAlign(modes.left)} />
+      <AlignIconButton
+        icon={AlignHorizontalJustifyCenter}
+        label="Align center"
+        onClick={() => onAlign(modes.centerH)}
+      />
+      <AlignIconButton icon={AlignHorizontalJustifyEnd} label="Align right" onClick={() => onAlign(modes.right)} />
+      <div className="mx-1 h-5 w-px bg-slate-200" />
+      <AlignIconButton icon={AlignVerticalJustifyStart} label="Align top" onClick={() => onAlign(modes.top)} />
+      <AlignIconButton
+        icon={AlignVerticalJustifyCenter}
+        label="Align middle"
+        onClick={() => onAlign(modes.middle)}
+      />
+      <AlignIconButton icon={AlignVerticalJustifyEnd} label="Align bottom" onClick={() => onAlign(modes.bottom)} />
+    </div>
+  )
+}
+
+// Alignment relative to the page (top/middle/bottom, left/center/right):
+// available for any single free block, since it only needs its own
+// position/size to compute.
+function PageAlignField() {
+  const { alignSelection } = useBuilder()
+  return (
+    <Field label="Align to page">
+      <AlignRow modes={PAGE_ALIGN_MODES} onAlign={alignSelection} />
+    </Field>
+  )
+}
+
+// Shown instead of the single-block editor when 2+ free blocks are
+// selected (shift-click on the sheet to build a selection): align them to
+// the page, to each other, or spread them out evenly.
+function MultiSelectPanel({ count }) {
+  const { alignSelection } = useBuilder()
+  return (
+    <div className="flex flex-col gap-4">
+      <h3 className="text-sm font-semibold text-slate-800">{count} objects selected</h3>
+      <p className="text-xs text-slate-500">
+        Shift-click blocks on the sheet to add or remove them from the selection.
+      </p>
+      <Field label="Align to page">
+        <AlignRow modes={PAGE_ALIGN_MODES} onAlign={alignSelection} />
+      </Field>
+      <Field label="Align to each other">
+        <AlignRow modes={SELECTION_ALIGN_MODES} onAlign={alignSelection} />
+      </Field>
+      {count >= 3 && (
+        <Field label="Distribute evenly">
+          <div className="flex items-center gap-1">
+            <AlignIconButton
+              icon={AlignHorizontalDistributeCenter}
+              label="Distribute horizontally"
+              onClick={() => alignSelection('distribute-h')}
+            />
+            <AlignIconButton
+              icon={AlignVerticalDistributeCenter}
+              label="Distribute vertically"
+              onClick={() => alignSelection('distribute-v')}
+            />
+          </div>
+        </Field>
+      )}
+    </div>
+  )
+}
+
 function PositionSizeFields({ block, onChange }) {
   if (typeof block.x !== 'number') return null
 
   return (
-    <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
-      <Field label="X (px)">
-        <input
-          type="number"
-          value={Math.round(block.x)}
-          onChange={(e) => onChange({ x: Number(e.target.value) })}
-          className={inputClasses}
-        />
-      </Field>
-      <Field label="Y (px)">
-        <input
-          type="number"
-          value={Math.round(block.y)}
-          onChange={(e) => onChange({ y: Number(e.target.value) })}
-          className={inputClasses}
-        />
-      </Field>
-      <Field label="Width (px)">
-        <input
-          type="number"
-          min={20}
-          max={SHEET_WIDTH}
-          value={Math.round(block.width)}
-          onChange={(e) => onChange({ width: Number(e.target.value) })}
-          className={inputClasses}
-        />
-      </Field>
-      <Field label="Height (px)">
-        <input
-          type="number"
-          min={20}
-          max={SHEET_HEIGHT}
-          value={Math.round(block.height)}
-          onChange={(e) => onChange({ height: Number(e.target.value) })}
-          className={inputClasses}
-        />
-      </Field>
+    <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
+      <PageAlignField />
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="X (px)">
+          <input
+            type="number"
+            value={Math.round(block.x)}
+            onChange={(e) => onChange({ x: Number(e.target.value) })}
+            className={inputClasses}
+          />
+        </Field>
+        <Field label="Y (px)">
+          <input
+            type="number"
+            value={Math.round(block.y)}
+            onChange={(e) => onChange({ y: Number(e.target.value) })}
+            className={inputClasses}
+          />
+        </Field>
+        <Field label="Width (px)">
+          <input
+            type="number"
+            min={20}
+            max={SHEET_WIDTH}
+            value={Math.round(block.width)}
+            onChange={(e) => onChange({ width: Number(e.target.value) })}
+            className={inputClasses}
+          />
+        </Field>
+        <Field label="Height (px)">
+          <input
+            type="number"
+            min={20}
+            max={SHEET_HEIGHT}
+            value={Math.round(block.height)}
+            onChange={(e) => onChange({ height: Number(e.target.value) })}
+            className={inputClasses}
+          />
+        </Field>
+      </div>
     </div>
   )
 }
@@ -232,10 +605,47 @@ function BlockPropertiesPanel({ block, onChange }) {
     )
   }
 
+  if (block.type === BLOCK_TYPES.SKILLS_CHART) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold text-slate-800">
+          Block: {BLOCK_LABELS[block.type]}
+        </h3>
+        <SkillsChartProperties block={block} onChange={onChange} />
+        <PositionSizeFields block={block} onChange={onChange} />
+      </div>
+    )
+  }
+
+  if (block.type === BLOCK_TYPES.QR_CODE) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold text-slate-800">
+          Block: {BLOCK_LABELS[block.type]}
+        </h3>
+        <QrCodeProperties block={block} onChange={onChange} />
+        <PositionSizeFields block={block} onChange={onChange} />
+      </div>
+    )
+  }
+
+  if (block.type === BLOCK_TYPES.SOCIAL_ICONS) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold text-slate-800">
+          Block: {BLOCK_LABELS[block.type]}
+        </h3>
+        <SocialIconsProperties block={block} onChange={onChange} />
+        <PositionSizeFields block={block} onChange={onChange} />
+      </div>
+    )
+  }
+
   const showAlign = block.type !== BLOCK_TYPES.DIVIDER
   const showContent = block.type !== BLOCK_TYPES.DIVIDER && block.type !== BLOCK_TYPES.IMAGE
   const isHeading = block.type === BLOCK_TYPES.HEADING
   const isText = block.type === BLOCK_TYPES.TEXT
+  const isImage = block.type === BLOCK_TYPES.IMAGE
   const hasTypography = [BLOCK_TYPES.HEADING, BLOCK_TYPES.TEXT, BLOCK_TYPES.QUOTE].includes(
     block.type,
   )
@@ -260,17 +670,30 @@ function BlockPropertiesPanel({ block, onChange }) {
         </Field>
       )}
 
-      {block.type === BLOCK_TYPES.IMAGE && (
+      {isImage && (
         <>
-          <Field label="Image URL">
-            <input
-              type="text"
-              value={block.src}
-              onChange={(e) => onChange({ src: e.target.value })}
-              placeholder="https://..."
-              className={inputClasses}
+          <Field label="Photo from library">
+            <LibrarySlotSelect
+              value={block.imageSlot}
+              onChange={(v) => onChange({ imageSlot: v })}
+              filter={(s) => s.key === 'photo'}
+              placeholder="— none —"
             />
           </Field>
+          {!block.imageSlot && (
+            <>
+              <ImageUploadField onChange={onChange} />
+              <Field label="or image URL">
+                <input
+                  type="text"
+                  value={block.src}
+                  onChange={(e) => onChange({ src: e.target.value })}
+                  placeholder="https://..."
+                  className={inputClasses}
+                />
+              </Field>
+            </>
+          )}
           <Field label="Shape">
             <select
               value={block.shape}
@@ -460,11 +883,13 @@ function BlockPropertiesPanel({ block, onChange }) {
 }
 
 export default function PropertiesPanel() {
-  const { selectedBlock, updateBlock } = useBuilder()
+  const { selectedBlock, selectedIds, updateBlock } = useBuilder()
 
   return (
     <aside className="w-72 shrink-0 overflow-y-auto border-l border-slate-200 bg-white p-4">
-      {selectedBlock ? (
+      {selectedIds.length > 1 ? (
+        <MultiSelectPanel count={selectedIds.length} />
+      ) : selectedBlock ? (
         <BlockPropertiesPanel
           block={selectedBlock}
           onChange={(patch) => updateBlock(selectedBlock.id, patch)}

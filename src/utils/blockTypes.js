@@ -1,11 +1,14 @@
 import {
+  BarChart3,
   Columns3,
   Heading1,
   IdCard,
   Image as ImageIcon,
   Minus,
+  QrCode,
   Quote as QuoteIcon,
   RectangleHorizontal,
+  Share2,
   Text as TextIcon,
   PanelBottom,
 } from 'lucide-react'
@@ -20,6 +23,9 @@ export const BLOCK_TYPES = {
   FOOTER: 'footer',
   CV_HEADER: 'cv_header',
   COLUMNS: 'columns',
+  SKILLS_CHART: 'skills_chart',
+  QR_CODE: 'qr_code',
+  SOCIAL_ICONS: 'social_icons',
 }
 
 // Fonts available in the font-family selectors (toolbar and properties panel).
@@ -47,6 +53,9 @@ export const DEFAULT_BLOCK_SIZE = {
   [BLOCK_TYPES.QUOTE]: { width: 698, height: 70 },
   [BLOCK_TYPES.FOOTER]: { width: 698, height: 40 },
   [BLOCK_TYPES.COLUMNS]: { width: 698, height: 340 },
+  [BLOCK_TYPES.SKILLS_CHART]: { width: 340, height: 180 },
+  [BLOCK_TYPES.QR_CODE]: { width: 140, height: 160 },
+  [BLOCK_TYPES.SOCIAL_ICONS]: { width: 300, height: 50 },
 }
 
 export const BLOCK_DEFINITIONS = [
@@ -72,6 +81,9 @@ export const BLOCK_DEFINITIONS = [
       contacts: ['site.com', 'email@example.com', '000-000-0000'],
       layout: 'row',
       color: null,
+      showContactIcons: true,
+      nameSlot: null,
+      contactsSlot: null,
     },
   },
   {
@@ -126,6 +138,7 @@ export const BLOCK_DEFINITIONS = [
       alt: 'Image',
       align: 'center',
       shape: 'rect',
+      imageSlot: null,
     },
   },
   {
@@ -172,6 +185,44 @@ export const BLOCK_DEFINITIONS = [
     defaultProps: {
       widths: null,
       columns: [{ items: [] }, { items: [] }],
+    },
+  },
+  {
+    type: BLOCK_TYPES.SKILLS_CHART,
+    label: 'Skills Chart',
+    icon: BarChart3,
+    defaultProps: {
+      title: 'Skills',
+      items: [
+        { label: 'Skill 1', level: 90 },
+        { label: 'Skill 2', level: 75 },
+        { label: 'Skill 3', level: 60 },
+      ],
+      useLibrarySkills: false,
+      color: null,
+    },
+  },
+  {
+    type: BLOCK_TYPES.QR_CODE,
+    label: 'QR Code',
+    icon: QrCode,
+    defaultProps: {
+      value: 'https://example.com',
+      useLibraryValue: false,
+      caption: '',
+    },
+  },
+  {
+    type: BLOCK_TYPES.SOCIAL_ICONS,
+    label: 'Social Icons',
+    icon: Share2,
+    defaultProps: {
+      items: [
+        { platform: 'linkedin', url: 'linkedin.com/in/you' },
+        { platform: 'github', url: 'github.com/you' },
+      ],
+      useLibraryLinks: false,
+      align: 'left',
     },
   },
 ]

@@ -9,6 +9,7 @@ export default function Canvas() {
   const {
     blocks,
     selectedBlockId,
+    selectedIds,
     selectBlock,
     removeBlock,
     addNestedItem,
@@ -42,7 +43,8 @@ export default function Canvas() {
           <FreeBlock
             key={block.id}
             block={block}
-            isSelected={block.id === selectedBlockId}
+            isSelected={selectedIds.includes(block.id)}
+            isOnlySelected={selectedIds.length === 1 && selectedIds[0] === block.id}
             selectedBlockId={selectedBlockId}
             onSelect={selectBlock}
             onRemove={removeBlock}

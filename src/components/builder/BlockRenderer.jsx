@@ -1,6 +1,8 @@
 import { BLOCK_TYPES } from '../../utils/blockTypes'
 import { useContentLibrary } from '../../context/ContentLibraryContext'
-import { ImageIcon } from 'lucide-react'
+import { getPlatformMeta, parseSocialLinks } from '../../utils/socialIcons'
+import { Globe, Image as ImageIcon, Mail, Phone } from 'lucide-react'
+import QRCodeImage from './QRCodeImage'
 
 function alignClass(align) {
   return align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
@@ -15,9 +17,9 @@ function textStyleClasses(block) {
   ].join(' ')
 }
 
-// Stile inline condiviso dai blocchi testuali "ricchi" (heading/text/quote):
-// font, dimensione in px, spaziatura lettere, altezza riga, colore testo e
-// di sfondo. `null`/`undefined` lasciano il valore ereditato dal foglio.
+// Shared inline style for "rich" text blocks (heading/text/quote): font,
+// size in px, letter spacing, line height, text and background color.
+// `null`/`undefined` leave the value inherited from the sheet.
 function typographyStyle(block) {
   return {
     color: block.color || undefined,
@@ -48,6 +50,47 @@ function useResolvedContent(block) {
   return block.content
 }
 
+// Best-effort icon for a contact line (email/phone/website); returns null
+// rather than guessing wrong for anything else (e.g. a plain address).
+function guessContactIcon(text) {
+  if (/@/.test(text)) return Mail
+  if (/^[+()]?[\d\s().-]{6,}$/.test(text)) return Phone
+  if (/^(https?:\/\/|www\.)|\.[a-z]{2,}(\/|$)/i.test(text)) return Globe
+  return null
+}
+
+function SkillBar({ label, level, color }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium text-slate-700">{label}</span>
+        <span className="text-slate-400">{level}%</span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+        <div
+          className="h-full rounded-full"
+          style={{ width: `${Math.max(0, Math.min(100, level))}%`, backgroundColor: color || '#2563eb' }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function SocialBadge({ platform, url }) {
+  const meta = getPlatformMeta(platform)
+  return (
+    <div className="flex items-center gap-1.5" title={url}>
+      <span
+        className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
+        style={{ backgroundColor: meta.color }}
+      >
+        {meta.badge}
+      </span>
+      <span className="max-w-[9rem] truncate text-xs text-slate-600">{url}</span>
+    </div>
+  )
+}
+
 export default function BlockRenderer({
   block,
   interactive = false,
@@ -56,6 +99,7 @@ export default function BlockRenderer({
   onAddItem,
 }) {
   const resolvedContent = useResolvedContent(block)
+  const { library } = useContentLibrary()
 
   switch (block.type) {
     case BLOCK_TYPES.HEADER:
@@ -67,6 +111,10 @@ export default function BlockRenderer({
 
     case BLOCK_TYPES.CV_HEADER: {
       const isStacked = block.layout === 'stacked'
+      const resolvedName = block.nameSlot ? library[block.nameSlot] ?? '' : block.name
+      const resolvedContacts = block.contactsSlot
+        ? (library[block.contactsSlot] || '').split('\n').filter(Boolean)
+        : block.contacts
       return (
         <div
           className={`flex ${isStacked ? 'items-start' : 'flex-wrap items-baseline'} justify-between gap-4 border-b border-slate-200 pb-4`}
@@ -76,19 +124,25 @@ export default function BlockRenderer({
               className="whitespace-pre-line text-lg font-bold leading-tight"
               style={{ color: block.color || undefined }}
             >
-              {block.name}
+              {resolvedName}
             </p>
             {block.role && <p className="text-sm text-slate-500">{block.role}</p>}
           </div>
-          {block.contacts?.length > 0 && (
+          {resolvedContacts?.length > 0 && (
             <div
               className={`flex text-xs text-slate-500 ${
-                isStacked ? 'flex-col items-end gap-0.5' : 'flex-wrap justify-end gap-4'
+                isStacked ? 'flex-col items-end gap-1' : 'flex-wrap justify-end gap-4'
               }`}
             >
-              {block.contacts.map((contact, i) => (
-                <span key={i}>{contact}</span>
-              ))}
+              {resolvedContacts.map((contact, i) => {
+                const Icon = block.showContactIcons ? guessContactIcon(contact) : null
+                return (
+                  <span key={i} className="flex items-center gap-1">
+                    {Icon && <Icon size={12} className="shrink-0 text-slate-400" />}
+                    {contact}
+                  </span>
+                )
+              })}
             </div>
           )}
         </div>
@@ -143,13 +197,14 @@ export default function BlockRenderer({
             ? 'justify-end'
             : 'justify-start'
       const isCircle = block.shape === 'circle'
+      const resolvedSrc = block.imageSlot ? library[block.imageSlot] || '' : block.src
       return (
         <div className={`flex ${justify}`}>
-          {block.src ? (
+          {resolvedSrc ? (
             <img
-              src={block.src}
+              src={resolvedSrc}
               alt={block.alt}
-              className={isCircle ? 'h-28 w-28 rounded-full object-cover' : 'max-h-40 rounded-md'}
+              className={isCircle ? 'h-28 w-28 rounded-full object-cover' : 'max-h-40 rounded-md object-cover'}
             />
           ) : (
             <div
@@ -183,6 +238,50 @@ export default function BlockRenderer({
           {block.content}
         </div>
       )
+
+    case BLOCK_TYPES.SKILLS_CHART: {
+      const items = block.useLibrarySkills
+        ? (library.skills || '')
+            .split('\n')
+            .filter(Boolean)
+            .map((line) => ({ label: line, level: 75 }))
+        : block.items
+      return (
+        <div className="flex flex-col gap-3">
+          {block.title && <p className="text-sm font-semibold text-slate-800">{block.title}</p>}
+          <div className="flex flex-col gap-2.5">
+            {items.map((item, i) => (
+              <SkillBar key={i} label={item.label} level={item.level} color={block.color} />
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    case BLOCK_TYPES.QR_CODE: {
+      const value = block.useLibraryValue ? library.qrValue : block.value
+      return (
+        <div className="flex flex-col items-center gap-1.5">
+          <QRCodeImage value={value} size={Math.min(block.width - 16, block.height - 32)} />
+          {block.caption && <p className="text-xs text-slate-500">{block.caption}</p>}
+        </div>
+      )
+    }
+
+    case BLOCK_TYPES.SOCIAL_ICONS: {
+      const items = block.useLibraryLinks
+        ? parseSocialLinks(library.socialLinks).filter((i) => i.url)
+        : block.items.filter((i) => i.url)
+      const justify =
+        block.align === 'center' ? 'justify-center' : block.align === 'right' ? 'justify-end' : 'justify-start'
+      return (
+        <div className={`flex flex-wrap items-center gap-4 ${justify}`}>
+          {items.map((item, i) => (
+            <SocialBadge key={i} platform={item.platform} url={item.url} />
+          ))}
+        </div>
+      )
+    }
 
     case BLOCK_TYPES.COLUMNS: {
       const gridTemplateColumns = block.widths?.length

@@ -257,3 +257,48 @@ export const CV_TEMPLATES = [
     ],
   },
 ]
+
+// For each built-in template, which block field should be bound to which
+// Content Library slot when the user clicks "Fill with my content" in the
+// builder. `field` is the block prop that holds the slot key (contentSlot
+// for heading/text/quote, nameSlot/contactsSlot for cv_header, imageSlot
+// for image).
+export const TEMPLATE_CONTENT_MAPS = {
+  'cv-1': [
+    { blockId: 'cv1-header', field: 'nameSlot', slot: 'name' },
+    { blockId: 'cv1-header', field: 'contactsSlot', slot: 'contact' },
+    { blockId: 'cv1-title', field: 'contentSlot', slot: 'title' },
+    { blockId: 'cv1-edu-t', field: 'contentSlot', slot: 'education' },
+    { blockId: 'cv1-ach-t', field: 'contentSlot', slot: 'coreCompetencies' },
+    { blockId: 'cv1-exp1-b', field: 'contentSlot', slot: 'experience' },
+  ],
+  'cv-2': [
+    { blockId: 'cv2-header', field: 'nameSlot', slot: 'name' },
+    { blockId: 'cv2-img', field: 'imageSlot', slot: 'photo' },
+    { blockId: 'cv2-about-t1', field: 'contentSlot', slot: 'profileSummary' },
+    { blockId: 'cv2-cap-t', field: 'contentSlot', slot: 'skills' },
+  ],
+  'cv-3': [
+    { blockId: 'cv3-header', field: 'nameSlot', slot: 'name' },
+    { blockId: 'cv3-header', field: 'contactsSlot', slot: 'contact' },
+    { blockId: 'cv3-about-t', field: 'contentSlot', slot: 'profileSummary' },
+    { blockId: 'cv3-edu-t', field: 'contentSlot', slot: 'education' },
+    { blockId: 'cv3-skills-t', field: 'contentSlot', slot: 'skills' },
+    { blockId: 'cv3-exp1-b', field: 'contentSlot', slot: 'experience' },
+  ],
+  'cv-4': [
+    { blockId: 'cv4-photo', field: 'imageSlot', slot: 'photo' },
+    { blockId: 'cv4-name', field: 'contentSlot', slot: 'name' },
+    { blockId: 'cv4-role', field: 'contentSlot', slot: 'title' },
+    { blockId: 'cv4-timeline', field: 'contentSlot', slot: 'experience' },
+    { blockId: 'cv4-sk-t', field: 'contentSlot', slot: 'skills' },
+    { blockId: 'cv4-la-t', field: 'contentSlot', slot: 'languages' },
+  ],
+  'cv-5': [
+    { blockId: 'cv5-title', field: 'contentSlot', slot: 'name' },
+    { blockId: 'cv5-contact-t', field: 'contentSlot', slot: 'contact' },
+    { blockId: 'cv5-edu-t', field: 'contentSlot', slot: 'education' },
+    { blockId: 'cv5-skills-t', field: 'contentSlot', slot: 'skills' },
+    { blockId: 'cv5-exp1-b', field: 'contentSlot', slot: 'experience' },
+  ],
+}

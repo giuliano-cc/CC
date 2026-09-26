@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 import { createBlockInstance, createNestedBlockInstance } from '../utils/blockTypes'
 import { findBlockById, removeBlockById, updateBlockById } from '../utils/blockTree'
 import { seedFreeLayout } from '../utils/layout'
+import { alignToPage, alignToSelection, distribute } from '../utils/align'
 
 const DEFAULT_GLOBAL_STYLE = {
   primaryColor: '#2563eb',
@@ -13,12 +14,14 @@ const BuilderContext = createContext(null)
 
 export function BuilderProvider({ children, initialBlocks = [], initialGlobalStyle }) {
   const [blocks, setBlocks] = useState(() => seedFreeLayout(initialBlocks))
-  const [selectedBlockId, setSelectedBlockId] = useState(null)
+  const [selectedIds, setSelectedIds] = useState([])
   const [globalStyle, setGlobalStyle] = useState({
     ...DEFAULT_GLOBAL_STYLE,
     ...initialGlobalStyle,
   })
   const zCounter = useRef(Math.max(1, ...blocks.map((b) => b.zIndex || 0)) + 1)
+
+  const selectedBlockId = selectedIds.length === 1 ? selectedIds[0] : null
 
   const selectedBlock = useMemo(
     () => findBlockById(blocks, selectedBlockId),
@@ -35,7 +38,7 @@ export function BuilderProvider({ children, initialBlocks = [], initialGlobalSty
     }
     newBlock.zIndex = zCounter.current++
     setBlocks((prev) => [...prev, newBlock])
-    setSelectedBlockId(newBlock.id)
+    setSelectedIds([newBlock.id])
     return newBlock
   }, [])
 
@@ -54,7 +57,7 @@ export function BuilderProvider({ children, initialBlocks = [], initialGlobalSty
         ),
       })),
     )
-    setSelectedBlockId(newItem.id)
+    setSelectedIds([newItem.id])
   }, [])
 
   const updateBlock = useCallback((id, patch) => {
@@ -63,7 +66,7 @@ export function BuilderProvider({ children, initialBlocks = [], initialGlobalSty
 
   const removeBlock = useCallback((id) => {
     setBlocks((prev) => removeBlockById(prev, id))
-    setSelectedBlockId((current) => (current === id ? null : current))
+    setSelectedIds((current) => current.filter((sid) => sid !== id))
   }, [])
 
   // Brings a block to the front when selected/dragged, so two overlapping
@@ -73,12 +76,59 @@ export function BuilderProvider({ children, initialBlocks = [], initialGlobalSty
     setBlocks((prev) => updateBlockById(prev, id, { zIndex: nextZ }))
   }, [])
 
+  // `additive: true` (shift-click) adds/removes the block from the current
+  // selection instead of replacing it, so several free blocks can be
+  // selected together for aligning/distributing them as a group.
   const selectBlock = useCallback(
-    (id) => {
-      setSelectedBlockId(id)
-      if (id) bringToFront(id)
+    (id, options) => {
+      if (id === null) {
+        setSelectedIds([])
+        return
+      }
+      if (options?.additive) {
+        setSelectedIds((prev) =>
+          prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id],
+        )
+      } else {
+        setSelectedIds([id])
+      }
+      bringToFront(id)
     },
     [bringToFront],
+  )
+
+  // Aligns/distributes the selected top-level (free) blocks. `mode` is one
+  // of: page-left/page-center-h/page-right/page-top/page-middle/page-bottom
+  // (relative to the sheet), left/center-h/right/top/middle/bottom
+  // (relative to the selection's own bounding box, 2+ blocks), or
+  // distribute-h/distribute-v (evenly spaced, 3+ blocks).
+  const alignSelection = useCallback(
+    (mode) => {
+      const targets = blocks.filter(
+        (b) => selectedIds.includes(b.id) && typeof b.x === 'number',
+      )
+      if (targets.length === 0) return
+
+      let updates
+      if (mode.startsWith('page-')) {
+        updates = alignToPage(targets, mode)
+      } else if (mode === 'distribute-h') {
+        updates = distribute(targets, 'h')
+      } else if (mode === 'distribute-v') {
+        updates = distribute(targets, 'v')
+      } else {
+        updates = alignToSelection(targets, mode)
+      }
+
+      setBlocks((prev) => {
+        let next = prev
+        updates.forEach(({ id, patch }) => {
+          next = updateBlockById(next, id, patch)
+        })
+        return next
+      })
+    },
+    [blocks, selectedIds],
   )
 
   const value = {
@@ -86,12 +136,14 @@ export function BuilderProvider({ children, initialBlocks = [], initialGlobalSty
     setBlocks,
     selectedBlock,
     selectedBlockId,
+    selectedIds,
     selectBlock,
     addBlock,
     addNestedItem,
     updateBlock,
     removeBlock,
     bringToFront,
+    alignSelection,
     globalStyle,
     setGlobalStyle,
   }
