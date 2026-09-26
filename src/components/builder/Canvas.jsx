@@ -60,6 +60,7 @@ function Page({ pageIndex, blocks, margin, globalStyle }) {
           isSelected={selectedIds.includes(block.id)}
           isOnlySelected={selectedIds.length === 1 && selectedIds[0] === block.id}
           selectedBlockId={selectedBlockId}
+          margin={margin}
           onSelect={selectBlock}
           onRemove={removeBlock}
           onAddNestedItem={addNestedItem}
@@ -75,7 +76,13 @@ export default function Canvas() {
   const margin = globalStyle.margin ?? 0
 
   return (
-    <div className="flex flex-1 items-start justify-center gap-6 overflow-auto bg-slate-100 p-8">
+    // `justify-start` (not `justify-center`): once enough pages overflow the
+    // viewport's width, centering an overflowing flex row makes the start of
+    // the content land in negative scroll territory that most browsers
+    // don't let you scroll back into — page 1 (and everything on it) would
+    // become unreachable. Left-aligning keeps every page reachable by
+    // scrolling right, however many there are.
+    <div className="flex flex-1 items-start justify-start gap-6 overflow-auto bg-slate-100 p-8">
       {Array.from({ length: pageCount }).map((_, pageIndex) => (
         <div key={pageIndex} className="flex flex-col items-center gap-2">
           <Page

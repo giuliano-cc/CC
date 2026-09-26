@@ -6,6 +6,17 @@ import BlockRenderer from './BlockRenderer'
 
 const MIN_WIDTH = 60
 const MIN_HEIGHT = 24
+const SNAP_THRESHOLD = 8
+
+// Snaps a value to the nearest margin line (page edge inset by `margin`)
+// when within SNAP_THRESHOLD px of it, so blocks "click" into place
+// against the dashed margin guide instead of needing pixel-perfect drops.
+function snapTo(value, targets) {
+  for (const target of targets) {
+    if (Math.abs(value - target) <= SNAP_THRESHOLD) return target
+  }
+  return value
+}
 
 const RESIZE_HANDLES = [
   { key: 'nw', className: '-left-1.5 -top-1.5 cursor-nwse-resize', x: -1, y: -1 },
@@ -23,6 +34,7 @@ export default function FreeBlock({
   isSelected,
   isOnlySelected,
   selectedBlockId,
+  margin = 0,
   onSelect,
   onRemove,
   onAddNestedItem,
@@ -93,8 +105,12 @@ export default function FreeBlock({
     const dy = event.clientY - state.startY
 
     if (state.mode === 'move') {
-      const x = clamp(state.origX + dx, 0, SHEET_WIDTH - MIN_WIDTH)
-      const y = clamp(state.origY + dy, 0, SHEET_HEIGHT - MIN_HEIGHT)
+      let x = clamp(state.origX + dx, 0, SHEET_WIDTH - MIN_WIDTH)
+      let y = clamp(state.origY + dy, 0, SHEET_HEIGHT - MIN_HEIGHT)
+      if (margin > 0) {
+        x = snapTo(x, [margin, SHEET_WIDTH - margin - block.width])
+        y = snapTo(y, [margin, SHEET_HEIGHT - margin - block.height])
+      }
       onChangeGeometry({ x, y })
       return
     }
@@ -104,20 +120,24 @@ export default function FreeBlock({
 
     if (handle.x === 1) {
       width = clamp(state.origWidth + dx, MIN_WIDTH, SHEET_WIDTH - state.origX)
+      if (margin > 0) width = snapTo(width, [SHEET_WIDTH - margin - x])
     } else if (handle.x === -1) {
       const maxDx = state.origWidth - MIN_WIDTH
       const clampedDx = clamp(dx, -state.origX, maxDx)
       width = state.origWidth - clampedDx
       x = state.origX + clampedDx
+      if (margin > 0) x = snapTo(x, [margin])
     }
 
     if (handle.y === 1) {
       height = clamp(state.origHeight + dy, MIN_HEIGHT, SHEET_HEIGHT - state.origY)
+      if (margin > 0) height = snapTo(height, [SHEET_HEIGHT - margin - y])
     } else if (handle.y === -1) {
       const maxDy = state.origHeight - MIN_HEIGHT
       const clampedDy = clamp(dy, -state.origY, maxDy)
       height = state.origHeight - clampedDy
       y = state.origY + clampedDy
+      if (margin > 0) y = snapTo(y, [margin])
     }
 
     onChangeGeometry({ x, y, width, height })

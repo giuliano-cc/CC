@@ -1,6 +1,7 @@
 import { BLOCK_TYPES, CHART_STYLES } from '../../utils/blockTypes'
 import { useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
+import { parseChecklist, parseLanguages } from '../../utils/contentLists'
 import { Globe, Image as ImageIcon, Mail, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
 
@@ -153,6 +154,7 @@ export default function BlockRenderer({
       const resolvedContacts = block.contactsSlot
         ? (library[block.contactsSlot] || '').split('\n').filter(Boolean)
         : block.contacts
+      const resolvedUsp = block.uspSlot ? library[block.uspSlot] || '' : block.usp
       return (
         <div
           className={`flex ${isStacked ? 'items-start' : 'flex-wrap items-baseline'} justify-between gap-4 border-b border-slate-200 pb-4`}
@@ -165,6 +167,7 @@ export default function BlockRenderer({
               {resolvedName}
             </p>
             {block.role && <p className="text-sm text-slate-500">{block.role}</p>}
+            {resolvedUsp && <p className="mt-1 text-sm italic text-slate-600">{resolvedUsp}</p>}
           </div>
           {resolvedContacts?.length > 0 && (
             <div
@@ -260,15 +263,20 @@ export default function BlockRenderer({
     case BLOCK_TYPES.DIVIDER:
       return <hr className="border-slate-200" />
 
-    case BLOCK_TYPES.QUOTE:
+    case BLOCK_TYPES.QUOTE: {
+      const resolvedAuthor = block.authorSlot ? library[block.authorSlot] || '' : block.author
       return (
         <blockquote
           className={`border-l-4 border-primary/40 pl-3 text-sm text-slate-600 ${textStyleClasses(block)}`}
           style={typographyStyle(block)}
         >
-          {resolvedContent}
+          <p>{resolvedContent}</p>
+          {resolvedAuthor && (
+            <footer className="mt-1.5 text-xs not-italic text-slate-400">— {resolvedAuthor}</footer>
+          )}
         </blockquote>
       )
+    }
 
     case BLOCK_TYPES.FOOTER:
       return (
@@ -279,10 +287,13 @@ export default function BlockRenderer({
 
     case BLOCK_TYPES.SKILLS_CHART: {
       const items = block.useLibrarySkills
-        ? (library.skills || '')
-            .split('\n')
-            .filter(Boolean)
-            .map((line) => ({ label: line, level: 75 }))
+        ? block.librarySource === 'languages'
+          ? parseLanguages(library.languagesItems, library.languages)
+              .filter((i) => i.name?.trim())
+              .map((i) => ({ label: i.name, level: i.level }))
+          : parseChecklist(library.skillsItems, library.skills)
+              .filter((i) => i.visible && i.text?.trim())
+              .map((i) => ({ label: i.text, level: 75 }))
         : block.items
       const chartStyle = block.chartStyle || 'bars'
 

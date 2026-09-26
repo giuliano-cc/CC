@@ -154,6 +154,25 @@ function CvHeaderProperties({ block, onChange }) {
           className={inputClasses}
         />
       </Field>
+      <Field label="USP from library">
+        <LibrarySlotSelect
+          value={block.uspSlot}
+          onChange={(v) => onChange({ uspSlot: v })}
+          filter={(s) => s.key === 'usp'}
+          placeholder="— none (type below) —"
+        />
+      </Field>
+      {!block.uspSlot && (
+        <Field label="USP (unique selling proposition)">
+          <input
+            type="text"
+            value={block.usp || ''}
+            onChange={(e) => onChange({ usp: e.target.value })}
+            placeholder="What makes you different in one short line"
+            className={inputClasses}
+          />
+        </Field>
+      )}
       <Field label="Contacts from library">
         <LibrarySlotSelect
           value={block.contactsSlot}
@@ -229,8 +248,20 @@ function SkillsChartProperties({ block, onChange }) {
           checked={!!block.useLibrarySkills}
           onChange={(e) => onChange({ useLibrarySkills: e.target.checked })}
         />
-        Use my Technical Skills from the library (fixed level)
+        Use content from the library
       </label>
+      {block.useLibrarySkills && (
+        <Field label="Source">
+          <select
+            value={block.librarySource || 'skills'}
+            onChange={(e) => onChange({ librarySource: e.target.value })}
+            className={inputClasses}
+          >
+            <option value="skills">Technical Skills (fixed level)</option>
+            <option value="languages">Languages (level per language)</option>
+          </select>
+        </Field>
+      )}
       <Field label="Chart title">
         <input
           type="text"
@@ -695,6 +726,30 @@ function BlockPropertiesPanel({ block, onChange }) {
             className={`${inputClasses} resize-none`}
           />
         </Field>
+      )}
+
+      {block.type === BLOCK_TYPES.QUOTE && (
+        <>
+          <Field label="Author (name, position) from library">
+            <LibrarySlotSelect
+              value={block.authorSlot}
+              onChange={(v) => onChange({ authorSlot: v })}
+              filter={(s) => s.key === 'quoteAuthor'}
+              placeholder="— none (type below) —"
+            />
+          </Field>
+          {!block.authorSlot && (
+            <Field label="Author (name, position)">
+              <input
+                type="text"
+                value={block.author}
+                onChange={(e) => onChange({ author: e.target.value })}
+                placeholder="Jane Doe, CEO of Company"
+                className={inputClasses}
+              />
+            </Field>
+          )}
+        </>
       )}
 
       {isImage && (

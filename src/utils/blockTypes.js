@@ -93,12 +93,14 @@ export const BLOCK_DEFINITIONS = [
     defaultProps: {
       name: 'Your Name',
       role: '',
+      usp: '',
       contacts: ['site.com', 'email@example.com', '000-000-0000'],
       layout: 'row',
       color: null,
       showContactIcons: true,
       nameSlot: null,
       contactsSlot: null,
+      uspSlot: null,
     },
   },
   {
@@ -179,6 +181,8 @@ export const BLOCK_DEFINITIONS = [
       lineHeight: null,
       bgColor: null,
       contentSlot: null,
+      author: '',
+      authorSlot: null,
     },
   },
   {
@@ -214,6 +218,7 @@ export const BLOCK_DEFINITIONS = [
         { label: 'Skill 3', level: 60 },
       ],
       useLibrarySkills: false,
+      librarySource: 'skills',
       color: null,
       chartStyle: 'bars',
     },
