@@ -322,7 +322,13 @@ export default function BlockRenderer({
       if (!title) return body
       return (
         <div className="flex flex-col gap-1.5">
-          <p className="border-b border-slate-200 pb-1.5" style={sectionTitleStyle({}, globalStyle.primaryColor)}>
+          <p
+            className="border-b border-slate-200 pb-1.5"
+            style={sectionTitleStyle(
+              { titleSize: block.titleSize, fontFamily: block.fontFamily, fontSize: block.titleFontSize },
+              block.titleColor || globalStyle.primaryColor,
+            )}
+          >
             {title}
           </p>
           {body}

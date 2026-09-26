@@ -8,6 +8,7 @@ import {
   IdCard,
   Image as ImageIcon,
   Languages as LanguagesIcon,
+  ListChecks,
   Minus,
   QrCode,
   Quote as QuoteIcon,
@@ -17,6 +18,7 @@ import {
   Text as TextIcon,
   PanelBottom,
 } from 'lucide-react'
+import { CONTENT_SLOTS } from '../context/ContentLibraryContext'
 
 export const BLOCK_TYPES = {
   HEADER: 'header',
@@ -170,8 +172,17 @@ export const BLOCK_DEFINITIONS = [
       // When bound to a Content Library field (contentSlot), shows that
       // field's name as a title above the text — visible by default, so
       // any Content Library field can be dragged in as a titled section
-      // without needing its own dedicated block type.
+      // without needing its own dedicated block type. Its own size/color
+      // (separate from the body text's own color/fontSize above), so it
+      // can be matched to a sibling heading's size without resizing the
+      // paragraph itself.
       showTitle: true,
+      titleSize: 'md',
+      titleColor: null,
+      // A separate override from the body's own `fontSize` above, so
+      // resizing the title (e.g. from the Global Style panel's typography
+      // list) never also resizes the paragraph.
+      titleFontSize: null,
     },
   },
   {
@@ -416,42 +427,76 @@ export const SECTION_TITLE_TYPES = [
   BLOCK_TYPES.LANGUAGES_CHART,
 ]
 
-// A freshly added nested item (via a Columns column's "+ Add block") gets
-// its type's own hardcoded default title size — 'md', the page-section
-// size — regardless of what its new siblings in that same Columns block
-// actually look like. In a sidebar-style column, every existing heading/
-// section title is typically smaller ('sm'), so the new one visibly
-// doesn't match. This scans every item across all of a Columns block's
-// columns (not just the target one, so an empty column still matches the
-// other column's convention) for the first HEADING or section-title
-// block, and returns its size/level so the new item can be made to match
-// instead of defaulting.
-function inferSiblingTitleStyle(columnsBlock) {
-  for (const column of columnsBlock.columns || []) {
-    for (const item of column.items || []) {
-      if (item.type === BLOCK_TYPES.HEADING) {
-        return { size: item.size || 'md', level: item.level || 'h1' }
+// Whether a block has an auto-generated section-heading title of its own
+// — either a SECTION_TITLE_TYPES block with a title set, or a Text block
+// bound to a Content Library field with showTitle on (see TEXT's
+// defaultProps and the TEXT case in BlockRenderer.jsx). Both kinds share
+// the same `titleSize`/`titleColor` fields.
+function hasSectionTitle(block) {
+  if (SECTION_TITLE_TYPES.includes(block.type)) return !!block.title
+  if (block.type === BLOCK_TYPES.TEXT) return block.showTitle === true && !!block.contentSlot
+  return false
+}
+
+// Which field holds a section-title block's own raw px size override: a
+// SECTION_TITLE_TYPES block has no other use for `fontSize`, but a Text
+// block's `fontSize` is already its body paragraph's size, so its title
+// keeps a separate `titleFontSize` instead.
+export function sectionTitleSizeField(block) {
+  return block.type === BLOCK_TYPES.TEXT ? 'titleFontSize' : 'fontSize'
+}
+
+// A freshly added block — nested inside a Columns column, or dropped
+// straight onto the page — gets its type's own hardcoded default title
+// size ('md', the page-section size) regardless of what its new siblings
+// actually look like. In a sidebar-style column, or a template whose
+// page-level headings all use 'sm', the new one visibly doesn't match.
+// This walks a flat list of sibling blocks (recursing into any Columns
+// block among them, checking every column so an empty one still matches
+// the other's convention) for the first HEADING or section-title block,
+// and returns its size/level so the new item can be made to match instead
+// of defaulting. `siblingBlocks` is either a page's top-level blocks (for
+// a block dropped from the palette) or one Columns block's own items (for
+// its "+ Add block").
+//
+// A level-h1 heading is skipped on the first pass (`allowH1` false): it's
+// almost always a one-off page/resume title, not a repeatable section
+// heading, and a page commonly has exactly one of those sitting before
+// the real section headings in the blocks array — matching it first would
+// make every new section title as huge as the resume's own name. Only if
+// nothing else at all is found does a second pass allow it, so a mostly
+// empty page still gets *something* to match against.
+function inferSiblingTitleStyle(siblingBlocks, allowH1 = false) {
+  for (const block of siblingBlocks || []) {
+    if (block.type === BLOCK_TYPES.HEADING) {
+      const level = block.level || 'h1'
+      if (level !== 'h1' || allowH1) {
+        return { size: block.size || 'md', level }
       }
-      if (SECTION_TITLE_TYPES.includes(item.type) && item.title) {
-        return { size: item.titleSize || 'md', level: null }
+    } else if (hasSectionTitle(block)) {
+      return { size: block.titleSize || 'md', level: null }
+    }
+    if (block.type === BLOCK_TYPES.COLUMNS) {
+      for (const column of block.columns || []) {
+        const found = inferSiblingTitleStyle(column.items, allowH1)
+        if (found) return found
       }
     }
   }
   return null
 }
 
-// Applies that inferred sibling style to a newly created nested item,
-// before it's added to the column — a HEADING gets a matching level/size,
-// a section-title block (Contact Info, Leisure, Experience, Education,
-// Technical Skills, Languages) gets a matching titleSize. Anything else is
-// left untouched.
-export function matchNestedItemToSiblings(newItem, columnsBlock) {
-  const style = inferSiblingTitleStyle(columnsBlock)
+// Applies that inferred sibling style to a newly created block, before
+// it's added — a HEADING gets a matching level/size, a section-title
+// block (Contact Info, Leisure, Experience, Education, Technical Skills,
+// Languages) gets a matching titleSize. Anything else is left untouched.
+export function matchNewBlockToSiblings(newItem, siblingBlocks) {
+  const style = inferSiblingTitleStyle(siblingBlocks) || inferSiblingTitleStyle(siblingBlocks, true)
   if (!style) return newItem
   if (newItem.type === BLOCK_TYPES.HEADING) {
     return { ...newItem, size: style.size, level: style.level || newItem.level }
   }
-  if (SECTION_TITLE_TYPES.includes(newItem.type)) {
+  if (SECTION_TITLE_TYPES.includes(newItem.type) || (newItem.type === BLOCK_TYPES.TEXT && newItem.showTitle)) {
     return { ...newItem, titleSize: style.size }
   }
   return newItem
@@ -471,6 +516,35 @@ const NON_NESTABLE_TYPES = [BLOCK_TYPES.COLUMNS, BLOCK_TYPES.HEADER, BLOCK_TYPES
 export const NESTABLE_BLOCK_DEFINITIONS = BLOCK_DEFINITIONS.filter(
   (def) => !NON_NESTABLE_TYPES.includes(def.type),
 )
+
+// Content Library fields shown as their own draggable palette items — a
+// Text block preconfigured with that field's contentSlot (and, for a
+// checklist/list-shaped one, `list: true`) and its name shown as a title,
+// so e.g. "Core Competencies" can be dragged straight onto the sheet
+// instead of dragging a plain Text block and then picking it from a
+// dropdown. Slots that already have a dedicated, richer block type
+// (Contact Info, Leisure, Experience, Education, Technical Skills,
+// Languages, and the ones needing a non-text editor: photo/social/QR/
+// contact group) are left out here — that block type is the better way
+// to add them, and is still offered above.
+const CONTENT_LIBRARY_PALETTE_SKIP_TYPES = new Set(['image', 'social', 'contactGroup', 'languages', 'entries'])
+const CONTENT_LIBRARY_PALETTE_SKIP_KEYS = new Set(['skills', 'hobbies', 'qrValue'])
+export const CONTENT_LIBRARY_PALETTE_ITEMS = CONTENT_SLOTS.filter(
+  (slot) =>
+    !slot.group &&
+    !CONTENT_LIBRARY_PALETTE_SKIP_TYPES.has(slot.type) &&
+    !CONTENT_LIBRARY_PALETTE_SKIP_KEYS.has(slot.key),
+).map((slot) => ({
+  key: `content-${slot.key}`,
+  label: slot.label,
+  icon: slot.type === 'checklist' || slot.isList ? ListChecks : TextIcon,
+  blockType: BLOCK_TYPES.TEXT,
+  extraProps: {
+    contentSlot: slot.key,
+    showTitle: true,
+    list: slot.type === 'checklist' || !!slot.isList,
+  },
+}))
 
 function generateId() {
   return `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -550,9 +624,16 @@ export function getTemplateTypographyStyles(template) {
         addRow('text', 'Body text (P)', block.fontSize || 14, !!block.bold, block.color, block.fontFamily, BLOCK_TYPES.TEXT)
       } else if (block.type === BLOCK_TYPES.QUOTE) {
         addRow('quote', 'Quote', block.fontSize || 14, !!block.bold, block.color, block.fontFamily, BLOCK_TYPES.QUOTE)
-      } else if (SECTION_TITLE_TYPES.includes(block.type) && block.title) {
+      }
+      // Independent of the branches above: a block can be BOTH a body
+      // paragraph (Text) AND carry its own auto-title (a section-title
+      // block, or a Text block with showTitle) — the title contributes its
+      // own H2 row, using `titleFontSize`/`titleColor` (never the body's
+      // own `fontSize`/`color`) so the two don't get resized/recolored
+      // together by mistake.
+      if (hasSectionTitle(block)) {
         const size = block.titleSize || 'md'
-        const sizePx = block.fontSize || HEADING_SIZE_PX[size] || HEADING_SIZE_PX.md
+        const sizePx = block[sectionTitleSizeField(block)] || HEADING_SIZE_PX[size] || HEADING_SIZE_PX.md
         addRow(
           `heading-h2-${size}`,
           `H2 (${size})`,
@@ -583,7 +664,7 @@ export function matchesTypographyRow(block, row) {
     if (block.type === BLOCK_TYPES.HEADING) {
       return (block.level || 'h1') === row.level && (block.size || 'md') === row.size
     }
-    if (row.level === 'h2' && SECTION_TITLE_TYPES.includes(block.type) && block.title) {
+    if (row.level === 'h2' && hasSectionTitle(block)) {
       return (block.titleSize || 'md') === row.size
     }
     return false

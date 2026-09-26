@@ -81,7 +81,7 @@ function BuilderContent({ initialTitle }) {
       if (pageIndex === null) return
       if (active.data.current?.source !== 'palette') return
 
-      const blockType = active.data.current.blockType
+      const { blockType, extraProps } = active.data.current
       const draggedRect = active.rect.current.translated
       const canvasRect = over.rect
 
@@ -92,7 +92,7 @@ function BuilderContent({ initialTitle }) {
           }
         : undefined
 
-      addBlock(blockType, position, pageIndex)
+      addBlock(blockType, position, pageIndex, extraProps)
     },
     [addBlock],
   )

@@ -1,10 +1,9 @@
 import { useDraggable } from '@dnd-kit/core'
 
-export default function PaletteItem({ definition }) {
-  const { type, label, icon: Icon } = definition
+export default function PaletteItem({ dragId, blockType, label, icon: Icon, extraProps }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `palette-${type}`,
-    data: { source: 'palette', blockType: type },
+    id: dragId,
+    data: { source: 'palette', blockType, extraProps },
   })
 
   return (

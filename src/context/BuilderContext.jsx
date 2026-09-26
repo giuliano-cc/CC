@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, useRef, useState } from 'react'
-import { createBlockInstance, createNestedBlockInstance, matchNestedItemToSiblings } from '../utils/blockTypes'
+import { createBlockInstance, createNestedBlockInstance, matchNewBlockToSiblings } from '../utils/blockTypes'
 import { findBlockById, removeBlockById, updateBlockById } from '../utils/blockTree'
 import { clamp, seedFreeLayout, SHEET_HEIGHT, SHEET_WIDTH } from '../utils/layout'
 import { alignToPage, alignToSelection, distribute } from '../utils/align'
@@ -67,9 +67,18 @@ export function BuilderProvider({
   )
 
   // Creates a free block on the sheet, at a given position (typically the
-  // cursor position at drop time from the palette) and page.
-  const addBlock = useCallback((type, position, page = 0) => {
-    const newBlock = createBlockInstance(type)
+  // cursor position at drop time from the palette) and page. `extraProps`
+  // (from a Content Library palette preset — see BlockPalette/PaletteItem)
+  // are merged in after the type's own defaults, e.g. to pre-bind a Text
+  // block to a library slot. Its title/heading size, if any, is matched to
+  // whatever sibling heading/section-title block already exists on this
+  // page (recursing into a Columns block among them), same as a nested
+  // item added inside a Columns column — otherwise a block dropped next to
+  // a template's smaller ('sm') page headings always came in at the
+  // hardcoded default ('md') and visibly didn't match.
+  const addBlock = useCallback((type, position, page = 0, extraProps) => {
+    let newBlock = createBlockInstance(type)
+    if (extraProps) newBlock = { ...newBlock, ...extraProps }
     if (position) {
       // Clamped so the block (and its delete/resize handles, which sit just
       // outside its own box) can never land partly beyond the page edge —
@@ -81,7 +90,8 @@ export function BuilderProvider({
     newBlock.zIndex = zCounter.current++
     setBlocks((prev) => {
       pushHistory(prev)
-      return [...prev, newBlock]
+      const pageSiblings = prev.filter((b) => (b.page ?? 0) === page)
+      return [...prev, matchNewBlockToSiblings(newBlock, pageSiblings)]
     })
     setSelectedIds([newBlock.id])
     return newBlock
@@ -114,7 +124,13 @@ export function BuilderProvider({
         ...block,
         columns: block.columns.map((column, index) =>
           index === columnIndex
-            ? { ...column, items: [...column.items, matchNestedItemToSiblings(newItem, block)] }
+            ? {
+                ...column,
+                items: [
+                  ...column.items,
+                  matchNewBlockToSiblings(newItem, block.columns.flatMap((c) => c.items)),
+                ],
+              }
             : column,
         ),
       }))

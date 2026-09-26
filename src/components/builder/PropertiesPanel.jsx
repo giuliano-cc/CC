@@ -21,7 +21,7 @@ import {
   FONT_FAMILY_OPTIONS,
   getTemplateTypographyStyles,
   matchesTypographyRow,
-  SECTION_TITLE_TYPES,
+  sectionTitleSizeField,
 } from '../../utils/blockTypes'
 import { emptyEntry } from '../../utils/contentLists'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
@@ -47,19 +47,26 @@ function GlobalStylePanel() {
   // Applies an edit made on a typography row to every block across the
   // template that shares that row's identity (same heading level+size, or
   // every Text/Quote block, or a Contact Info/Leisure/Experience/
-  // Education/chart block's own title at that size), including nested
-  // inside a Columns block — so "change the H2 style" changes every H2,
-  // not just one instance. Those "section title" blocks use `titleColor`
-  // instead of `color` (their `color` field, where they have one, means
-  // something else — e.g. a chart's bar color) and don't support a bold
-  // toggle (their title is always bold), so the patch is translated for them.
+  // Education/chart block's own title — or a Text block's own auto-title
+  // — at that size), including nested inside a Columns block — so "change
+  // the H2 style" changes every H2, not just one instance. A block matched
+  // into an H2 row that isn't itself a literal Heading (a section-title
+  // block, or a Text block's auto-title) uses `titleColor`/a size field of
+  // its own instead of `color`/`fontSize` (which, where it has them at
+  // all, mean something else — e.g. a chart's bar color, or a Text
+  // block's own paragraph size) and doesn't support a bold toggle (its
+  // title is always bold), so the patch is translated for it.
   function applyTypographyChange(row, patch) {
     function walk(list) {
       list.forEach((block) => {
         if (matchesTypographyRow(block, row)) {
-          if (SECTION_TITLE_TYPES.includes(block.type)) {
-            const { color, bold: _bold, ...rest } = patch
-            updateBlock(block.id, color !== undefined ? { ...rest, titleColor: color } : rest)
+          const isTitleOnlyMatch = row.matchType === BLOCK_TYPES.HEADING && block.type !== BLOCK_TYPES.HEADING
+          if (isTitleOnlyMatch) {
+            const { color, fontSize, bold: _bold, ...rest } = patch
+            const translated = { ...rest }
+            if (color !== undefined) translated.titleColor = color
+            if (fontSize !== undefined) translated[sectionTitleSizeField(block)] = fontSize
+            updateBlock(block.id, translated)
           } else {
             updateBlock(block.id, patch)
           }
@@ -1328,14 +1335,17 @@ function BlockPropertiesPanel({ block, onChange }) {
       {canBindContent && <ContentSlotBinder block={block} onChange={onChange} />}
 
       {block.type === BLOCK_TYPES.TEXT && block.contentSlot && (
-        <label className="flex items-center gap-1.5 text-xs text-slate-600">
-          <input
-            type="checkbox"
-            checked={block.showTitle === true}
-            onChange={(e) => onChange({ showTitle: e.target.checked })}
-          />
-          Show the field's name as a title above it
-        </label>
+        <>
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={block.showTitle === true}
+              onChange={(e) => onChange({ showTitle: e.target.checked })}
+            />
+            Show the field's name as a title above it
+          </label>
+          {block.showTitle === true && <TitleSizeField block={block} onChange={onChange} />}
+        </>
       )}
 
       {showContent && !block.contentSlot && (
