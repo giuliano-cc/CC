@@ -106,6 +106,8 @@ const BLOCK_LABELS = {
   [BLOCK_TYPES.SKILLS_CHART]: 'Skills Chart',
   [BLOCK_TYPES.QR_CODE]: 'QR Code',
   [BLOCK_TYPES.SOCIAL_ICONS]: 'Social Icons',
+  [BLOCK_TYPES.CONTACT_INFO]: 'Contact Info',
+  [BLOCK_TYPES.LEISURE]: 'Leisure',
 }
 
 // Generic "pick a Content Library slot" select, used for fields that bind
@@ -417,6 +419,107 @@ function SocialIconsProperties({ block, onChange }) {
   )
 }
 
+function ContactInfoProperties({ block, onChange }) {
+  const fields = [
+    { key: 'address', label: 'Address' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'email', label: 'Email' },
+    { key: 'website', label: 'Website' },
+  ]
+
+  return (
+    <div className="flex flex-col gap-4">
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={!!block.useLibraryContact}
+          onChange={(e) => onChange({ useLibraryContact: e.target.checked })}
+        />
+        Use my Contact fields from the library
+      </label>
+      {!block.useLibraryContact && (
+        <div className="flex flex-col gap-3">
+          {fields.map((f) => (
+            <Field key={f.key} label={f.label}>
+              <input
+                type="text"
+                value={block[f.key]}
+                onChange={(e) => onChange({ [f.key]: e.target.value })}
+                className={inputClasses}
+              />
+            </Field>
+          ))}
+        </div>
+      )}
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={!!block.showIcons}
+          onChange={(e) => onChange({ showIcons: e.target.checked })}
+        />
+        Show icons next to each field
+      </label>
+      <Field label="Alignment">
+        <select
+          value={block.align}
+          onChange={(e) => onChange({ align: e.target.value })}
+          className={inputClasses}
+        >
+          <option value="left">Left</option>
+          <option value="center">Center</option>
+          <option value="right">Right</option>
+        </select>
+      </Field>
+    </div>
+  )
+}
+
+function LeisureProperties({ block, onChange }) {
+  const linesValue = (block.items || []).join('\n')
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Field label="Title">
+        <input
+          type="text"
+          value={block.title}
+          onChange={(e) => onChange({ title: e.target.value })}
+          className={inputClasses}
+        />
+      </Field>
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={!!block.useLibraryHobbies}
+          onChange={(e) => onChange({ useLibraryHobbies: e.target.checked })}
+        />
+        Use my Leisure / Hobbies from the library
+      </label>
+      {!block.useLibraryHobbies && (
+        <Field label="Items (one per line)">
+          <textarea
+            rows={4}
+            value={linesValue}
+            onChange={(e) => onChange({ items: e.target.value.split('\n') })}
+            className={`${inputClasses} resize-none`}
+          />
+        </Field>
+      )}
+      <Field label="Alignment">
+        <select
+          value={block.align}
+          onChange={(e) => onChange({ align: e.target.value })}
+          className={inputClasses}
+        >
+          <option value="left">Left</option>
+          <option value="center">Center</option>
+          <option value="right">Right</option>
+        </select>
+      </Field>
+    </div>
+  )
+}
+
 // Links the block's content to one of the Content Library slots: from
 // then on the displayed text is read from there, so the content stays the
 // same when switching from one template to another.
@@ -694,6 +797,30 @@ function BlockPropertiesPanel({ block, onChange }) {
           Block: {BLOCK_LABELS[block.type]}
         </h3>
         <SocialIconsProperties block={block} onChange={onChange} />
+        <PositionSizeFields block={block} onChange={onChange} />
+      </div>
+    )
+  }
+
+  if (block.type === BLOCK_TYPES.CONTACT_INFO) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold text-slate-800">
+          Block: {BLOCK_LABELS[block.type]}
+        </h3>
+        <ContactInfoProperties block={block} onChange={onChange} />
+        <PositionSizeFields block={block} onChange={onChange} />
+      </div>
+    )
+  }
+
+  if (block.type === BLOCK_TYPES.LEISURE) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold text-slate-800">
+          Block: {BLOCK_LABELS[block.type]}
+        </h3>
+        <LeisureProperties block={block} onChange={onChange} />
         <PositionSizeFields block={block} onChange={onChange} />
       </div>
     )

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { ArrowLeft, Loader2, Save, Wand2 } from 'lucide-react'
+import { ArrowLeft, FileText, Loader2, Save, Wand2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { BuilderProvider, useBuilder } from '../context/BuilderContext'
 import { useContentLibrary } from '../context/ContentLibraryContext'
 import BlockPalette from '../components/builder/BlockPalette'
 import Canvas, { parsePageDroppableId } from '../components/builder/Canvas'
+import PdfPreviewModal from '../components/builder/PdfPreviewModal'
 import PropertiesPanel from '../components/builder/PropertiesPanel'
 import Toolbar from '../components/builder/Toolbar'
 import LoadingSpinner from '../components/common/LoadingSpinner'
@@ -16,6 +17,7 @@ import { BLOCK_TYPES } from '../utils/blockTypes'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../utils/layout'
 import { TEMPLATE_CONTENT_MAPS } from '../utils/cvTemplates'
 import { parseSocialLinks } from '../utils/socialIcons'
+import { generatePdfBlob } from '../utils/pdfExport'
 import {
   createTemplate,
   getTemplateById,
@@ -27,12 +29,13 @@ function BuilderContent({ initialTitle }) {
   const navigate = useNavigate()
   const { id } = useParams()
   const isNew = !id || id === 'new'
-  const { blocks, addBlock, updateBlock, pageCount, globalStyle } = useBuilder()
+  const { blocks, addBlock, updateBlock, pageCount, globalStyle, selectBlock } = useBuilder()
   const { library } = useContentLibrary()
 
   const [title, setTitle] = useState(initialTitle)
   const [isSaving, setIsSaving] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
+  const [pdfState, setPdfState] = useState(null) // null | { blobUrl, isGenerating }
 
   const debouncedBlocks = useDebouncedValue(blocks, 800)
   const hasRenderedOnce = useRef(false)
@@ -117,6 +120,28 @@ function BuilderContent({ initialTitle }) {
     toast.success('Content applied from your library')
   }
 
+  // Renders every page to an image and assembles a PDF, entirely
+  // client-side. Deselecting first removes selection outlines/resize
+  // handles from the capture; a tick lets that re-render before we snapshot.
+  async function handlePreviewPdf() {
+    selectBlock(null)
+    setPdfState({ blobUrl: null, isGenerating: true })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    try {
+      const blob = await generatePdfBlob(pageCount)
+      const blobUrl = URL.createObjectURL(blob)
+      setPdfState({ blobUrl, isGenerating: false })
+    } catch {
+      toast.error('Unable to generate the PDF preview.')
+      setPdfState(null)
+    }
+  }
+
+  function closePdfPreview() {
+    if (pdfState?.blobUrl) URL.revokeObjectURL(pdfState.blobUrl)
+    setPdfState(null)
+  }
+
   async function handleSave() {
     setIsSaving(true)
     try {
@@ -178,6 +203,14 @@ function BuilderContent({ initialTitle }) {
             </button>
             <button
               type="button"
+              onClick={handlePreviewPdf}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+            >
+              <FileText size={15} />
+              Preview PDF
+            </button>
+            <button
+              type="button"
               onClick={handleSave}
               disabled={isSaving}
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-70"
@@ -196,6 +229,14 @@ function BuilderContent({ initialTitle }) {
           <PropertiesPanel />
         </div>
       </div>
+
+      {pdfState && (
+        <PdfPreviewModal
+          blobUrl={pdfState.blobUrl}
+          isGenerating={pdfState.isGenerating}
+          onClose={closePdfPreview}
+        />
+      )}
     </DndContext>
   )
 }

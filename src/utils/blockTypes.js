@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Columns3,
+  Contact,
   Heading1,
   IdCard,
   Image as ImageIcon,
@@ -9,6 +10,7 @@ import {
   Quote as QuoteIcon,
   RectangleHorizontal,
   Share2,
+  Sparkles,
   Text as TextIcon,
   PanelBottom,
 } from 'lucide-react'
@@ -26,6 +28,8 @@ export const BLOCK_TYPES = {
   SKILLS_CHART: 'skills_chart',
   QR_CODE: 'qr_code',
   SOCIAL_ICONS: 'social_icons',
+  CONTACT_INFO: 'contact_info',
+  LEISURE: 'leisure',
 }
 
 // Fonts available in the font-family selectors (toolbar and properties panel).
@@ -66,6 +70,8 @@ export const DEFAULT_BLOCK_SIZE = {
   [BLOCK_TYPES.SKILLS_CHART]: { width: 340, height: 180 },
   [BLOCK_TYPES.QR_CODE]: { width: 140, height: 160 },
   [BLOCK_TYPES.SOCIAL_ICONS]: { width: 300, height: 50 },
+  [BLOCK_TYPES.CONTACT_INFO]: { width: 300, height: 130 },
+  [BLOCK_TYPES.LEISURE]: { width: 300, height: 150 },
 }
 
 // Interchangeable visual styles for the Skills Chart block — click the
@@ -243,6 +249,31 @@ export const BLOCK_DEFINITIONS = [
         { platform: 'github', url: 'github.com/you' },
       ],
       useLibraryLinks: false,
+      align: 'left',
+    },
+  },
+  {
+    type: BLOCK_TYPES.CONTACT_INFO,
+    label: 'Contact Info',
+    icon: Contact,
+    defaultProps: {
+      address: 'City, Country',
+      phone: '+00 000 000 0000',
+      email: 'you@example.com',
+      website: 'yourwebsite.com',
+      useLibraryContact: false,
+      showIcons: true,
+      align: 'left',
+    },
+  },
+  {
+    type: BLOCK_TYPES.LEISURE,
+    label: 'Leisure',
+    icon: Sparkles,
+    defaultProps: {
+      title: 'Hobbies & Interests',
+      items: ['Photography', 'Hiking', 'Reading'],
+      useLibraryHobbies: false,
       align: 'left',
     },
   },

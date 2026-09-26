@@ -2,7 +2,7 @@ import { BLOCK_TYPES, CHART_STYLES } from '../../utils/blockTypes'
 import { useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
 import { parseChecklist, parseLanguages } from '../../utils/contentLists'
-import { Globe, Image as ImageIcon, Mail, Phone, RefreshCw } from 'lucide-react'
+import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
 
 function alignClass(align) {
@@ -359,6 +359,52 @@ export default function BlockRenderer({
           {items.map((item, i) => (
             <SocialBadge key={i} platform={item.platform} url={item.url} />
           ))}
+        </div>
+      )
+    }
+
+    case BLOCK_TYPES.CONTACT_INFO: {
+      const fields = block.useLibraryContact
+        ? [
+            { key: 'address', value: library.contactAddress, Icon: MapPin },
+            { key: 'phone', value: library.contactPhone, Icon: Phone },
+            { key: 'email', value: library.contactEmail, Icon: Mail },
+            { key: 'website', value: library.contactWebsite, Icon: Globe },
+          ]
+        : [
+            { key: 'address', value: block.address, Icon: MapPin },
+            { key: 'phone', value: block.phone, Icon: Phone },
+            { key: 'email', value: block.email, Icon: Mail },
+            { key: 'website', value: block.website, Icon: Globe },
+          ]
+      const visible = fields.filter((f) => f.value?.trim())
+      const alignItems = block.align === 'center' ? 'items-center' : block.align === 'right' ? 'items-end' : 'items-start'
+      return (
+        <div className={`flex flex-col gap-1.5 text-sm text-slate-600 ${alignItems}`}>
+          {visible.map((f) => (
+            <span key={f.key} className="flex items-center gap-2">
+              {block.showIcons && <f.Icon size={14} className="shrink-0 text-slate-400" />}
+              {f.value}
+            </span>
+          ))}
+        </div>
+      )
+    }
+
+    case BLOCK_TYPES.LEISURE: {
+      const items = block.useLibraryHobbies
+        ? parseChecklist(library.hobbiesItems, library.hobbies)
+            .filter((i) => i.visible && i.text?.trim())
+            .map((i) => i.text)
+        : block.items
+      return (
+        <div className={`flex flex-col gap-2 ${alignClass(block.align)}`}>
+          {block.title && <p className="text-sm font-semibold text-slate-800">{block.title}</p>}
+          <ul className="list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400">
+            {items.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
         </div>
       )
     }

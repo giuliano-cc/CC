@@ -29,6 +29,7 @@ function Page({ pageIndex, blocks, margin, globalStyle }) {
   return (
     <div
       ref={setNodeRef}
+      id={`pdf-page-${pageIndex}`}
       onClick={() => selectBlock(null)}
       style={{
         width: SHEET_WIDTH,
@@ -43,12 +44,14 @@ function Page({ pageIndex, blocks, margin, globalStyle }) {
       {margin > 0 && (
         <div
           style={{ inset: margin }}
-          className="pointer-events-none absolute rounded-sm border border-dashed border-slate-200"
+          // `pdf-ignore`: a purely editor-side guide, excluded when
+          // rendering the PDF preview (see utils/pdfExport.js).
+          className="pdf-ignore pointer-events-none absolute rounded-sm border border-dashed border-slate-200"
         />
       )}
 
       {blocks.length === 0 && (
-        <div className="absolute inset-8 flex items-center justify-center rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400">
+        <div className="pdf-ignore absolute inset-8 flex items-center justify-center rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400">
           Drag a block here to get started
         </div>
       )}

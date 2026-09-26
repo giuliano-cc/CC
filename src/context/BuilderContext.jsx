@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useReducer, useRef, useState } from 'react'
 import { createBlockInstance, createNestedBlockInstance } from '../utils/blockTypes'
 import { findBlockById, removeBlockById, updateBlockById } from '../utils/blockTree'
 import { clamp, seedFreeLayout, SHEET_HEIGHT, SHEET_WIDTH } from '../utils/layout'
@@ -21,6 +21,34 @@ export function BuilderProvider({
 }) {
   const [blocks, setBlocks] = useState(() => seedFreeLayout(initialBlocks))
   const [selectedIds, setSelectedIds] = useState([])
+
+  // Undo/redo history, tracked at the `blocks` level. Discrete actions
+  // (add/remove/align) always push a snapshot; continuous ones (dragging,
+  // resizing, typing — all funneled through `updateBlock`) coalesce into a
+  // single snapshot per block while they're rapid/on the same block, so a
+  // whole drag or typing burst undoes as one step instead of hundreds.
+  //
+  // Kept as plain refs (not React state): React 18 StrictMode invokes a
+  // functional setState updater twice to catch impure ones, and undo/redo
+  // need to trigger a second setState (setBlocks) as a side effect of
+  // popping the stack — nesting that inside another updater got silently
+  // double-applied in dev and cancelled itself out. `historyVersion` is
+  // the only piece of state, bumped after each change purely to force a
+  // re-render so the Undo/Redo buttons' disabled state stays in sync.
+  const pastRef = useRef([])
+  const futureRef = useRef([])
+  const blocksRef = useRef(blocks)
+  blocksRef.current = blocks
+  const lastEditRef = useRef({ id: null, time: 0 })
+  const [, bumpHistoryVersion] = useReducer((v) => v + 1, 0)
+  const HISTORY_LIMIT = 50
+  const COALESCE_MS = 800
+
+  function pushHistory(prevBlocks) {
+    pastRef.current = [...pastRef.current.slice(-(HISTORY_LIMIT - 1)), prevBlocks]
+    futureRef.current = []
+    bumpHistoryVersion()
+  }
   const [globalStyle, setGlobalStyle] = useState({
     ...DEFAULT_GLOBAL_STYLE,
     ...initialGlobalStyle,
@@ -51,7 +79,10 @@ export function BuilderProvider({
     }
     newBlock.page = page
     newBlock.zIndex = zCounter.current++
-    setBlocks((prev) => [...prev, newBlock])
+    setBlocks((prev) => {
+      pushHistory(prev)
+      return [...prev, newBlock]
+    })
     setSelectedIds([newBlock.id])
     return newBlock
   }, [])
@@ -77,25 +108,36 @@ export function BuilderProvider({
   // sheet), but they're still selectable/editable like all the others.
   const addNestedItem = useCallback((columnsBlockId, columnIndex, type) => {
     const newItem = createNestedBlockInstance(type)
-    setBlocks((prev) =>
-      updateBlockById(prev, columnsBlockId, (block) => ({
+    setBlocks((prev) => {
+      pushHistory(prev)
+      return updateBlockById(prev, columnsBlockId, (block) => ({
         ...block,
         columns: block.columns.map((column, index) =>
           index === columnIndex
             ? { ...column, items: [...column.items, newItem] }
             : column,
         ),
-      })),
-    )
+      }))
+    })
     setSelectedIds([newItem.id])
   }, [])
 
   const updateBlock = useCallback((id, patch) => {
-    setBlocks((prev) => updateBlockById(prev, id, patch))
+    const now = Date.now()
+    const last = lastEditRef.current
+    const shouldCheckpoint = last.id !== id || now - last.time > COALESCE_MS
+    setBlocks((prev) => {
+      if (shouldCheckpoint) pushHistory(prev)
+      return updateBlockById(prev, id, patch)
+    })
+    lastEditRef.current = { id, time: now }
   }, [])
 
   const removeBlock = useCallback((id) => {
-    setBlocks((prev) => removeBlockById(prev, id))
+    setBlocks((prev) => {
+      pushHistory(prev)
+      return removeBlockById(prev, id)
+    })
     setSelectedIds((current) => current.filter((sid) => sid !== id))
   }, [])
 
@@ -151,6 +193,7 @@ export function BuilderProvider({
       }
 
       setBlocks((prev) => {
+        pushHistory(prev)
         let next = prev
         updates.forEach(({ id, patch }) => {
           next = updateBlockById(next, id, patch)
@@ -160,6 +203,26 @@ export function BuilderProvider({
     },
     [blocks, selectedIds],
   )
+
+  const undo = useCallback(() => {
+    if (pastRef.current.length === 0) return
+    const previous = pastRef.current[pastRef.current.length - 1]
+    pastRef.current = pastRef.current.slice(0, -1)
+    futureRef.current = [...futureRef.current.slice(-(HISTORY_LIMIT - 1)), blocksRef.current]
+    setBlocks(previous)
+    lastEditRef.current = { id: null, time: 0 }
+    bumpHistoryVersion()
+  }, [])
+
+  const redo = useCallback(() => {
+    if (futureRef.current.length === 0) return
+    const next = futureRef.current[futureRef.current.length - 1]
+    futureRef.current = futureRef.current.slice(0, -1)
+    pastRef.current = [...pastRef.current.slice(-(HISTORY_LIMIT - 1)), blocksRef.current]
+    setBlocks(next)
+    lastEditRef.current = { id: null, time: 0 }
+    bumpHistoryVersion()
+  }, [])
 
   const value = {
     blocks,
@@ -174,6 +237,11 @@ export function BuilderProvider({
     removeBlock,
     bringToFront,
     alignSelection,
+    undo,
+    redo,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reads refs kept in sync by historyVersion bumps
+    canUndo: pastRef.current.length > 0,
+    canRedo: futureRef.current.length > 0,
     globalStyle,
     setGlobalStyle,
     pageCount,

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import {
   AlignCenter,
   AlignLeft,
@@ -8,7 +9,9 @@ import {
   Italic,
   List,
   ListOrdered,
+  Redo2,
   Underline,
+  Undo2,
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import { BLOCK_TYPES, FONT_FAMILY_OPTIONS } from '../../utils/blockTypes'
@@ -39,7 +42,31 @@ const TEXTUAL_TYPES = [
 ]
 
 export default function Toolbar() {
-  const { selectedBlock, updateBlock } = useBuilder()
+  const { selectedBlock, updateBlock, undo, redo, canUndo, canRedo } = useBuilder()
+
+  // Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z (or Ctrl+Y) to redo — ignored while
+  // typing in an input/textarea so it doesn't fight the browser's own
+  // native undo inside that field.
+  useEffect(() => {
+    function handleKeyDown(event) {
+      const isMod = event.metaKey || event.ctrlKey
+      if (!isMod) return
+      const target = event.target
+      if (target?.closest?.('input, textarea, [contenteditable="true"]')) return
+
+      if (event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        if (event.shiftKey) redo()
+        else undo()
+      } else if (event.key.toLowerCase() === 'y') {
+        event.preventDefault()
+        redo()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [undo, redo])
+
   const isTextual = !!selectedBlock && TEXTUAL_TYPES.includes(selectedBlock.type)
   const disabled = !isTextual
   const isHeading = selectedBlock?.type === BLOCK_TYPES.HEADING
@@ -71,6 +98,15 @@ export default function Toolbar() {
 
   return (
     <div className="flex h-12 shrink-0 items-center gap-1 overflow-x-auto border-b border-slate-200 bg-white px-4">
+      <ToolbarButton label="Undo (Ctrl/Cmd+Z)" disabled={!canUndo} onClick={undo}>
+        <Undo2 size={16} />
+      </ToolbarButton>
+      <ToolbarButton label="Redo (Ctrl/Cmd+Shift+Z)" disabled={!canRedo} onClick={redo}>
+        <Redo2 size={16} />
+      </ToolbarButton>
+
+      <div className="mx-2 h-5 w-px shrink-0 bg-slate-200" />
+
       {hasTypography && (
         <>
           <select

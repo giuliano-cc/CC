@@ -40,6 +40,7 @@ export const CONTENT_SLOTS = [
   { key: 'contactWebsite', label: 'Website', multiline: false, group: 'contact' },
   { key: 'socialLinks', label: 'Social Links', type: 'social' },
   { key: 'qrValue', label: 'QR Code Link', multiline: false },
+  { key: 'hobbies', label: 'Leisure / Hobbies', type: 'checklist' },
   { key: 'coverLetterBody', label: 'Cover Letter Body', multiline: true },
 ]
 
