@@ -35,6 +35,13 @@ export const BLOCK_TYPES = {
 }
 
 // Fonts available in the font-family selectors (toolbar and properties panel).
+// Pixel sizes behind each heading "size" preset (sm/md/lg/xl — see
+// HEADING_SIZE_CLASSES in BlockRenderer.jsx for the matching Tailwind
+// classes). Exported so anything that needs the same scale outside a
+// Tailwind class context (auto-generated titles, the typography
+// reference below) uses the identical values instead of guessing.
+export const HEADING_SIZE_PX = { sm: 16, md: 24, lg: 30, xl: 48 }
+
 export const FONT_FAMILY_OPTIONS = [
   { value: '', label: 'Inherit from global style' },
   { value: 'Inter, system-ui, sans-serif', label: 'Inter' },
@@ -344,6 +351,48 @@ export function createNestedBlockInstance(type) {
     type,
     ...structuredClone(definition.defaultProps),
   }
+}
+
+// A reference list of the distinct text styles actually in use across a
+// template — one row per (block type, heading level/size, or paragraph)
+// combination actually found, with its real pixel size/weight/color — so
+// changing "the H2 style" or "the body text style" means knowing exactly
+// which blocks that touches, instead of guessing from one example.
+export function getTemplateTypographyStyles(template) {
+  const rows = new Map()
+
+  function addRow(key, label, block, sizePx) {
+    if (rows.has(key)) return
+    rows.set(key, {
+      key,
+      label,
+      sizePx,
+      bold: !!block.bold,
+      italic: !!block.italic,
+      color: block.color || null,
+    })
+  }
+
+  function walk(blocks) {
+    ;(blocks || []).forEach((block) => {
+      if (block.type === BLOCK_TYPES.HEADING) {
+        const level = block.level || 'h1'
+        const size = block.size || 'md'
+        const sizePx = block.fontSize || HEADING_SIZE_PX[size] || HEADING_SIZE_PX.md
+        addRow(`heading-${level}-${size}`, `${level.toUpperCase()} (${size})`, block, sizePx)
+      } else if (block.type === BLOCK_TYPES.TEXT) {
+        addRow('text', 'Body text (P)', block, block.fontSize || 14)
+      } else if (block.type === BLOCK_TYPES.QUOTE) {
+        addRow('quote', 'Quote', block, block.fontSize || 14)
+      }
+      if (block.type === BLOCK_TYPES.COLUMNS) {
+        block.columns?.forEach((column) => walk(column.items))
+      }
+    })
+  }
+  walk(template.blocks)
+
+  return [...rows.values()].sort((a, b) => b.sizePx - a.sizePx)
 }
 
 // The distinct fonts actually used by a template: its global font plus any

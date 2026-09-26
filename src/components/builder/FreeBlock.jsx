@@ -230,7 +230,7 @@ export default function FreeBlock({
       >
         <BlockRenderer
           block={block}
-          interactive={block.type === BLOCK_TYPES.COLUMNS}
+          interactive={block.type === BLOCK_TYPES.COLUMNS && isSelected}
           selectedId={selectedBlockId}
           onSelectItem={onSelect}
           onAddItem={(columnIndex, type) => onAddNestedItem(block.id, columnIndex, type)}
@@ -246,7 +246,7 @@ export default function FreeBlock({
           event.stopPropagation()
           onRemove(block.id)
         }}
-        className="absolute -right-2 -top-2 z-10 hidden h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow group-hover:flex"
+        className="pdf-ignore absolute -right-2 -top-2 z-10 hidden h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow group-hover:flex"
         aria-label="Delete block"
       >
         <Trash2 size={12} />
@@ -258,7 +258,7 @@ export default function FreeBlock({
             key={handle.key}
             data-no-drag
             onPointerDown={(event) => handleResizeStart(event, handle)}
-            className={`absolute h-3 w-3 rounded-full border-2 border-white bg-primary shadow ${handle.className}`}
+            className={`pdf-ignore absolute h-3 w-3 rounded-full border-2 border-white bg-primary shadow ${handle.className}`}
           />
         ))}
     </div>

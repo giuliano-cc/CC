@@ -1,4 +1,4 @@
-import { BLOCK_TYPES, CHART_STYLES } from '../../utils/blockTypes'
+import { BLOCK_TYPES, CHART_STYLES, HEADING_SIZE_PX } from '../../utils/blockTypes'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
 import { parseChecklist, parseLanguages } from '../../utils/contentLists'
@@ -37,6 +37,20 @@ const HEADING_SIZE_CLASSES = {
   md: 'text-2xl',
   lg: 'text-3xl',
   xl: 'text-5xl',
+}
+
+// Matches the template's own "section heading" convention (a HEADING
+// block at level h2, size md — the same look every built-in template
+// already uses for "Selected Works", "Core Competencies", etc.), so an
+// auto-generated title (on the Contact Info, Leisure and chart blocks,
+// or on any Text block bound to a Content Library field) reads as a
+// native section of that template rather than a smaller, invented
+// label. Font-family is left unset so it inherits the page's own font;
+// pair with the "border-b border-slate-200 pb-1.5" classes (on this
+// element or, for a title that sits in a row with a button, on the row)
+// to also match the underline rule those headings use.
+function sectionTitleStyle(color) {
+  return { fontSize: `${HEADING_SIZE_PX.md}px`, fontWeight: 700, color }
 }
 
 // A block can be "linked" to a Content Library entry (block.contentSlot):
@@ -108,11 +122,9 @@ function Chart({ block, items, onUpdateBlock, accentColor }) {
   const chartStyle = block.chartStyle || 'bars'
   return (
     <div className="group/chart flex flex-col gap-3">
-      <div className="flex items-center justify-between">
+      <div className={`flex items-end justify-between ${block.title ? 'border-b border-slate-200 pb-1.5' : ''}`}>
         {block.title && (
-          <p className="text-sm font-semibold" style={{ color: block.titleColor || accentColor }}>
-            {block.title}
-          </p>
+          <p style={sectionTitleStyle(block.titleColor || accentColor)}>{block.title}</p>
         )}
         {onUpdateBlock && (
           <button
@@ -264,13 +276,17 @@ export default function BlockRenderer({
 
     case BLOCK_TYPES.TEXT: {
       // A Text block bound to a Content Library field shows that field's
-      // name as a title by default (block.showTitle, on unless the user
-      // hides it) — so any library field can be dragged in as a titled
-      // section without a dedicated block type for each one.
+      // name as a title when block.showTitle is explicitly true — set by
+      // default for newly dragged-in blocks (see TEXT's defaultProps), so
+      // any library field can be dropped in as a titled section without a
+      // dedicated block type for each one. Blocks saved before this option
+      // existed have no showTitle field at all and stay untitled, since
+      // the built-in templates already pair these bindings with their own
+      // separate Heading block.
       const slotLabel = block.contentSlot
         ? CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.label
         : null
-      const title = block.showTitle !== false && slotLabel ? slotLabel : null
+      const title = block.showTitle === true && slotLabel ? slotLabel : null
 
       const body = block.list ? (
         (() => {
@@ -300,7 +316,7 @@ export default function BlockRenderer({
       if (!title) return body
       return (
         <div className="flex flex-col gap-1.5">
-          <p className="text-sm font-semibold" style={{ color: globalStyle.primaryColor }}>
+          <p className="border-b border-slate-200 pb-1.5" style={sectionTitleStyle(globalStyle.primaryColor)}>
             {title}
           </p>
           {body}
@@ -431,8 +447,8 @@ export default function BlockRenderer({
         <div className={`flex flex-col gap-1.5 ${alignItems}`}>
           {block.title && (
             <p
-              className="mb-0.5 text-sm font-semibold"
-              style={{ color: block.titleColor || globalStyle.primaryColor }}
+              className="mb-0.5 w-full border-b border-slate-200 pb-1.5"
+              style={sectionTitleStyle(block.titleColor || globalStyle.primaryColor)}
             >
               {block.title}
             </p>
@@ -458,7 +474,10 @@ export default function BlockRenderer({
       return (
         <div className={`flex flex-col gap-2 ${alignClass(block.align)}`}>
           {block.title && (
-            <p className="text-sm font-semibold" style={{ color: block.titleColor || globalStyle.primaryColor }}>
+            <p
+              className="border-b border-slate-200 pb-1.5"
+              style={sectionTitleStyle(block.titleColor || globalStyle.primaryColor)}
+            >
               {block.title}
             </p>
           )}
@@ -505,7 +524,7 @@ export default function BlockRenderer({
                 </div>
               ))}
               {interactive && (
-                <div className="flex gap-2 pt-1">
+                <div className="pdf-ignore flex gap-2 pt-1">
                   <button
                     type="button"
                     onClick={(event) => {

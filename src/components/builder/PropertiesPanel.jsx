@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
-import { BLOCK_TYPES, FONT_FAMILY_OPTIONS } from '../../utils/blockTypes'
+import { BLOCK_TYPES, FONT_FAMILY_OPTIONS, getTemplateTypographyStyles } from '../../utils/blockTypes'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import { SOCIAL_PLATFORMS } from '../../utils/socialIcons'
 import ImageCropModal from './ImageCropModal'
@@ -33,7 +33,8 @@ const inputClasses =
   'w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20'
 
 function GlobalStylePanel() {
-  const { globalStyle, setGlobalStyle } = useBuilder()
+  const { globalStyle, setGlobalStyle, blocks } = useBuilder()
+  const typographyRows = getTemplateTypographyStyles({ blocks })
 
   return (
     <div className="flex flex-col gap-4">
@@ -89,6 +90,35 @@ function GlobalStylePanel() {
         The margin shows as a dashed guide on the sheet — it's a visual
         guide only, blocks can still be placed anywhere.
       </p>
+
+      {typographyRows.length > 0 && (
+        <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-4">
+          <h4 className="text-xs font-semibold text-slate-600">Text styles used in this template</h4>
+          <p className="-mt-1 text-xs text-slate-400">
+            What to look for on the sheet if you want to change one of these.
+          </p>
+          <div className="flex flex-col divide-y divide-slate-100 rounded-md border border-slate-200">
+            {typographyRows.map((row) => (
+              <div key={row.key} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs">
+                <span
+                  className="truncate"
+                  style={{
+                    fontWeight: row.bold ? 700 : 400,
+                    fontStyle: row.italic ? 'italic' : 'normal',
+                    color: row.color || globalStyle.textColor,
+                  }}
+                >
+                  {row.label}
+                </span>
+                <span className="shrink-0 text-slate-400">
+                  {row.sizePx}px{row.bold ? ' · bold' : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="text-xs text-slate-400">
         Select a block on the sheet to edit its specific properties.
       </p>
@@ -1035,7 +1065,7 @@ function BlockPropertiesPanel({ block, onChange }) {
         <label className="flex items-center gap-1.5 text-xs text-slate-600">
           <input
             type="checkbox"
-            checked={block.showTitle !== false}
+            checked={block.showTitle === true}
             onChange={(e) => onChange({ showTitle: e.target.checked })}
           />
           Show the field's name as a title above it
