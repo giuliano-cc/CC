@@ -40,17 +40,23 @@ const HEADING_SIZE_CLASSES = {
 }
 
 // Matches the template's own "section heading" convention (a HEADING
-// block at level h2, size md — the same look every built-in template
-// already uses for "Selected Works", "Core Competencies", etc.), so an
-// auto-generated title (on the Contact Info, Leisure and chart blocks,
-// or on any Text block bound to a Content Library field) reads as a
-// native section of that template rather than a smaller, invented
-// label. Font-family is left unset so it inherits the page's own font;
-// pair with the "border-b border-slate-200 pb-1.5" classes (on this
-// element or, for a title that sits in a row with a button, on the row)
-// to also match the underline rule those headings use.
-function sectionTitleStyle(color) {
-  return { fontSize: `${HEADING_SIZE_PX.md}px`, fontWeight: 700, color }
+// block at level h2 — the same look every built-in template already
+// uses for "Selected Works", "Core Competencies", etc.), so an
+// auto-generated title (on the Contact Info, Leisure, Experience,
+// Education and chart blocks, or on any Text block bound to a Content
+// Library field) reads as a native section of that template rather
+// than a smaller, invented label. Size defaults to 'md' but is
+// block.titleSize (or a raw block.fontSize override) so it can be made
+// to match a smaller/larger sibling heading — see getTemplateTypographyStyles,
+// which tracks these same titles as pseudo-H2 rows so they can all be
+// resized/recolored/re-fonted together from the Global Style panel.
+// Font-family defaults to inheriting the page's own font; pair with the
+// "border-b border-slate-200 pb-1.5" classes (on this element or, for a
+// title that sits in a row with a button, on the row) to also match the
+// underline rule those headings use.
+function sectionTitleStyle(block, color) {
+  const sizePx = block.fontSize || HEADING_SIZE_PX[block.titleSize || 'md'] || HEADING_SIZE_PX.md
+  return { fontSize: `${sizePx}px`, fontWeight: 700, color, fontFamily: block.fontFamily || undefined }
 }
 
 // A block can be "linked" to a Content Library entry (block.contentSlot):
@@ -124,7 +130,7 @@ function Chart({ block, items, onUpdateBlock, accentColor }) {
     <div className="group/chart flex flex-col gap-3">
       <div className={`flex items-end justify-between ${block.title ? 'border-b border-slate-200 pb-1.5' : ''}`}>
         {block.title && (
-          <p style={sectionTitleStyle(block.titleColor || accentColor)}>{block.title}</p>
+          <p style={sectionTitleStyle(block, block.titleColor || accentColor)}>{block.title}</p>
         )}
         {onUpdateBlock && (
           <button
@@ -316,7 +322,7 @@ export default function BlockRenderer({
       if (!title) return body
       return (
         <div className="flex flex-col gap-1.5">
-          <p className="border-b border-slate-200 pb-1.5" style={sectionTitleStyle(globalStyle.primaryColor)}>
+          <p className="border-b border-slate-200 pb-1.5" style={sectionTitleStyle({}, globalStyle.primaryColor)}>
             {title}
           </p>
           {body}
@@ -448,7 +454,7 @@ export default function BlockRenderer({
           {block.title && (
             <p
               className="mb-0.5 w-full border-b border-slate-200 pb-1.5"
-              style={sectionTitleStyle(block.titleColor || globalStyle.primaryColor)}
+              style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor)}
             >
               {block.title}
             </p>
@@ -476,7 +482,7 @@ export default function BlockRenderer({
           {block.title && (
             <p
               className="border-b border-slate-200 pb-1.5"
-              style={sectionTitleStyle(block.titleColor || globalStyle.primaryColor)}
+              style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor)}
             >
               {block.title}
             </p>
@@ -503,7 +509,7 @@ export default function BlockRenderer({
           {block.title && (
             <p
               className="border-b border-slate-200 pb-1.5"
-              style={sectionTitleStyle(block.titleColor || globalStyle.primaryColor)}
+              style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor)}
             >
               {block.title}
             </p>

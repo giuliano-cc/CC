@@ -241,6 +241,10 @@ export const BLOCK_DEFINITIONS = [
     icon: BarChart3,
     defaultProps: {
       title: 'Technical Skills',
+      titleSize: 'md',
+      titleColor: null,
+      fontFamily: null,
+      fontSize: null,
       items: [
         { label: 'Skill 1', level: 90 },
         { label: 'Skill 2', level: 75 },
@@ -259,6 +263,10 @@ export const BLOCK_DEFINITIONS = [
     icon: LanguagesIcon,
     defaultProps: {
       title: 'Languages',
+      titleSize: 'md',
+      titleColor: null,
+      fontFamily: null,
+      fontSize: null,
       items: [
         { label: 'English', level: 90 },
         { label: 'Italian', level: 100 },
@@ -298,7 +306,10 @@ export const BLOCK_DEFINITIONS = [
     icon: Contact,
     defaultProps: {
       title: 'Contact Info',
+      titleSize: 'md',
       titleColor: null,
+      fontFamily: null,
+      fontSize: null,
       address: 'City, Country',
       phone: '+00 000 000 0000',
       email: 'you@example.com',
@@ -314,7 +325,10 @@ export const BLOCK_DEFINITIONS = [
     icon: Briefcase,
     defaultProps: {
       title: 'Experience',
+      titleSize: 'md',
       titleColor: null,
+      fontFamily: null,
+      fontSize: null,
       items: [
         {
           id: 'exp-default-1',
@@ -347,7 +361,10 @@ export const BLOCK_DEFINITIONS = [
     icon: GraduationCap,
     defaultProps: {
       title: 'Education',
+      titleSize: 'md',
       titleColor: null,
+      fontFamily: null,
+      fontSize: null,
       items: [
         {
           id: 'edu-default-1',
@@ -370,6 +387,10 @@ export const BLOCK_DEFINITIONS = [
     icon: Sparkles,
     defaultProps: {
       title: 'Hobbies & Interests',
+      titleSize: 'md',
+      titleColor: null,
+      fontFamily: null,
+      fontSize: null,
       items: ['Photography', 'Hiking', 'Reading'],
       useLibraryHobbies: false,
       align: 'left',
@@ -415,31 +436,41 @@ export function createNestedBlockInstance(type) {
   }
 }
 
+// Block types whose "title" (Contact Info, Leisure, Experience, Education,
+// Technical Skills, Languages) is rendered as a section heading — see
+// sectionTitleStyle in BlockRenderer.jsx — but isn't itself a HEADING
+// block, so it needs `titleSize`/`titleColor`/`fontFamily`/`fontSize`
+// fields of its own instead of the usual level/size/color/fontFamily ones.
+export const SECTION_TITLE_TYPES = [
+  BLOCK_TYPES.CONTACT_INFO,
+  BLOCK_TYPES.LEISURE,
+  BLOCK_TYPES.EXPERIENCE,
+  BLOCK_TYPES.EDUCATION,
+  BLOCK_TYPES.SKILLS_CHART,
+  BLOCK_TYPES.LANGUAGES_CHART,
+]
+
 // A reference list of the distinct text styles actually in use across a
 // template — one row per (block type, heading level/size, or paragraph)
-// combination actually found, with its real pixel size/weight/color — so
-// changing "the H2 style" or "the body text style" means knowing exactly
-// which blocks that touches, instead of guessing from one example.
+// combination actually found, with its real pixel size/weight/color/font
+// — so changing "the H2 style" or "the body text style" means knowing
+// exactly which blocks that touches, instead of guessing from one
+// example. A SECTION_TITLE_TYPES block's title counts as a level-h2
+// heading of its own titleSize, merging into the same row as any literal
+// H2 heading of that size (e.g. a template's "Skills" heading and its
+// "Experience"/"Education" block titles are meant to look like siblings),
+// so editing one row keeps them all in sync instead of drifting apart.
 export function getTemplateTypographyStyles(template) {
   const rows = new Map()
 
   // `matchType`/`level`/`size` identify every block this row stands for
   // (see matchesTypographyRow below), so the row can be edited in place —
-  // changing its size/weight/color re-applies to every block sharing that
-  // identity, not just the one instance that happened to be walked first.
-  function addRow(key, label, block, sizePx, matchType, level, size) {
+  // changing its size/weight/color/font re-applies to every block sharing
+  // that identity, not just the one instance that happened to be walked
+  // first.
+  function addRow(key, label, sizePx, bold, color, fontFamily, matchType, level, size) {
     if (rows.has(key)) return
-    rows.set(key, {
-      key,
-      label,
-      sizePx,
-      bold: !!block.bold,
-      italic: !!block.italic,
-      color: block.color || null,
-      matchType,
-      level,
-      size,
-    })
+    rows.set(key, { key, label, sizePx, bold, color: color || null, fontFamily: fontFamily || null, matchType, level, size })
   }
 
   function walk(blocks) {
@@ -448,11 +479,35 @@ export function getTemplateTypographyStyles(template) {
         const level = block.level || 'h1'
         const size = block.size || 'md'
         const sizePx = block.fontSize || HEADING_SIZE_PX[size] || HEADING_SIZE_PX.md
-        addRow(`heading-${level}-${size}`, `${level.toUpperCase()} (${size})`, block, sizePx, BLOCK_TYPES.HEADING, level, size)
+        addRow(
+          `heading-${level}-${size}`,
+          `${level.toUpperCase()} (${size})`,
+          sizePx,
+          !!block.bold,
+          block.color,
+          block.fontFamily,
+          BLOCK_TYPES.HEADING,
+          level,
+          size,
+        )
       } else if (block.type === BLOCK_TYPES.TEXT) {
-        addRow('text', 'Body text (P)', block, block.fontSize || 14, BLOCK_TYPES.TEXT)
+        addRow('text', 'Body text (P)', block.fontSize || 14, !!block.bold, block.color, block.fontFamily, BLOCK_TYPES.TEXT)
       } else if (block.type === BLOCK_TYPES.QUOTE) {
-        addRow('quote', 'Quote', block, block.fontSize || 14, BLOCK_TYPES.QUOTE)
+        addRow('quote', 'Quote', block.fontSize || 14, !!block.bold, block.color, block.fontFamily, BLOCK_TYPES.QUOTE)
+      } else if (SECTION_TITLE_TYPES.includes(block.type) && block.title) {
+        const size = block.titleSize || 'md'
+        const sizePx = block.fontSize || HEADING_SIZE_PX[size] || HEADING_SIZE_PX.md
+        addRow(
+          `heading-h2-${size}`,
+          `H2 (${size})`,
+          sizePx,
+          true,
+          block.titleColor,
+          block.fontFamily,
+          BLOCK_TYPES.HEADING,
+          'h2',
+          size,
+        )
       }
       if (block.type === BLOCK_TYPES.COLUMNS) {
         block.columns?.forEach((column) => walk(column.items))
@@ -468,11 +523,16 @@ export function getTemplateTypographyStyles(template) {
 // getTemplateTypographyStyles) stands for — used to re-apply an edit made
 // on the row to every matching block across the template.
 export function matchesTypographyRow(block, row) {
-  if (block.type !== row.matchType) return false
   if (row.matchType === BLOCK_TYPES.HEADING) {
-    return (block.level || 'h1') === row.level && (block.size || 'md') === row.size
+    if (block.type === BLOCK_TYPES.HEADING) {
+      return (block.level || 'h1') === row.level && (block.size || 'md') === row.size
+    }
+    if (row.level === 'h2' && SECTION_TITLE_TYPES.includes(block.type) && block.title) {
+      return (block.titleSize || 'md') === row.size
+    }
+    return false
   }
-  return true
+  return block.type === row.matchType
 }
 
 // The distinct fonts actually used by a template: its global font plus any

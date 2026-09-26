@@ -263,6 +263,7 @@ export const CV_TEMPLATES = [
                 type: 'education_entries',
                 title: 'Education.',
                 titleColor: null,
+                titleSize: 'sm',
                 items: [
                   {
                     id: 'cv1-edu-1',
@@ -289,6 +290,7 @@ export const CV_TEMPLATES = [
                 type: 'experience_entries',
                 title: 'Experience.',
                 titleColor: null,
+                titleSize: 'sm',
                 items: [
                   {
                     id: 'cv1-exp-1',
@@ -419,6 +421,7 @@ export const CV_TEMPLATES = [
                 type: 'education_entries',
                 title: 'education',
                 titleColor: null,
+                titleSize: 'sm',
                 items: [
                   {
                     id: 'cv3-edu-1',
@@ -445,6 +448,7 @@ export const CV_TEMPLATES = [
                 type: 'experience_entries',
                 title: 'work experience',
                 titleColor: null,
+                titleSize: 'sm',
                 items: [
                   {
                     id: 'cv3-exp-1',
@@ -500,6 +504,7 @@ export const CV_TEMPLATES = [
         type: 'education_entries',
         title: '',
         titleColor: null,
+        titleSize: 'sm',
         items: [
           {
             id: 'cv4-edu-1',
@@ -520,6 +525,7 @@ export const CV_TEMPLATES = [
         type: 'experience_entries',
         title: '',
         titleColor: null,
+        titleSize: 'sm',
         items: [
           {
             id: 'cv4-exp-1',
@@ -596,6 +602,7 @@ export const CV_TEMPLATES = [
                 type: 'education_entries',
                 title: 'Education',
                 titleColor: '#dc2626',
+                titleSize: 'sm',
                 items: [
                   {
                     id: 'cv5-edu-1',
@@ -632,6 +639,7 @@ export const CV_TEMPLATES = [
                 type: 'experience_entries',
                 title: 'Experience',
                 titleColor: '#dc2626',
+                titleSize: 'sm',
                 items: [
                   {
                     id: 'cv5-exp-1',

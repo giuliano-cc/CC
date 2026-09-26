@@ -20,6 +20,7 @@ import {
   FONT_FAMILY_OPTIONS,
   getTemplateTypographyStyles,
   matchesTypographyRow,
+  SECTION_TITLE_TYPES,
 } from '../../utils/blockTypes'
 import { emptyEntry } from '../../utils/contentLists'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
@@ -44,12 +45,24 @@ function GlobalStylePanel() {
 
   // Applies an edit made on a typography row to every block across the
   // template that shares that row's identity (same heading level+size, or
-  // every Text/Quote block), including nested inside a Columns block —
-  // so "change the H2 style" changes every H2, not just one instance.
+  // every Text/Quote block, or a Contact Info/Leisure/Experience/
+  // Education/chart block's own title at that size), including nested
+  // inside a Columns block — so "change the H2 style" changes every H2,
+  // not just one instance. Those "section title" blocks use `titleColor`
+  // instead of `color` (their `color` field, where they have one, means
+  // something else — e.g. a chart's bar color) and don't support a bold
+  // toggle (their title is always bold), so the patch is translated for them.
   function applyTypographyChange(row, patch) {
     function walk(list) {
       list.forEach((block) => {
-        if (matchesTypographyRow(block, row)) updateBlock(block.id, patch)
+        if (matchesTypographyRow(block, row)) {
+          if (SECTION_TITLE_TYPES.includes(block.type)) {
+            const { color, bold: _bold, ...rest } = patch
+            updateBlock(block.id, color !== undefined ? { ...rest, titleColor: color } : rest)
+          } else {
+            updateBlock(block.id, patch)
+          }
+        }
         if (block.type === BLOCK_TYPES.COLUMNS) {
           block.columns?.forEach((column) => walk(column.items))
         }
@@ -126,8 +139,8 @@ function GlobalStylePanel() {
                   className="truncate"
                   style={{
                     fontWeight: row.bold ? 700 : 400,
-                    fontStyle: row.italic ? 'italic' : 'normal',
                     color: row.color || globalStyle.textColor,
+                    fontFamily: row.fontFamily || undefined,
                   }}
                 >
                   {row.label}
@@ -139,7 +152,7 @@ function GlobalStylePanel() {
                     max={96}
                     value={row.sizePx}
                     onChange={(e) => applyTypographyChange(row, { fontSize: Number(e.target.value) })}
-                    className={`${inputClasses} !w-16 shrink-0 py-1`}
+                    className={`${inputClasses} !w-14 shrink-0 py-1`}
                     title="Size (px)"
                   />
                   <label className="flex shrink-0 items-center gap-1 text-slate-600">
@@ -158,6 +171,19 @@ function GlobalStylePanel() {
                     title="Color"
                   />
                 </div>
+                <select
+                  value={row.fontFamily || ''}
+                  onChange={(e) => applyTypographyChange(row, { fontFamily: e.target.value || null })}
+                  className={`${inputClasses} py-1`}
+                  title="Font — leave as inherited to use the global one"
+                >
+                  <option value="">Inherit from global style</option>
+                  {FONT_FAMILY_OPTIONS.filter((opt) => opt.value).map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             ))}
           </div>
@@ -296,6 +322,28 @@ function CvHeaderProperties({ block, onChange }) {
   )
 }
 
+// Shared by every block whose "title" is rendered as a section heading
+// (Contact Info, Leisure, Experience, Education, Technical Skills,
+// Languages) rather than being a HEADING block itself — lets it match
+// whichever size a sibling heading in the same sidebar/column uses,
+// instead of always defaulting to the page-section size.
+function TitleSizeField({ block, onChange }) {
+  return (
+    <Field label="Title size">
+      <select
+        value={block.titleSize || 'md'}
+        onChange={(e) => onChange({ titleSize: e.target.value })}
+        className={inputClasses}
+      >
+        <option value="sm">Small (compact sidebar heading)</option>
+        <option value="md">Medium (page section heading)</option>
+        <option value="lg">Large</option>
+        <option value="xl">Extra large</option>
+      </select>
+    </Field>
+  )
+}
+
 function ColumnsProperties({ block }) {
   return (
     <div className="flex flex-col gap-3">
@@ -352,6 +400,7 @@ function SkillsChartProperties({ block, onChange }) {
           className={inputClasses}
         />
       </Field>
+      <TitleSizeField block={block} onChange={onChange} />
       <Field label="Style">
         <select
           value={block.chartStyle || 'bars'}
@@ -433,6 +482,7 @@ function LanguagesChartProperties({ block, onChange }) {
           className={inputClasses}
         />
       </Field>
+      <TitleSizeField block={block} onChange={onChange} />
       <Field label="Style">
         <select
           value={block.chartStyle || 'bars'}
@@ -615,6 +665,7 @@ function ContactInfoProperties({ block, onChange }) {
           className={inputClasses}
         />
       </Field>
+      <TitleSizeField block={block} onChange={onChange} />
       <Field label="Content from library">
         <select
           value={block.useLibraryContact ? 'contact' : ''}
@@ -675,6 +726,7 @@ function LeisureProperties({ block, onChange }) {
           className={inputClasses}
         />
       </Field>
+      <TitleSizeField block={block} onChange={onChange} />
       <Field label="Content from library">
         <select
           value={block.useLibraryHobbies ? 'hobbies' : ''}
@@ -741,6 +793,7 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
           className={inputClasses}
         />
       </Field>
+      <TitleSizeField block={block} onChange={onChange} />
       <Field label="Content from library">
         <select
           value={usesLibrary ? 'library' : ''}
