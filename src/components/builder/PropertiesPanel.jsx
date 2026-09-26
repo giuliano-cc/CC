@@ -104,7 +104,7 @@ const BLOCK_LABELS = {
   [BLOCK_TYPES.QUOTE]: 'Quote',
   [BLOCK_TYPES.FOOTER]: 'Footer',
   [BLOCK_TYPES.COLUMNS]: 'Columns',
-  [BLOCK_TYPES.SKILLS_CHART]: 'Skills Chart',
+  [BLOCK_TYPES.SKILLS_CHART]: 'Technical Skills',
   [BLOCK_TYPES.QR_CODE]: 'QR Code',
   [BLOCK_TYPES.SOCIAL_ICONS]: 'Social Icons',
   [BLOCK_TYPES.CONTACT_INFO]: 'Contact Info',
