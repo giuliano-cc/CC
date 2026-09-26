@@ -154,6 +154,11 @@ export const BLOCK_DEFINITIONS = [
       lineHeight: null,
       bgColor: null,
       contentSlot: null,
+      // When bound to a Content Library field (contentSlot), shows that
+      // field's name as a title above the text — visible by default, so
+      // any Content Library field can be dragged in as a titled section
+      // without needing its own dedicated block type.
+      showTitle: true,
     },
   },
   {
@@ -339,4 +344,31 @@ export function createNestedBlockInstance(type) {
     type,
     ...structuredClone(definition.defaultProps),
   }
+}
+
+// The distinct fonts actually used by a template: its global font plus any
+// per-block overrides (including inside COLUMNS' nested items), shown as
+// short display names — e.g. so the templates gallery can tell you at a
+// glance what a template will look like typographically.
+export function getTemplateFontLabels(template) {
+  const values = new Set()
+  if (template.globalStyle?.fontFamily) values.add(template.globalStyle.fontFamily)
+
+  function walk(blocks) {
+    ;(blocks || []).forEach((block) => {
+      if (block.fontFamily) values.add(block.fontFamily)
+      if (block.type === BLOCK_TYPES.COLUMNS) {
+        block.columns?.forEach((column) => walk(column.items))
+      }
+    })
+  }
+  walk(template.blocks)
+
+  return [...values].map((value) => {
+    const known = FONT_FAMILY_OPTIONS.find((opt) => opt.value === value)
+    if (known) return known.label
+    // A raw font stack (e.g. "Georgia, 'Times New Roman', serif"): show
+    // just the first, most specific family name.
+    return value.split(',')[0].replace(/['"]/g, '').trim()
+  })
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Copy, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Copy, MoreVertical, Pencil, Trash2, Type } from 'lucide-react'
+import { getTemplateFontLabels } from '../../utils/blockTypes'
 import TemplateThumbnail from './TemplateThumbnail'
 
 export default function TemplateCard({ template, onDuplicate, onDelete }) {
@@ -12,6 +13,7 @@ export default function TemplateCard({ template, onDuplicate, onDelete }) {
     month: 'short',
     year: 'numeric',
   })
+  const fontLabels = getTemplateFontLabels(template)
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
@@ -31,6 +33,12 @@ export default function TemplateCard({ template, onDuplicate, onDelete }) {
           <p className="mt-0.5 text-xs text-slate-500">
             {template.category} · {formattedDate}
           </p>
+          {fontLabels.length > 0 && (
+            <p className="mt-1 flex items-center gap-1 truncate text-xs text-slate-400" title={fontLabels.join(', ')}>
+              <Type size={12} className="shrink-0" />
+              {fontLabels.join(', ')}
+            </p>
+          )}
         </div>
 
         <div className="relative shrink-0">

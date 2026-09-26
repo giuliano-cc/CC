@@ -1031,6 +1031,17 @@ function BlockPropertiesPanel({ block, onChange }) {
 
       {canBindContent && <ContentSlotBinder block={block} onChange={onChange} />}
 
+      {block.type === BLOCK_TYPES.TEXT && block.contentSlot && (
+        <label className="flex items-center gap-1.5 text-xs text-slate-600">
+          <input
+            type="checkbox"
+            checked={block.showTitle !== false}
+            onChange={(e) => onChange({ showTitle: e.target.checked })}
+          />
+          Show the field's name as a title above it
+        </label>
+      )}
+
       {showContent && !block.contentSlot && (
         <Field label="Text">
           <textarea

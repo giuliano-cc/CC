@@ -1,5 +1,5 @@
 import { BLOCK_TYPES, CHART_STYLES } from '../../utils/blockTypes'
-import { useContentLibrary } from '../../context/ContentLibraryContext'
+import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
 import { parseChecklist, parseLanguages } from '../../utils/contentLists'
 import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
@@ -262,23 +262,33 @@ export default function BlockRenderer({
       )
     }
 
-    case BLOCK_TYPES.TEXT:
-      if (block.list) {
-        const ListTag = block.ordered ? 'ol' : 'ul'
-        return (
-          <ListTag
-            className={`${block.ordered ? 'list-decimal' : 'list-disc'} space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400 ${alignClass(block.align)}`}
-            style={typographyStyle(block)}
-          >
-            {resolvedContent.split('\n').filter(Boolean).map((line, i) => (
-              <li key={i} className={textStyleClasses({ ...block, align: undefined })}>
-                {line}
-              </li>
-            ))}
-          </ListTag>
-        )
-      }
-      return (
+    case BLOCK_TYPES.TEXT: {
+      // A Text block bound to a Content Library field shows that field's
+      // name as a title by default (block.showTitle, on unless the user
+      // hides it) — so any library field can be dragged in as a titled
+      // section without a dedicated block type for each one.
+      const slotLabel = block.contentSlot
+        ? CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.label
+        : null
+      const title = block.showTitle !== false && slotLabel ? slotLabel : null
+
+      const body = block.list ? (
+        (() => {
+          const ListTag = block.ordered ? 'ol' : 'ul'
+          return (
+            <ListTag
+              className={`${block.ordered ? 'list-decimal' : 'list-disc'} space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400 ${alignClass(block.align)}`}
+              style={typographyStyle(block)}
+            >
+              {resolvedContent.split('\n').filter(Boolean).map((line, i) => (
+                <li key={i} className={textStyleClasses({ ...block, align: undefined })}>
+                  {line}
+                </li>
+              ))}
+            </ListTag>
+          )
+        })()
+      ) : (
         <p
           className={`whitespace-pre-line text-sm leading-relaxed ${textStyleClasses(block)}`}
           style={typographyStyle(block)}
@@ -286,6 +296,17 @@ export default function BlockRenderer({
           {resolvedContent}
         </p>
       )
+
+      if (!title) return body
+      return (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm font-semibold" style={{ color: globalStyle.primaryColor }}>
+            {title}
+          </p>
+          {body}
+        </div>
+      )
+    }
 
     case BLOCK_TYPES.IMAGE: {
       const justify =
