@@ -156,6 +156,7 @@ export default function FreeBlock({
           selectedId={selectedBlockId}
           onSelectItem={onSelect}
           onAddItem={(columnIndex, type) => onAddNestedItem(block.id, columnIndex, type)}
+          onUpdateBlock={onChangeGeometry}
         />
       </div>
 

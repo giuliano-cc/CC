@@ -38,6 +38,16 @@ export const FONT_FAMILY_OPTIONS = [
   { value: "Georgia, 'Times New Roman', serif", label: 'Georgia (serif)' },
   { value: "'Times New Roman', Times, serif", label: 'Times New Roman' },
   { value: "'Courier New', monospace", label: 'Courier New' },
+  { value: "'EB Garamond', Georgia, serif", label: 'EB Garamond' },
+  { value: "Figtree, -apple-system, sans-serif", label: 'Figtree' },
+  { value: "'IBM Plex Sans', -apple-system, sans-serif", label: 'IBM Plex Sans' },
+  { value: "'IBM Plex Mono', ui-monospace, monospace", label: 'IBM Plex Mono' },
+  { value: "Lora, Georgia, serif", label: 'Lora' },
+  { value: "Merriweather, Georgia, serif", label: 'Merriweather' },
+  { value: "'Playfair Display', Georgia, serif", label: 'Playfair Display' },
+  { value: "'Source Sans 3', -apple-system, sans-serif", label: 'Source Sans 3' },
+  { value: "Poppins, -apple-system, sans-serif", label: 'Poppins' },
+  { value: "Roboto, -apple-system, sans-serif", label: 'Roboto' },
 ]
 
 // Default size (in px, on the 794x1123 sheet) for each block type: used
@@ -57,6 +67,11 @@ export const DEFAULT_BLOCK_SIZE = {
   [BLOCK_TYPES.QR_CODE]: { width: 140, height: 160 },
   [BLOCK_TYPES.SOCIAL_ICONS]: { width: 300, height: 50 },
 }
+
+// Interchangeable visual styles for the Skills Chart block — click the
+// small cycle button on the block itself, or pick one in the properties
+// panel.
+export const CHART_STYLES = ['bars', 'dots', 'tags']
 
 export const BLOCK_DEFINITIONS = [
   {
@@ -200,6 +215,7 @@ export const BLOCK_DEFINITIONS = [
       ],
       useLibrarySkills: false,
       color: null,
+      chartStyle: 'bars',
     },
   },
   {
@@ -249,6 +265,7 @@ export function createBlockInstance(type) {
     width: size.width,
     height: size.height,
     zIndex: 1,
+    page: 0,
     ...structuredClone(definition.defaultProps),
   }
 }

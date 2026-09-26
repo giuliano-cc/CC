@@ -8,16 +8,26 @@ const DEFAULT_GLOBAL_STYLE = {
   primaryColor: '#2563eb',
   textColor: '#1e293b',
   fontFamily: 'Inter, system-ui, sans-serif',
+  margin: 48,
 }
 
 const BuilderContext = createContext(null)
 
-export function BuilderProvider({ children, initialBlocks = [], initialGlobalStyle }) {
+export function BuilderProvider({
+  children,
+  initialBlocks = [],
+  initialGlobalStyle,
+  initialPageCount,
+}) {
   const [blocks, setBlocks] = useState(() => seedFreeLayout(initialBlocks))
   const [selectedIds, setSelectedIds] = useState([])
   const [globalStyle, setGlobalStyle] = useState({
     ...DEFAULT_GLOBAL_STYLE,
     ...initialGlobalStyle,
+  })
+  const [pageCount, setPageCount] = useState(() => {
+    const maxPage = Math.max(0, ...initialBlocks.map((b) => b.page ?? 0))
+    return Math.max(initialPageCount || 1, maxPage + 1)
   })
   const zCounter = useRef(Math.max(1, ...blocks.map((b) => b.zIndex || 0)) + 1)
 
@@ -29,17 +39,34 @@ export function BuilderProvider({ children, initialBlocks = [], initialGlobalSty
   )
 
   // Creates a free block on the sheet, at a given position (typically the
-  // cursor position at drop time from the palette).
-  const addBlock = useCallback((type, position) => {
+  // cursor position at drop time from the palette) and page.
+  const addBlock = useCallback((type, position, page = 0) => {
     const newBlock = createBlockInstance(type)
     if (position) {
       newBlock.x = position.x
       newBlock.y = position.y
     }
+    newBlock.page = page
     newBlock.zIndex = zCounter.current++
     setBlocks((prev) => [...prev, newBlock])
     setSelectedIds([newBlock.id])
     return newBlock
+  }, [])
+
+  // Adds one more page, side by side with the existing ones.
+  const addPage = useCallback(() => {
+    setPageCount((prev) => prev + 1)
+  }, [])
+
+  // Removes the last page and any blocks on it (can't remove page 1).
+  const removeLastPage = useCallback(() => {
+    setPageCount((prev) => {
+      if (prev <= 1) return prev
+      const removedPage = prev - 1
+      setBlocks((blocksPrev) => blocksPrev.filter((b) => (b.page ?? 0) !== removedPage))
+      setSelectedIds([])
+      return prev - 1
+    })
   }, [])
 
   // Adds a simple block (heading/text) inside a column of a COLUMNS
@@ -146,6 +173,9 @@ export function BuilderProvider({ children, initialBlocks = [], initialGlobalSty
     alignSelection,
     globalStyle,
     setGlobalStyle,
+    pageCount,
+    addPage,
+    removeLastPage,
   }
 
   return (

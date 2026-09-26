@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import { BuilderProvider, useBuilder } from '../context/BuilderContext'
 import { useContentLibrary } from '../context/ContentLibraryContext'
 import BlockPalette from '../components/builder/BlockPalette'
-import Canvas, { CANVAS_DROPPABLE_ID } from '../components/builder/Canvas'
+import Canvas, { parsePageDroppableId } from '../components/builder/Canvas'
 import PropertiesPanel from '../components/builder/PropertiesPanel'
 import Toolbar from '../components/builder/Toolbar'
 import LoadingSpinner from '../components/common/LoadingSpinner'
@@ -27,7 +27,7 @@ function BuilderContent({ initialTitle }) {
   const navigate = useNavigate()
   const { id } = useParams()
   const isNew = !id || id === 'new'
-  const { blocks, addBlock, updateBlock } = useBuilder()
+  const { blocks, addBlock, updateBlock, pageCount, globalStyle } = useBuilder()
   const { library } = useContentLibrary()
 
   const [title, setTitle] = useState(initialTitle)
@@ -72,7 +72,9 @@ function BuilderContent({ initialTitle }) {
   const handleDragEnd = useCallback(
     (event) => {
       const { active, over } = event
-      if (!over || over.id !== CANVAS_DROPPABLE_ID) return
+      if (!over) return
+      const pageIndex = parsePageDroppableId(over.id)
+      if (pageIndex === null) return
       if (active.data.current?.source !== 'palette') return
 
       const blockType = active.data.current.blockType
@@ -86,7 +88,7 @@ function BuilderContent({ initialTitle }) {
           }
         : undefined
 
-      addBlock(blockType, position)
+      addBlock(blockType, position, pageIndex)
     },
     [addBlock],
   )
@@ -118,7 +120,7 @@ function BuilderContent({ initialTitle }) {
   async function handleSave() {
     setIsSaving(true)
     try {
-      const payload = { title, blocks }
+      const payload = { title, blocks, pageCount, globalStyle }
       if (isNew) {
         const created = await createTemplate({ ...payload, category: 'Custom' })
         toast.success('Template saved')
@@ -251,7 +253,11 @@ export default function TemplateBuilderPage() {
   }
 
   return (
-    <BuilderProvider initialBlocks={template.blocks} initialGlobalStyle={template.globalStyle}>
+    <BuilderProvider
+      initialBlocks={template.blocks}
+      initialGlobalStyle={template.globalStyle}
+      initialPageCount={template.pageCount}
+    >
       <BuilderContent initialTitle={template.title} />
     </BuilderProvider>
   )

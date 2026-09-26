@@ -70,6 +70,22 @@ function GlobalStylePanel() {
           ))}
         </select>
       </Field>
+      <Field label="Page margin (px)">
+        <input
+          type="number"
+          min={0}
+          max={120}
+          value={globalStyle.margin ?? 48}
+          onChange={(e) =>
+            setGlobalStyle((prev) => ({ ...prev, margin: Number(e.target.value) }))
+          }
+          className={inputClasses}
+        />
+      </Field>
+      <p className="text-xs text-slate-400">
+        The margin shows as a dashed guide on the sheet — it's a visual
+        guide only, blocks can still be placed anywhere.
+      </p>
       <p className="text-xs text-slate-400">
         Select a block on the sheet to edit its specific properties.
       </p>
@@ -222,6 +238,17 @@ function SkillsChartProperties({ block, onChange }) {
           onChange={(e) => onChange({ title: e.target.value })}
           className={inputClasses}
         />
+      </Field>
+      <Field label="Style">
+        <select
+          value={block.chartStyle || 'bars'}
+          onChange={(e) => onChange({ chartStyle: e.target.value })}
+          className={inputClasses}
+        >
+          <option value="bars">Bars</option>
+          <option value="dots">Dots</option>
+          <option value="tags">Tags</option>
+        </select>
       </Field>
       {!block.useLibrarySkills && (
         <Field label="Skills (one per line: Label|Level 0-100)">

@@ -4,12 +4,94 @@
 // user: only the structure, proportions and text sizes faithfully
 // reproduce the reference layout.
 
+// A second page (page: 1), added to every resume template below: a cover
+// letter in the same globalStyle (font/colors) as its resume, bound to the
+// same Content Library slots (name/contact) so they never fall out of
+// sync, plus its own Cover Letter Body slot. Like the resume blocks, these
+// have no x/y — they auto-stack top to bottom the first time the template
+// loads (see utils/layout.js seedFreeLayout), and can be freely moved from
+// there.
+function coverLetterBlocks(prefix, accentColor) {
+  return [
+    {
+      id: `${prefix}-cl-name`,
+      type: 'heading',
+      content: 'Your Name',
+      level: 'h1',
+      align: 'left',
+      bold: true,
+      italic: false,
+      underline: false,
+      size: 'sm',
+      color: accentColor,
+      rule: false,
+      contentSlot: 'name',
+      page: 1,
+    },
+    {
+      id: `${prefix}-cl-contact`,
+      type: 'text',
+      content: 'you@example.com · +00 000 000 0000',
+      align: 'left',
+      contentSlot: 'contact',
+      page: 1,
+    },
+    {
+      id: `${prefix}-cl-date`,
+      type: 'text',
+      content: 'Month Day, Year',
+      align: 'left',
+      page: 1,
+    },
+    {
+      id: `${prefix}-cl-recipient`,
+      type: 'text',
+      content: 'Hiring Manager\nCompany Name',
+      align: 'left',
+      page: 1,
+    },
+    {
+      id: `${prefix}-cl-salutation`,
+      type: 'text',
+      content: 'Dear Hiring Manager,',
+      align: 'left',
+      page: 1,
+    },
+    {
+      id: `${prefix}-cl-body`,
+      type: 'text',
+      content:
+        "Write your cover letter here. Explain why you're a great fit for the role, referencing your key achievements and how your skills match what the company is looking for.\n\nUse a second paragraph for a specific example of your impact, and a third to express enthusiasm for the role and next steps.",
+      align: 'left',
+      contentSlot: 'coverLetterBody',
+      page: 1,
+    },
+    {
+      id: `${prefix}-cl-closing`,
+      type: 'text',
+      content: 'Sincerely,',
+      align: 'left',
+      page: 1,
+    },
+    {
+      id: `${prefix}-cl-signoff`,
+      type: 'text',
+      content: 'Your Name',
+      align: 'left',
+      bold: true,
+      contentSlot: 'name',
+      page: 1,
+    },
+  ]
+}
+
 export const CV_TEMPLATES = [
   {
     id: 'cv-1',
     title: 'Minimal Serif Resume',
     category: 'Resumes',
     updatedAt: '2026-09-20T10:00:00Z',
+    pageCount: 2,
     globalStyle: {
       primaryColor: '#1e293b',
       textColor: '#1e293b',
@@ -64,6 +146,7 @@ export const CV_TEMPLATES = [
           },
         ],
       },
+      ...coverLetterBlocks('cv1', null),
     ],
   },
 
@@ -72,6 +155,7 @@ export const CV_TEMPLATES = [
     title: 'Bio Portfolio',
     category: 'Resumes',
     updatedAt: '2026-09-18T09:30:00Z',
+    pageCount: 2,
     globalStyle: {
       primaryColor: '#166534',
       textColor: '#1f2937',
@@ -122,6 +206,7 @@ export const CV_TEMPLATES = [
         ],
       },
       { id: 'cv2-footer', type: 'footer', content: '© 2026 Your Studio. All rights reserved.', align: 'center', bold: false, italic: false, underline: false },
+      ...coverLetterBlocks('cv2', '#166534'),
     ],
   },
 
@@ -130,6 +215,7 @@ export const CV_TEMPLATES = [
     title: 'Modern Two-Column',
     category: 'Resumes',
     updatedAt: '2026-09-15T14:00:00Z',
+    pageCount: 2,
     globalStyle: {
       primaryColor: '#111827',
       textColor: '#111827',
@@ -173,6 +259,7 @@ export const CV_TEMPLATES = [
           },
         ],
       },
+      ...coverLetterBlocks('cv3', null),
     ],
   },
 
@@ -181,6 +268,7 @@ export const CV_TEMPLATES = [
     title: 'Creative with Photo',
     category: 'Resumes',
     updatedAt: '2026-09-12T11:00:00Z',
+    pageCount: 2,
     globalStyle: {
       primaryColor: '#111111',
       textColor: '#111111',
@@ -212,6 +300,7 @@ export const CV_TEMPLATES = [
         ],
       },
       { id: 'cv4-contact', type: 'footer', content: 'email@example.com · portfolio-site.com', align: 'center', bold: false, italic: false, underline: false },
+      ...coverLetterBlocks('cv4', '#ef4444'),
     ],
   },
 
@@ -220,6 +309,7 @@ export const CV_TEMPLATES = [
     title: 'Bold Colored Title',
     category: 'Resumes',
     updatedAt: '2026-09-10T11:20:00Z',
+    pageCount: 2,
     globalStyle: {
       primaryColor: '#dc2626',
       textColor: '#111111',
@@ -254,6 +344,7 @@ export const CV_TEMPLATES = [
           },
         ],
       },
+      ...coverLetterBlocks('cv5', '#dc2626'),
     ],
   },
 ]
@@ -269,7 +360,7 @@ export const TEMPLATE_CONTENT_MAPS = {
     { blockId: 'cv1-header', field: 'contactsSlot', slot: 'contact' },
     { blockId: 'cv1-title', field: 'contentSlot', slot: 'title' },
     { blockId: 'cv1-edu-t', field: 'contentSlot', slot: 'education' },
-    { blockId: 'cv1-ach-t', field: 'contentSlot', slot: 'coreCompetencies' },
+    { blockId: 'cv1-ach-t', field: 'contentSlot', slot: 'achievements' },
     { blockId: 'cv1-exp1-b', field: 'contentSlot', slot: 'experience' },
   ],
   'cv-2': [

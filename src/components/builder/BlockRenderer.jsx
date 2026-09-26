@@ -1,7 +1,7 @@
-import { BLOCK_TYPES } from '../../utils/blockTypes'
+import { BLOCK_TYPES, CHART_STYLES } from '../../utils/blockTypes'
 import { useContentLibrary } from '../../context/ContentLibraryContext'
-import { getPlatformMeta, parseSocialLinks } from '../../utils/socialIcons'
-import { Globe, Image as ImageIcon, Mail, Phone } from 'lucide-react'
+import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
+import { Globe, Image as ImageIcon, Mail, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
 
 function alignClass(align) {
@@ -76,18 +76,55 @@ function SkillBar({ label, level, color }) {
   )
 }
 
+function SkillDots({ label, level, color }) {
+  const filled = Math.round((Math.max(0, Math.min(100, level)) / 100) * 5)
+  return (
+    <div className="flex items-center justify-between text-xs">
+      <span className="font-medium text-slate-700">{label}</span>
+      <div className="flex items-center gap-1">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <span
+            key={i}
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: i < filled ? color || '#2563eb' : '#e2e8f0' }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SkillTag({ label, color }) {
+  return (
+    <span
+      className="rounded-full px-2.5 py-1 text-xs font-medium text-white"
+      style={{ backgroundColor: color || '#2563eb' }}
+    >
+      {label}
+    </span>
+  )
+}
+
 function SocialBadge({ platform, url }) {
   const meta = getPlatformMeta(platform)
   return (
-    <div className="flex items-center gap-1.5" title={url}>
+    <a
+      href={normalizeUrl(url)}
+      target="_blank"
+      rel="noreferrer"
+      title={url}
+      data-no-drag
+      onClick={(e) => e.stopPropagation()}
+      className="flex items-center gap-1.5 no-underline hover:opacity-80"
+    >
       <span
-        className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
         style={{ backgroundColor: meta.color }}
       >
         {meta.badge}
       </span>
-      <span className="max-w-[9rem] truncate text-xs text-slate-600">{url}</span>
-    </div>
+      <span className="max-w-[9rem] truncate text-xs text-slate-600 underline">{url}</span>
+    </a>
   )
 }
 
@@ -97,6 +134,7 @@ export default function BlockRenderer({
   selectedId = null,
   onSelectItem,
   onAddItem,
+  onUpdateBlock,
 }) {
   const resolvedContent = useResolvedContent(block)
   const { library } = useContentLibrary()
@@ -246,14 +284,45 @@ export default function BlockRenderer({
             .filter(Boolean)
             .map((line) => ({ label: line, level: 75 }))
         : block.items
+      const chartStyle = block.chartStyle || 'bars'
+
       return (
-        <div className="flex flex-col gap-3">
-          {block.title && <p className="text-sm font-semibold text-slate-800">{block.title}</p>}
-          <div className="flex flex-col gap-2.5">
-            {items.map((item, i) => (
-              <SkillBar key={i} label={item.label} level={item.level} color={block.color} />
-            ))}
+        <div className="group/chart flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            {block.title && <p className="text-sm font-semibold text-slate-800">{block.title}</p>}
+            {onUpdateBlock && (
+              <button
+                type="button"
+                data-no-drag
+                title="Switch chart style"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  const next = CHART_STYLES[(CHART_STYLES.indexOf(chartStyle) + 1) % CHART_STYLES.length]
+                  onUpdateBlock({ chartStyle: next })
+                }}
+                className="invisible flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-primary group-hover/chart:visible"
+              >
+                <RefreshCw size={13} />
+              </button>
+            )}
           </div>
+          {chartStyle === 'tags' ? (
+            <div className="flex flex-wrap gap-2">
+              {items.map((item, i) => (
+                <SkillTag key={i} label={item.label} color={block.color} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {items.map((item, i) =>
+                chartStyle === 'dots' ? (
+                  <SkillDots key={i} label={item.label} level={item.level} color={block.color} />
+                ) : (
+                  <SkillBar key={i} label={item.label} level={item.level} color={block.color} />
+                ),
+              )}
+            </div>
+          )}
         </div>
       )
     }

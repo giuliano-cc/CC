@@ -15,8 +15,10 @@ export const CONTENT_SLOTS = [
   { key: 'photo', label: 'Profile Photo', type: 'image' },
   { key: 'profileSummary', label: 'Professional Profile', multiline: true },
   { key: 'coreCompetencies', label: 'Core Competencies', multiline: true, isList: true },
+  { key: 'achievements', label: 'Achievements', multiline: true, isList: true },
   { key: 'keywords', label: 'Keywords', multiline: true, isList: true },
   { key: 'experience', label: 'Work Experience', multiline: true },
+  { key: 'selectedWorks', label: 'Selected Works', multiline: true, isList: true },
   { key: 'education', label: 'Education', multiline: true },
   { key: 'skills', label: 'Technical Skills', multiline: true, isList: true },
   { key: 'languages', label: 'Languages', multiline: true, isList: true },
@@ -24,6 +26,7 @@ export const CONTENT_SLOTS = [
   { key: 'contact', label: 'Contact', multiline: true },
   { key: 'socialLinks', label: 'Social Links', type: 'social' },
   { key: 'qrValue', label: 'QR Code Link', multiline: false },
+  { key: 'coverLetterBody', label: 'Cover Letter Body', multiline: true },
 ]
 
 const DEFAULT_LIBRARY = Object.fromEntries(CONTENT_SLOTS.map((slot) => [slot.key, '']))

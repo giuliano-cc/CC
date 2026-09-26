@@ -33,3 +33,10 @@ export function parseSocialLinks(text) {
 export function formatSocialLinks(items) {
   return items.map((item) => `${item.platform}|${item.url}`).join('\n')
 }
+
+// So a link typed as "linkedin.com/in/you" (no scheme) still opens
+// correctly when clicked, instead of being treated as a relative path.
+export function normalizeUrl(url) {
+  if (!url) return url
+  return /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`
+}

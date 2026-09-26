@@ -16,23 +16,26 @@ function estimateHeight(block) {
 // Legacy templates (created before the free canvas was introduced) don't
 // have x/y/width/height: this function assigns them a full-width, vertically
 // stacked position, equivalent to the old "flow" behavior. From there on the
-// user can freely move/resize each block.
+// user can freely move/resize each block. Each page stacks independently.
 export function seedFreeLayout(blocks) {
-  let cursorY = SHEET_PADDING
+  const cursorYByPage = {}
   return blocks.map((block, index) => {
+    const page = block.page ?? 0
     if (typeof block.x === 'number' && typeof block.y === 'number') {
-      return block
+      return block.page === undefined ? { ...block, page } : block
     }
+    const cursorY = cursorYByPage[page] ?? SHEET_PADDING
     const height = estimateHeight(block)
     const positioned = {
       ...block,
+      page,
       x: SHEET_PADDING,
       y: cursorY,
       width: CONTENT_WIDTH,
       height,
       zIndex: index + 1,
     }
-    cursorY += height + 16
+    cursorYByPage[page] = cursorY + height + 16
     return positioned
   })
 }

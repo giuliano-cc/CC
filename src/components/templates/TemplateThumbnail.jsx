@@ -23,8 +23,10 @@ export default function TemplateThumbnail({ template }) {
   // Blocks are positioned exactly like on the real builder canvas (see
   // components/builder/Canvas.jsx): the thumbnail reproduces the same
   // sheet, scaled down to the card's actual width. `seedFreeLayout` gives
-  // legacy blocks without x/y/width/height a stacked position too.
-  const positionedBlocks = seedFreeLayout(template.blocks)
+  // legacy blocks without x/y/width/height a stacked position too. Only
+  // page 1 is shown — templates can have more than one page (e.g. a resume
+  // + matching cover letter).
+  const positionedBlocks = seedFreeLayout(template.blocks).filter((b) => (b.page ?? 0) === 0)
 
   return (
     <div
