@@ -64,6 +64,7 @@ function Page({ pageIndex, blocks, margin, globalStyle }) {
           isOnlySelected={selectedIds.length === 1 && selectedIds[0] === block.id}
           selectedBlockId={selectedBlockId}
           margin={margin}
+          siblings={blocks.filter((b) => b.id !== block.id && typeof b.x === 'number')}
           onSelect={selectBlock}
           onRemove={removeBlock}
           onAddNestedItem={addNestedItem}

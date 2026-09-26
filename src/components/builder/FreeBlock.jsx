@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useRef } from 'react'
 import { Trash2 } from 'lucide-react'
 import { BLOCK_TYPES } from '../../utils/blockTypes'
 import { clamp, SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
@@ -8,15 +8,43 @@ const MIN_WIDTH = 60
 const MIN_HEIGHT = 24
 const SNAP_THRESHOLD = 8
 
-// Snaps a value to the nearest margin line (page edge inset by `margin`)
-// when within SNAP_THRESHOLD px of it, so blocks "click" into place
-// against the dashed margin guide instead of needing pixel-perfect drops.
+// Snaps a value to the nearest of several target positions (a margin
+// line, a sibling block's edge/center, ...) when within SNAP_THRESHOLD px
+// of it, so blocks "click" into place instead of needing pixel-perfect
+// drops. `targets` doesn't need to be sorted; the closest one within
+// range wins.
 function snapTo(value, targets) {
+  let best = value
+  let bestDist = SNAP_THRESHOLD
   for (const target of targets) {
-    if (Math.abs(value - target) <= SNAP_THRESHOLD) return target
+    const dist = Math.abs(value - target)
+    if (dist <= bestDist) {
+      best = target
+      bestDist = dist
+    }
   }
-  return value
+  return best
 }
+
+// For a block of the given size being moved/resized, the positions that
+// would align one of its edges or its center with a sibling block already
+// on the page — flush with the sibling's near/far edge, aligned to its
+// far edge, centered on it, or butted right up against it (for placing
+// two blocks side by side with no gap).
+function getSnapTargets(siblings, size, getPos, getSize) {
+  const targets = []
+  siblings.forEach((sibling) => {
+    const sPos = getPos(sibling)
+    const sSize = getSize(sibling)
+    targets.push(sPos, sPos + sSize - size, sPos + sSize, sPos - size, sPos + sSize / 2 - size / 2)
+  })
+  return targets
+}
+
+const getX = (b) => b.x
+const getY = (b) => b.y
+const getWidth = (b) => b.width
+const getHeight = (b) => b.height
 
 const RESIZE_HANDLES = [
   { key: 'nw', className: '-left-1.5 -top-1.5 cursor-nwse-resize', x: -1, y: -1 },
@@ -35,6 +63,7 @@ export default function FreeBlock({
   isOnlySelected,
   selectedBlockId,
   margin = 0,
+  siblings = [],
   onSelect,
   onRemove,
   onAddNestedItem,
@@ -42,61 +71,60 @@ export default function FreeBlock({
 }) {
   const dragState = useRef(null)
 
-  const handlePointerDownMove = useCallback(
-    (event) => {
-      // Only the left button/primary touch starts the move; doesn't
-      // interfere with clicks on input/textarea/select inside the block.
-      if (event.button !== undefined && event.button !== 0) return
-      const target = event.target
-      if (target.closest('input, textarea, select, button, [data-no-drag]')) return
+  // Plain functions, not useCallback: they close over `siblings`/`margin`,
+  // which change on essentially every render (any block moving anywhere on
+  // the page recomputes this block's sibling list) but weren't in the
+  // memoization deps below — so a drag that started after some other
+  // block moved, without this block's own x/y changing first, kept using
+  // a stale (empty or outdated) sibling list and silently stopped
+  // snapping to it.
+  function handlePointerDownMove(event) {
+    // Only the left button/primary touch starts the move; doesn't
+    // interfere with clicks on input/textarea/select inside the block.
+    if (event.button !== undefined && event.button !== 0) return
+    const target = event.target
+    if (target.closest('input, textarea, select, button, [data-no-drag]')) return
 
-      event.preventDefault()
-      event.stopPropagation()
+    event.preventDefault()
+    event.stopPropagation()
 
-      // Shift-click only adds/removes this block from the selection (to
-      // build a multi-selection for aligning/distributing); it doesn't
-      // also start dragging it.
-      if (event.shiftKey) {
-        onSelect(block.id, { additive: true })
-        return
-      }
-      onSelect(block.id)
+    // Shift-click only adds/removes this block from the selection (to
+    // build a multi-selection for aligning/distributing); it doesn't
+    // also start dragging it.
+    if (event.shiftKey) {
+      onSelect(block.id, { additive: true })
+      return
+    }
+    onSelect(block.id)
 
-      dragState.current = {
-        mode: 'move',
-        startX: event.clientX,
-        startY: event.clientY,
-        origX: block.x,
-        origY: block.y,
-      }
-      window.addEventListener('pointermove', handlePointerMove)
-      window.addEventListener('pointerup', handlePointerUp)
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [block.id, block.x, block.y],
-  )
+    dragState.current = {
+      mode: 'move',
+      startX: event.clientX,
+      startY: event.clientY,
+      origX: block.x,
+      origY: block.y,
+    }
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+  }
 
-  const handleResizeStart = useCallback(
-    (event, handle) => {
-      event.stopPropagation()
-      event.preventDefault()
-      onSelect(block.id)
-      dragState.current = {
-        mode: 'resize',
-        handle,
-        startX: event.clientX,
-        startY: event.clientY,
-        origX: block.x,
-        origY: block.y,
-        origWidth: block.width,
-        origHeight: block.height,
-      }
-      window.addEventListener('pointermove', handlePointerMove)
-      window.addEventListener('pointerup', handlePointerUp)
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [block.id, block.x, block.y, block.width, block.height],
-  )
+  function handleResizeStart(event, handle) {
+    event.stopPropagation()
+    event.preventDefault()
+    onSelect(block.id)
+    dragState.current = {
+      mode: 'resize',
+      handle,
+      startX: event.clientX,
+      startY: event.clientY,
+      origX: block.x,
+      origY: block.y,
+      origWidth: block.width,
+      origHeight: block.height,
+    }
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+  }
 
   function handlePointerMove(event) {
     const state = dragState.current
@@ -110,10 +138,14 @@ export default function FreeBlock({
       // overflow, which made the delete/resize handles unreachable there.
       let x = clamp(state.origX + dx, 0, Math.max(0, SHEET_WIDTH - block.width))
       let y = clamp(state.origY + dy, 0, Math.max(0, SHEET_HEIGHT - block.height))
+      const xTargets = getSnapTargets(siblings, block.width, getX, getWidth)
+      const yTargets = getSnapTargets(siblings, block.height, getY, getHeight)
       if (margin > 0) {
-        x = snapTo(x, [margin, SHEET_WIDTH - margin - block.width])
-        y = snapTo(y, [margin, SHEET_HEIGHT - margin - block.height])
+        xTargets.push(margin, SHEET_WIDTH - margin - block.width)
+        yTargets.push(margin, SHEET_HEIGHT - margin - block.height)
       }
+      x = snapTo(x, xTargets)
+      y = snapTo(y, yTargets)
       onChangeGeometry({ x, y })
       return
     }
@@ -121,26 +153,47 @@ export default function FreeBlock({
     const { handle } = state
     let { origX: x, origY: y, origWidth: width, origHeight: height } = state
 
+    // Edges/centers of sibling blocks that the *moving* edge of this one
+    // (its right edge when growing right, its left edge when growing
+    // left, ...) can snap against — same idea as the margin snap, just
+    // against other blocks instead of the page inset.
+    const rightEdgeTargets = siblings.flatMap((s) => [s.x, s.x + s.width, s.x + s.width / 2])
+    const leftEdgeTargets = rightEdgeTargets
+    const bottomEdgeTargets = siblings.flatMap((s) => [s.y, s.y + s.height, s.y + s.height / 2])
+    const topEdgeTargets = bottomEdgeTargets
+
     if (handle.x === 1) {
       width = clamp(state.origWidth + dx, MIN_WIDTH, SHEET_WIDTH - state.origX)
-      if (margin > 0) width = snapTo(width, [SHEET_WIDTH - margin - x])
+      const targets = [...rightEdgeTargets]
+      if (margin > 0) targets.push(SHEET_WIDTH - margin)
+      width = snapTo(x + width, targets) - x
     } else if (handle.x === -1) {
       const maxDx = state.origWidth - MIN_WIDTH
       const clampedDx = clamp(dx, -state.origX, maxDx)
       width = state.origWidth - clampedDx
       x = state.origX + clampedDx
-      if (margin > 0) x = snapTo(x, [margin])
+      const targets = [...leftEdgeTargets]
+      if (margin > 0) targets.push(margin)
+      const snappedX = snapTo(x, targets)
+      width += x - snappedX
+      x = snappedX
     }
 
     if (handle.y === 1) {
       height = clamp(state.origHeight + dy, MIN_HEIGHT, SHEET_HEIGHT - state.origY)
-      if (margin > 0) height = snapTo(height, [SHEET_HEIGHT - margin - y])
+      const targets = [...bottomEdgeTargets]
+      if (margin > 0) targets.push(SHEET_HEIGHT - margin)
+      height = snapTo(y + height, targets) - y
     } else if (handle.y === -1) {
       const maxDy = state.origHeight - MIN_HEIGHT
       const clampedDy = clamp(dy, -state.origY, maxDy)
       height = state.origHeight - clampedDy
       y = state.origY + clampedDy
-      if (margin > 0) y = snapTo(y, [margin])
+      const targets = [...topEdgeTargets]
+      if (margin > 0) targets.push(margin)
+      const snappedY = snapTo(y, targets)
+      height += y - snappedY
+      y = snappedY
     }
 
     onChangeGeometry({ x, y, width, height })
