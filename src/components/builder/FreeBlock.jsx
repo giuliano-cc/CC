@@ -105,8 +105,11 @@ export default function FreeBlock({
     const dy = event.clientY - state.startY
 
     if (state.mode === 'move') {
-      let x = clamp(state.origX + dx, 0, SHEET_WIDTH - MIN_WIDTH)
-      let y = clamp(state.origY + dy, 0, SHEET_HEIGHT - MIN_HEIGHT)
+      // Clamped by the block's own width/height (not MIN_WIDTH/HEIGHT), so
+      // it can never be dragged partly past the page edge — the page clips
+      // overflow, which made the delete/resize handles unreachable there.
+      let x = clamp(state.origX + dx, 0, Math.max(0, SHEET_WIDTH - block.width))
+      let y = clamp(state.origY + dy, 0, Math.max(0, SHEET_HEIGHT - block.height))
       if (margin > 0) {
         x = snapTo(x, [margin, SHEET_WIDTH - margin - block.width])
         y = snapTo(y, [margin, SHEET_HEIGHT - margin - block.height])

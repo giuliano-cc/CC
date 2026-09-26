@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
 import { createBlockInstance, createNestedBlockInstance } from '../utils/blockTypes'
 import { findBlockById, removeBlockById, updateBlockById } from '../utils/blockTree'
-import { seedFreeLayout } from '../utils/layout'
+import { clamp, seedFreeLayout, SHEET_HEIGHT, SHEET_WIDTH } from '../utils/layout'
 import { alignToPage, alignToSelection, distribute } from '../utils/align'
 
 const DEFAULT_GLOBAL_STYLE = {
@@ -43,8 +43,11 @@ export function BuilderProvider({
   const addBlock = useCallback((type, position, page = 0) => {
     const newBlock = createBlockInstance(type)
     if (position) {
-      newBlock.x = position.x
-      newBlock.y = position.y
+      // Clamped so the block (and its delete/resize handles, which sit just
+      // outside its own box) can never land partly beyond the page edge —
+      // the page clips overflow, which made those controls unreachable.
+      newBlock.x = clamp(position.x, 0, Math.max(0, SHEET_WIDTH - newBlock.width))
+      newBlock.y = clamp(position.y, 0, Math.max(0, SHEET_HEIGHT - newBlock.height))
     }
     newBlock.page = page
     newBlock.zIndex = zCounter.current++
