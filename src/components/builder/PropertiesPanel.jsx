@@ -534,7 +534,11 @@ function ContentSlotBinder({ block, onChange }) {
         className={inputClasses}
       >
         <option value="">— none (free text) —</option>
-        {CONTENT_SLOTS.filter((s) => !s.type).map((slot) => (
+        {/* 'checklist'/'languages' slots still resolve to a plain, newline-
+            joined string (see utils/contentLists.js) — bindable here like
+            any other text slot. Only 'image'/'social'/'contactGroup' need
+            their own dedicated editor UI instead of a text block. */}
+        {CONTENT_SLOTS.filter((s) => !['image', 'social', 'contactGroup'].includes(s.type)).map((slot) => (
           <option key={slot.key} value={slot.key}>
             {slot.label}
           </option>
