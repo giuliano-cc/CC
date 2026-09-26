@@ -506,6 +506,7 @@ export const TEMPLATE_CONTENT_MAPS = {
     { blockId: 'cv2-img', field: 'imageSlot', slot: 'photo' },
     { blockId: 'cv2-about-t1', field: 'contentSlot', slot: 'profileSummary' },
     { blockId: 'cv2-cap-t', field: 'contentSlot', slot: 'skills' },
+    { blockId: 'cv2-cli-t', field: 'contentSlot', slot: 'selectedClients' },
   ],
   'cv-3': [
     { blockId: 'cv3-header', field: 'nameSlot', slot: 'name' },

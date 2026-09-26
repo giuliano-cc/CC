@@ -24,6 +24,7 @@ export const CONTENT_SLOTS = [
   { key: 'keywords', label: 'Keywords', multiline: true, isList: true },
   { key: 'experience', label: 'Work Experience', multiline: true },
   { key: 'selectedWorks', label: 'Selected Works', multiline: true, isList: true },
+  { key: 'selectedClients', label: 'Selected Clients', multiline: true, isList: true },
   { key: 'education', label: 'Education', multiline: true },
   { key: 'skills', label: 'Technical Skills', type: 'checklist' },
   { key: 'languages', label: 'Languages', type: 'languages' },

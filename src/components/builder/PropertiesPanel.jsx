@@ -244,28 +244,27 @@ function SkillsChartProperties({ block, onChange }) {
     onChange({ items })
   }
 
+  const checklistSlots = CONTENT_SLOTS.filter((s) => s.type === 'checklist')
+
   return (
     <div className="flex flex-col gap-4">
-      <label className="flex items-center gap-1.5 text-xs text-slate-600">
-        <input
-          type="checkbox"
-          checked={!!block.useLibrarySkills}
-          onChange={(e) => onChange({ useLibrarySkills: e.target.checked })}
-        />
-        Use content from the library
-      </label>
-      {block.useLibrarySkills && (
-        <Field label="Source">
-          <select
-            value={block.librarySource || 'skills'}
-            onChange={(e) => onChange({ librarySource: e.target.value })}
-            className={inputClasses}
-          >
-            <option value="skills">Technical Skills (fixed level)</option>
-            <option value="languages">Languages (level per language)</option>
-          </select>
-        </Field>
-      )}
+      <Field label="Content from library">
+        <select
+          value={block.useLibrarySkills ? block.librarySource || 'skills' : ''}
+          onChange={(e) => {
+            const value = e.target.value
+            onChange({ useLibrarySkills: !!value, librarySource: value || 'skills' })
+          }}
+          className={inputClasses}
+        >
+          <option value="">— none (type below) —</option>
+          {checklistSlots.map((slot) => (
+            <option key={slot.key} value={slot.key}>
+              {slot.label}
+            </option>
+          ))}
+        </select>
+      </Field>
       <Field label="Chart title">
         <input
           type="text"
@@ -337,14 +336,16 @@ function LanguagesChartProperties({ block, onChange }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <label className="flex items-center gap-1.5 text-xs text-slate-600">
-        <input
-          type="checkbox"
-          checked={!!block.useLibraryLanguages}
-          onChange={(e) => onChange({ useLibraryLanguages: e.target.checked })}
-        />
-        Use my Languages from the library
-      </label>
+      <Field label="Content from library">
+        <select
+          value={block.useLibraryLanguages ? 'languages' : ''}
+          onChange={(e) => onChange({ useLibraryLanguages: e.target.value === 'languages' })}
+          className={inputClasses}
+        >
+          <option value="">— none (type below) —</option>
+          <option value="languages">Languages</option>
+        </select>
+      </Field>
       <Field label="Chart title">
         <input
           type="text"
@@ -402,14 +403,16 @@ function LanguagesChartProperties({ block, onChange }) {
 function QrCodeProperties({ block, onChange }) {
   return (
     <div className="flex flex-col gap-4">
-      <label className="flex items-center gap-1.5 text-xs text-slate-600">
-        <input
-          type="checkbox"
-          checked={!!block.useLibraryValue}
-          onChange={(e) => onChange({ useLibraryValue: e.target.checked })}
-        />
-        Use the "QR Code Link" from the library
-      </label>
+      <Field label="Content from library">
+        <select
+          value={block.useLibraryValue ? 'qrValue' : ''}
+          onChange={(e) => onChange({ useLibraryValue: e.target.value === 'qrValue' })}
+          className={inputClasses}
+        >
+          <option value="">— none (type below) —</option>
+          <option value="qrValue">QR Code Link</option>
+        </select>
+      </Field>
       {!block.useLibraryValue && (
         <Field label="Link or text to encode">
           <input
@@ -449,14 +452,16 @@ function SocialIconsProperties({ block, onChange }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <label className="flex items-center gap-1.5 text-xs text-slate-600">
-        <input
-          type="checkbox"
-          checked={!!block.useLibraryLinks}
-          onChange={(e) => onChange({ useLibraryLinks: e.target.checked })}
-        />
-        Use my Social Links from the library
-      </label>
+      <Field label="Content from library">
+        <select
+          value={block.useLibraryLinks ? 'socialLinks' : ''}
+          onChange={(e) => onChange({ useLibraryLinks: e.target.value === 'socialLinks' })}
+          className={inputClasses}
+        >
+          <option value="">— none (type below) —</option>
+          <option value="socialLinks">Social Links</option>
+        </select>
+      </Field>
       {!block.useLibraryLinks && (
         <div className="flex flex-col gap-2">
           {block.items.map((item, i) => (
@@ -522,14 +527,16 @@ function ContactInfoProperties({ block, onChange }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <label className="flex items-center gap-1.5 text-xs text-slate-600">
-        <input
-          type="checkbox"
-          checked={!!block.useLibraryContact}
-          onChange={(e) => onChange({ useLibraryContact: e.target.checked })}
-        />
-        Use my Contact fields from the library
-      </label>
+      <Field label="Content from library">
+        <select
+          value={block.useLibraryContact ? 'contact' : ''}
+          onChange={(e) => onChange({ useLibraryContact: e.target.value === 'contact' })}
+          className={inputClasses}
+        >
+          <option value="">— none (type below) —</option>
+          <option value="contact">Contact</option>
+        </select>
+      </Field>
       {!block.useLibraryContact && (
         <div className="flex flex-col gap-3">
           {fields.map((f) => (
@@ -580,14 +587,16 @@ function LeisureProperties({ block, onChange }) {
           className={inputClasses}
         />
       </Field>
-      <label className="flex items-center gap-1.5 text-xs text-slate-600">
-        <input
-          type="checkbox"
-          checked={!!block.useLibraryHobbies}
-          onChange={(e) => onChange({ useLibraryHobbies: e.target.checked })}
-        />
-        Use my Leisure / Hobbies from the library
-      </label>
+      <Field label="Content from library">
+        <select
+          value={block.useLibraryHobbies ? 'hobbies' : ''}
+          onChange={(e) => onChange({ useLibraryHobbies: e.target.value === 'hobbies' })}
+          className={inputClasses}
+        >
+          <option value="">— none (type below) —</option>
+          <option value="hobbies">Leisure / Hobbies</option>
+        </select>
+      </Field>
       {!block.useLibraryHobbies && (
         <Field label="Items (one per line)">
           <textarea

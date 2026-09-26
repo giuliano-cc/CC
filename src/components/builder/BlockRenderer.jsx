@@ -338,14 +338,15 @@ export default function BlockRenderer({
       )
 
     case BLOCK_TYPES.SKILLS_CHART: {
+      // `librarySource` names any checklist-type Content Library slot
+      // (Technical Skills, Core Competencies, Achievements, ...), so this
+      // one chart block can plot whichever list the "Content from
+      // library" dropdown picked, not just Technical Skills.
+      const source = block.librarySource || 'skills'
       const items = block.useLibrarySkills
-        ? block.librarySource === 'languages'
-          ? parseLanguages(library.languagesItems, library.languages)
-              .filter((i) => i.name?.trim())
-              .map((i) => ({ label: i.name, level: i.level }))
-          : parseChecklist(library.skillsItems, library.skills)
-              .filter((i) => i.visible && i.text?.trim())
-              .map((i) => ({ label: i.text, level: 75 }))
+        ? parseChecklist(library[`${source}Items`], library[source])
+            .filter((i) => i.visible && i.text?.trim())
+            .map((i) => ({ label: i.text, level: 75 }))
         : block.items
       return <Chart block={block} items={items} onUpdateBlock={onUpdateBlock} />
     }
