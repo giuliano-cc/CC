@@ -4,7 +4,32 @@ import { CV_TEMPLATES } from '../utils/cvTemplates'
 // Sample data used until the real backend is available.
 // The backend, via the token sent by apiClient's interceptor, will
 // automatically filter results based on the authenticated user.
-const MOCK_TEMPLATES = structuredClone(CV_TEMPLATES)
+//
+// Persisted to localStorage (like the Content Library) so edits survive
+// a page reload/reopen instead of resetting to the built-in defaults on
+// every fresh load of this module.
+const STORAGE_KEY = 'printflow.templates'
+
+function loadTemplates() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    // localStorage unavailable or corrupted entry: fall back to defaults.
+  }
+  return structuredClone(CV_TEMPLATES)
+}
+
+const MOCK_TEMPLATES = loadTemplates()
+
+function persistTemplates() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_TEMPLATES))
+  } catch {
+    // Quota exceeded or unavailable: edits still work for this session,
+    // just won't survive a reload.
+  }
+}
 
 const USE_MOCK = true
 
@@ -33,6 +58,7 @@ export async function createTemplate(payload) {
   if (USE_MOCK) {
     const newTemplate = { id: String(Date.now()), updatedAt: new Date().toISOString(), ...payload }
     MOCK_TEMPLATES.unshift(newTemplate)
+    persistTemplates()
     return new Promise((resolve) => setTimeout(() => resolve(newTemplate), 300))
   }
 
@@ -51,6 +77,7 @@ export async function updateTemplate(id, payload) {
       updatedAt: new Date().toISOString(),
     }
     if (index !== -1) MOCK_TEMPLATES[index] = updated
+    persistTemplates()
     return new Promise((resolve) => setTimeout(() => resolve(structuredClone(updated)), 300))
   }
 
@@ -68,6 +95,7 @@ export async function duplicateTemplate(id) {
       updatedAt: new Date().toISOString(),
     }
     MOCK_TEMPLATES.unshift(copy)
+    persistTemplates()
     return new Promise((resolve) => setTimeout(() => resolve(copy), 300))
   }
 
@@ -79,6 +107,7 @@ export async function deleteTemplate(id) {
   if (USE_MOCK) {
     const index = MOCK_TEMPLATES.findIndex((t) => t.id === id)
     if (index !== -1) MOCK_TEMPLATES.splice(index, 1)
+    persistTemplates()
     return new Promise((resolve) => setTimeout(resolve, 300))
   }
 
