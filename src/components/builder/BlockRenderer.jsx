@@ -382,7 +382,8 @@ export default function BlockRenderer({
       // the built-in templates already pair these bindings with their own
       // separate Heading block.
       const boundSlot = block.contentSlot ? CONTENT_SLOTS.find((s) => s.key === block.contentSlot) : null
-      const title = block.showTitle === true && boundSlot?.label ? boundSlot.label : null
+      const autoTitle = block.titleText || boundSlot?.label
+      const title = block.showTitle === true && autoTitle ? autoTitle : null
       const bodyFont = resolveBodyFont(globalStyle)
 
       // A Text block bound to an "entries" library slot (e.g. Selected
@@ -391,7 +392,7 @@ export default function BlockRenderer({
       // dedicated Experience/Education blocks, just without their own
       // date fields.
       const body = boundSlot?.type === 'entries' ? (
-        <div className="flex flex-col gap-3">
+        <div className={`flex flex-col gap-3 ${alignClass(block.align)}`}>
           {parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]).map((item, i) => (
             <div key={item.id || i} className="flex flex-col gap-0.5">
               {item.title && (
@@ -439,7 +440,7 @@ export default function BlockRenderer({
 
       if (!title) return body
       return (
-        <div className="flex flex-col gap-1.5">
+        <div className={`flex flex-col gap-1.5 ${alignClass(block.align)}`}>
           <p
             className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
             style={sectionTitleStyle(

@@ -1969,7 +1969,28 @@ function BlockPropertiesPanel({ block, onChange }) {
             />
             Show the field's name as a title above it
           </label>
-          {block.showTitle === true && <TitleSizeField block={block} onChange={onChange} />}
+          {block.showTitle === true && (
+            <>
+              <Field label="Title text (optional)">
+                <input
+                  type="text"
+                  value={block.titleText || ''}
+                  onChange={(e) => onChange({ titleText: e.target.value || null })}
+                  placeholder={CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.label || ''}
+                  className={inputClasses}
+                />
+              </Field>
+              <TitleSizeField block={block} onChange={onChange} />
+              <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={block.titleRule !== false}
+                  onChange={(e) => onChange({ titleRule: e.target.checked })}
+                />
+                Show line under title
+              </label>
+            </>
+          )}
         </>
       )}
 

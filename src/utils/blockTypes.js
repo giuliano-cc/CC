@@ -206,6 +206,10 @@ export const BLOCK_DEFINITIONS = [
       // resizing the title (e.g. from the Global Style panel's typography
       // list) never also resizes the paragraph.
       titleFontSize: null,
+      // Overrides the bound Content Library field's own label (e.g.
+      // "Work Experience" for the `experience` slot) — null keeps
+      // showing that label, same as before this existed.
+      titleText: null,
     },
   },
   {

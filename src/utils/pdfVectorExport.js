@@ -310,7 +310,8 @@ async function drawBlock(pdf, block, ctx) {
 
     case BLOCK_TYPES.TEXT: {
       const boundSlot = block.contentSlot ? CONTENT_SLOTS.find((s) => s.key === block.contentSlot) : null
-      const title = block.showTitle === true && boundSlot?.label ? boundSlot.label : null
+      const autoTitle = block.titleText || boundSlot?.label
+      const title = block.showTitle === true && autoTitle ? autoTitle : null
       const bodyFont = resolveBodyFont(globalStyle)
       let cursorY = y
 
@@ -323,6 +324,7 @@ async function drawBlock(pdf, block, ctx) {
           color: block.titleColor || globalStyle.primaryColor,
           fontFamily: resolveTitleFont(globalStyle),
           rule: block.titleRule,
+          align: block.align,
         })
       }
 
@@ -332,18 +334,18 @@ async function drawBlock(pdf, block, ctx) {
           if (item.title) {
             setFont(pdf, resolveTitleFont(globalStyle), { bold: true, sizePx: 16 })
             setTextColor(pdf, null, hexToRgb(globalStyle.textColor))
-            cursorY += drawParagraph(pdf, item.title, { x, y: cursorY, width, lineHeightMult: 1.3 })
+            cursorY += drawParagraph(pdf, item.title, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
           }
           const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
           if (subLine) {
             setFont(pdf, bodyFont, { sizePx: 14 })
             setTextColor(pdf, null, SLATE[500])
-            cursorY += drawParagraph(pdf, subLine, { x, y: cursorY, width, lineHeightMult: 1.3 })
+            cursorY += drawParagraph(pdf, subLine, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
           }
           if (item.description) {
             setFont(pdf, bodyFont, { sizePx: 14 })
             setTextColor(pdf, null, SLATE[600])
-            cursorY += drawParagraph(pdf, item.description, { x, y: cursorY, width, lineHeightMult: 1.5 })
+            cursorY += drawParagraph(pdf, item.description, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.5 })
           }
           cursorY += 10
         })
