@@ -1,0 +1,92 @@
+/* Every font selectable in the builder (Style -> Font family), self-hosted
+   via @fontsource instead of a Google Fonts CDN `<link>` — the same local
+   files utils/pdfFontEmbed.js already embeds into the exported PDF, so the
+   glyphs on screen and in print are byte-for-byte the same font, not two
+   independent fetches of "the same name" that can drift apart (a CDN
+   outage/block, a different subset, a future version bump...). It also
+   means the builder works fully offline once installed.
+   Only 400/700 (normal/italic) are loaded — the only weights this app's
+   own typography actually asks for (regular body text and `fontWeight:
+   700` section titles/headings; see BlockRenderer.jsx's
+   sectionTitleStyle) and the only ones utils/pdfFontEmbed.js embeds for
+   the PDF export. A `font-medium`/`font-semibold` utility class used
+   elsewhere in the app's own UI chrome (not CV content) still renders —
+   CSS matches it to the nearest loaded weight (700) instead of a
+   dedicated 500/600 cut. */
+@import '@fontsource/eb-garamond/400.css';
+@import '@fontsource/eb-garamond/400-italic.css';
+@import '@fontsource/eb-garamond/700.css';
+@import '@fontsource/eb-garamond/700-italic.css';
+
+@import '@fontsource/figtree/400.css';
+@import '@fontsource/figtree/400-italic.css';
+@import '@fontsource/figtree/700.css';
+@import '@fontsource/figtree/700-italic.css';
+
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/400-italic.css';
+@import '@fontsource/ibm-plex-sans/700.css';
+@import '@fontsource/ibm-plex-sans/700-italic.css';
+
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/400-italic.css';
+@import '@fontsource/ibm-plex-mono/700.css';
+@import '@fontsource/ibm-plex-mono/700-italic.css';
+
+@import '@fontsource/lora/400.css';
+@import '@fontsource/lora/400-italic.css';
+@import '@fontsource/lora/700.css';
+@import '@fontsource/lora/700-italic.css';
+
+@import '@fontsource/merriweather/400.css';
+@import '@fontsource/merriweather/400-italic.css';
+@import '@fontsource/merriweather/700.css';
+@import '@fontsource/merriweather/700-italic.css';
+
+@import '@fontsource/playfair-display/400.css';
+@import '@fontsource/playfair-display/400-italic.css';
+@import '@fontsource/playfair-display/700.css';
+@import '@fontsource/playfair-display/700-italic.css';
+
+@import '@fontsource/source-sans-3/400.css';
+@import '@fontsource/source-sans-3/400-italic.css';
+@import '@fontsource/source-sans-3/700.css';
+@import '@fontsource/source-sans-3/700-italic.css';
+
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/400-italic.css';
+@import '@fontsource/poppins/700.css';
+@import '@fontsource/poppins/700-italic.css';
+
+@import '@fontsource/roboto/400.css';
+@import '@fontsource/roboto/400-italic.css';
+@import '@fontsource/roboto/700.css';
+@import '@fontsource/roboto/700-italic.css';
+
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/400-italic.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/inter/700-italic.css';
+
+/* Google's own metric-compatible clones of Arial/Times New Roman/Courier
+   New/Georgia — see the comment on FONT_FAMILY_OPTIONS in
+   utils/blockTypes.js. */
+@import '@fontsource/arimo/400.css';
+@import '@fontsource/arimo/400-italic.css';
+@import '@fontsource/arimo/700.css';
+@import '@fontsource/arimo/700-italic.css';
+
+@import '@fontsource/tinos/400.css';
+@import '@fontsource/tinos/400-italic.css';
+@import '@fontsource/tinos/700.css';
+@import '@fontsource/tinos/700-italic.css';
+
+@import '@fontsource/cousine/400.css';
+@import '@fontsource/cousine/400-italic.css';
+@import '@fontsource/cousine/700.css';
+@import '@fontsource/cousine/700-italic.css';
+
+@import '@fontsource/gelasio/400.css';
+@import '@fontsource/gelasio/400-italic.css';
+@import '@fontsource/gelasio/700.css';
+@import '@fontsource/gelasio/700-italic.css';

@@ -5,14 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PrintFlow</title>
-    <!-- Extra fonts selectable in the builder (Style -> Font family), loaded
-         from Google Fonts so they render correctly on any computer. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&family=Figtree:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Lora:wght@400;500;600;700&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Poppins:wght@400;600;700&family=Roboto:ital,wght@0,400;0,700;1,400&display=swap"
-    />
+    <!-- Fonts selectable in the builder (Style -> Font family) are
+         self-hosted (see src/styles/builderFonts.css, imported from
+         main.jsx) rather than loaded from the Google Fonts CDN: the exact
+         same local files utils/pdfFontEmbed.js embeds into the exported
+         PDF, so screen and print are guaranteed to use the same glyphs
+         instead of two independent fetches of "the same name" that can
+         drift apart, and the builder works fully offline. Inter/Arimo/
+         Tinos/Cousine/Gelasio stand in for the "system font" options
+         (Inter itself, Arial, Times New Roman, Courier New, Georgia) —
+         Arimo/Tinos/Cousine/Gelasio are Google's own metric-compatible
+         clones of Arial/Times New Roman/Courier New/Georgia, so choosing
+         one of those options still looks like that typeface. -->
   </head>
   <body>
     <div id="root"></div>

@@ -69,12 +69,21 @@ export const TEXT_TRANSFORM_OPTIONS = [
 export const FONT_FAMILY_OPTIONS = [
   { value: '', label: 'Inherit from global style', category: null },
   { value: 'Inter, system-ui, sans-serif', label: 'Inter', category: 'sans-serif' },
-  { value: "'Segoe UI', Arial, sans-serif", label: 'Segoe UI', category: 'sans-serif' },
-  { value: 'Arial, Helvetica, sans-serif', label: 'Arial', category: 'sans-serif' },
-  { value: 'Georgia, serif', label: 'Georgia', category: 'serif' },
-  { value: "Georgia, 'Times New Roman', serif", label: 'Georgia (serif)', category: 'serif' },
-  { value: "'Times New Roman', Times, serif", label: 'Times New Roman', category: 'serif' },
-  { value: "'Courier New', monospace", label: 'Courier New', category: 'monospace' },
+  // Arimo/Tinos/Cousine/Gelasio are Google's own metric-compatible clones
+  // of Arial/Times New Roman/Courier New/Georgia — leading the stack with
+  // one of them (loaded as a real webfont, see index.html) makes an
+  // "Arial"/"Georgia"/... pick actually render as that shape on screen
+  // instead of silently falling back to whatever the browser's own
+  // system default happens to be, and gives the PDF export (see
+  // utils/pdfFontEmbed.js) a real file it can embed for it, so screen and
+  // print no longer drift apart from each other. The named system font
+  // stays right after as the fallback if the webfont somehow fails to load.
+  { value: "Arimo, 'Segoe UI', Arial, sans-serif", label: 'Segoe UI', category: 'sans-serif' },
+  { value: 'Arimo, Arial, Helvetica, sans-serif', label: 'Arial', category: 'sans-serif' },
+  { value: 'Gelasio, Georgia, serif', label: 'Georgia', category: 'serif' },
+  { value: "Gelasio, Georgia, 'Times New Roman', serif", label: 'Georgia (serif)', category: 'serif' },
+  { value: "Tinos, 'Times New Roman', Times, serif", label: 'Times New Roman', category: 'serif' },
+  { value: "Cousine, 'Courier New', monospace", label: 'Courier New', category: 'monospace' },
   { value: "'EB Garamond', Georgia, serif", label: 'EB Garamond', category: 'serif' },
   { value: "Figtree, -apple-system, sans-serif", label: 'Figtree', category: 'sans-serif' },
   { value: "'IBM Plex Sans', -apple-system, sans-serif", label: 'IBM Plex Sans', category: 'sans-serif' },

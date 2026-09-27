@@ -226,7 +226,7 @@ export const CV_TEMPLATES = [
     globalStyle: {
       primaryColor: '#1e293b',
       textColor: '#1e293b',
-      fontFamily: "Georgia, 'Times New Roman', serif",
+      fontFamily: "Gelasio, Georgia, 'Times New Roman', serif",
     },
     blocks: [
       {
@@ -334,7 +334,7 @@ export const CV_TEMPLATES = [
     globalStyle: {
       primaryColor: '#166534',
       textColor: '#1f2937',
-      fontFamily: "'Segoe UI', Arial, sans-serif",
+      fontFamily: "Arimo, 'Segoe UI', Arial, sans-serif",
     },
     blocks: [
       {
@@ -395,7 +395,7 @@ export const CV_TEMPLATES = [
     globalStyle: {
       primaryColor: '#111827',
       textColor: '#111827',
-      fontFamily: "'Segoe UI', Arial, sans-serif",
+      fontFamily: "Arimo, 'Segoe UI', Arial, sans-serif",
     },
     blocks: [
       {
@@ -492,7 +492,7 @@ export const CV_TEMPLATES = [
     globalStyle: {
       primaryColor: '#111111',
       textColor: '#111111',
-      fontFamily: "'Segoe UI', Arial, sans-serif",
+      fontFamily: "Arimo, 'Segoe UI', Arial, sans-serif",
     },
     blocks: [
       { id: 'cv4-photo', type: 'image', src: '', alt: 'Profile photo', align: 'center', shape: 'circle' },
@@ -585,7 +585,7 @@ export const CV_TEMPLATES = [
     globalStyle: {
       primaryColor: '#dc2626',
       textColor: '#111111',
-      fontFamily: "'Segoe UI', Arial, sans-serif",
+      fontFamily: "Arimo, 'Segoe UI', Arial, sans-serif",
     },
     blocks: [
       { id: 'cv5-title', type: 'heading', content: 'Your Name', level: 'h1', align: 'left', bold: true, size: 'xl', color: null },

@@ -7,11 +7,15 @@
 //
 // Every Google Font this app actually loads (see index.html's Google
 // Fonts `<link>`) is embedded for real — its own glyphs, not a
-// substitute — via utils/pdfFontEmbed.js. A handful of FONT_FAMILY_OPTIONS
-// entries are plain OS/system fonts that were never loaded as a webfont
-// to begin with (Arial, Georgia, "Segoe UI", "Times New Roman", "Courier
-// New", Inter); those still map to the nearest of jsPDF's three built-in
-// core fonts by `category` (serif/sans-serif/monospace), same as before.
+// substitute — via utils/pdfFontEmbed.js. That now includes every
+// FONT_FAMILY_OPTIONS entry, even the ones named after a system font
+// (Arial, Georgia, "Segoe UI", "Times New Roman", "Courier New", Inter):
+// each is backed by a real webfont — either the font itself (Inter), or
+// Google's own metric-compatible clone of it (Arimo/Gelasio/Tinos/Cousine
+// — see the comment on FONT_FAMILY_OPTIONS in blockTypes.js) — so only a
+// family somehow missing from FONT_EMBED_FILES entirely falls back to the
+// nearest of jsPDF's three built-in core fonts by `category`
+// (serif/sans-serif/monospace) below.
 //
 // Block positions (x/y/width/height) are already stored in the same pixel
 // space as the sheet (SHEET_WIDTH/SHEET_HEIGHT, see utils/layout.js), and

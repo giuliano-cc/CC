@@ -85,13 +85,46 @@ import robotoBold from '@fontsource/roboto/files/roboto-latin-700-normal.woff2?u
 import robotoItalic from '@fontsource/roboto/files/roboto-latin-400-italic.woff2?url'
 import robotoBoldItalic from '@fontsource/roboto/files/roboto-latin-700-italic.woff2?url'
 
+import interNormal from '@fontsource/inter/files/inter-latin-400-normal.woff2?url'
+import interBold from '@fontsource/inter/files/inter-latin-700-normal.woff2?url'
+import interItalic from '@fontsource/inter/files/inter-latin-400-italic.woff2?url'
+import interBoldItalic from '@fontsource/inter/files/inter-latin-700-italic.woff2?url'
+
+// Google's own metric-compatible clones of Arial/Times New Roman/Courier
+// New/Georgia (see the comment on FONT_FAMILY_OPTIONS in blockTypes.js) —
+// embedded under those options' own labels below, so picking "Arial" (or
+// "Segoe UI", "Times New Roman", "Courier New", "Georgia"/"Georgia
+// (serif)") gets a real embedded file too, not just the plain
+// Helvetica/Times/Courier category fallback.
+import arimoNormal from '@fontsource/arimo/files/arimo-latin-400-normal.woff2?url'
+import arimoBold from '@fontsource/arimo/files/arimo-latin-700-normal.woff2?url'
+import arimoItalic from '@fontsource/arimo/files/arimo-latin-400-italic.woff2?url'
+import arimoBoldItalic from '@fontsource/arimo/files/arimo-latin-700-italic.woff2?url'
+
+import tinosNormal from '@fontsource/tinos/files/tinos-latin-400-normal.woff2?url'
+import tinosBold from '@fontsource/tinos/files/tinos-latin-700-normal.woff2?url'
+import tinosItalic from '@fontsource/tinos/files/tinos-latin-400-italic.woff2?url'
+import tinosBoldItalic from '@fontsource/tinos/files/tinos-latin-700-italic.woff2?url'
+
+import cousineNormal from '@fontsource/cousine/files/cousine-latin-400-normal.woff2?url'
+import cousineBold from '@fontsource/cousine/files/cousine-latin-700-normal.woff2?url'
+import cousineItalic from '@fontsource/cousine/files/cousine-latin-400-italic.woff2?url'
+import cousineBoldItalic from '@fontsource/cousine/files/cousine-latin-700-italic.woff2?url'
+
+import gelasioNormal from '@fontsource/gelasio/files/gelasio-latin-400-normal.woff2?url'
+import gelasioBold from '@fontsource/gelasio/files/gelasio-latin-700-normal.woff2?url'
+import gelasioItalic from '@fontsource/gelasio/files/gelasio-latin-400-italic.woff2?url'
+import gelasioBoldItalic from '@fontsource/gelasio/files/gelasio-latin-700-italic.woff2?url'
+
 // Keyed by FONT_FAMILY_OPTIONS' own `label` (not the raw CSS `value`,
 // which carries quotes/fallback stacks that are easy to mismatch) — every
-// label here is one this app actually loads as a webfont in index.html;
-// every other FONT_FAMILY_OPTIONS entry (Arial, Georgia, "Segoe UI",
-// "Times New Roman", "Courier New", Inter) is a system font with no real
-// file of its own to embed, and keeps using the Helvetica/Times/Courier
-// category fallback in pdfVectorExport.js.
+// label here is one this app actually loads as a webfont in index.html.
+// "Segoe UI"/Arial/Georgia/"Georgia (serif)"/"Times New Roman"/"Courier
+// New" reuse Arimo/Gelasio/Tinos/Cousine, Google's own metric-compatible
+// clones of those system typefaces (see the comment on FONT_FAMILY_OPTIONS
+// in blockTypes.js) — every option now has a real embeddable file; only a
+// family that somehow isn't in this map at all still falls back to the
+// plain Helvetica/Times/Courier category mapping in pdfVectorExport.js.
 const FONT_EMBED_FILES = {
   'EB Garamond': { normal: ebGaramondNormal, bold: ebGaramondBold, italic: ebGaramondItalic, bolditalic: ebGaramondBoldItalic },
   Figtree: { normal: figtreeNormal, bold: figtreeBold, italic: figtreeItalic, bolditalic: figtreeBoldItalic },
@@ -103,6 +136,13 @@ const FONT_EMBED_FILES = {
   'Source Sans 3': { normal: sourceSans3Normal, bold: sourceSans3Bold, italic: sourceSans3Italic, bolditalic: sourceSans3BoldItalic },
   Poppins: { normal: poppinsNormal, bold: poppinsBold, italic: poppinsItalic, bolditalic: poppinsBoldItalic },
   Roboto: { normal: robotoNormal, bold: robotoBold, italic: robotoItalic, bolditalic: robotoBoldItalic },
+  Inter: { normal: interNormal, bold: interBold, italic: interItalic, bolditalic: interBoldItalic },
+  'Segoe UI': { normal: arimoNormal, bold: arimoBold, italic: arimoItalic, bolditalic: arimoBoldItalic },
+  Arial: { normal: arimoNormal, bold: arimoBold, italic: arimoItalic, bolditalic: arimoBoldItalic },
+  Georgia: { normal: gelasioNormal, bold: gelasioBold, italic: gelasioItalic, bolditalic: gelasioBoldItalic },
+  'Georgia (serif)': { normal: gelasioNormal, bold: gelasioBold, italic: gelasioItalic, bolditalic: gelasioBoldItalic },
+  'Times New Roman': { normal: tinosNormal, bold: tinosBold, italic: tinosItalic, bolditalic: tinosBoldItalic },
+  'Courier New': { normal: cousineNormal, bold: cousineBold, italic: cousineItalic, bolditalic: cousineBoldItalic },
 }
 
 // `label -> Set of styles` successfully registered on the jsPDF instance
