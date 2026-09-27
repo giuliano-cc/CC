@@ -17,7 +17,6 @@ import { BLOCK_TYPES } from '../utils/blockTypes'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../utils/layout'
 import { CV_TEMPLATES, TEMPLATE_CONTENT_MAPS } from '../utils/cvTemplates'
 import { parseSocialLinks } from '../utils/socialIcons'
-import { generatePdfBlob } from '../utils/pdfVectorExport'
 import {
   createTemplate,
   getTemplateById,
@@ -154,6 +153,11 @@ function BuilderContent({ initialTitle }) {
     selectBlock(null)
     setPdfState({ blobUrl: null, isGenerating: true })
     try {
+      // Dynamically imported: jsPDF, the embedded-font decompressor and
+      // ~30 font files are only ever needed once someone actually asks
+      // for a PDF, so they're kept out of the app's main bundle entirely
+      // until then.
+      const { generatePdfBlob } = await import('../utils/pdfVectorExport')
       const blob = await generatePdfBlob({ pageCount, blocks, globalStyle, library })
       const blobUrl = URL.createObjectURL(blob)
       setPdfState({ blobUrl, isGenerating: false })

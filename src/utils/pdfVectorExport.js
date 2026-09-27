@@ -5,13 +5,13 @@
 // any zoom or print size, and a file that's mostly text (kilobytes, not a
 // full-page PNG per page).
 //
-// The trade-off: jsPDF's core fonts are Helvetica/Times/Courier only (no
-// embedding of the app's actual Google Fonts, which would mean fetching
-// and converting each one's binary at export time). Every font in
-// FONT_FAMILY_OPTIONS is mapped to the nearest of the three by its own
-// `category` (serif/sans-serif/monospace) — the weight/style (bold,
-// italic) and every size/color/spacing/alignment/wrap still match the
-// editor exactly, just not the exact typeface.
+// Every Google Font this app actually loads (see index.html's Google
+// Fonts `<link>`) is embedded for real — its own glyphs, not a
+// substitute — via utils/pdfFontEmbed.js. A handful of FONT_FAMILY_OPTIONS
+// entries are plain OS/system fonts that were never loaded as a webfont
+// to begin with (Arial, Georgia, "Segoe UI", "Times New Roman", "Courier
+// New", Inter); those still map to the nearest of jsPDF's three built-in
+// core fonts by `category` (serif/sans-serif/monospace), same as before.
 //
 // Block positions (x/y/width/height) are already stored in the same pixel
 // space as the sheet (SHEET_WIDTH/SHEET_HEIGHT, see utils/layout.js), and
@@ -33,6 +33,7 @@ import { CONTENT_SLOTS } from '../context/ContentLibraryContext'
 import { parseChecklist, parseEntries, parseLanguages, sortEntriesByDate } from './contentLists'
 import { getPlatformMeta, parseSocialLinks } from './socialIcons'
 import { SHEET_HEIGHT, SHEET_WIDTH } from './layout'
+import { registerEmbeddedFonts, resolveEmbeddedFont } from './pdfFontEmbed'
 
 // ---------------------------------------------------------------------
 // Color / font helpers
@@ -72,7 +73,13 @@ function pdfFontStyle(bold, italic) {
 }
 
 function setFont(pdf, fontFamilyValue, { bold = false, italic = false, sizePx }) {
-  pdf.setFont(pdfFontName(fontFamilyValue), pdfFontStyle(bold, italic))
+  const style = pdfFontStyle(bold, italic)
+  const embedded = resolveEmbeddedFont(fontFamilyValue, style)
+  if (embedded) {
+    pdf.setFont(embedded.name, embedded.style)
+  } else {
+    pdf.setFont(pdfFontName(fontFamilyValue), style)
+  }
   if (sizePx) pdf.setFontSize(sizePx)
 }
 
@@ -789,6 +796,7 @@ async function drawBlock(pdf, block, ctx) {
 
 export async function generatePdfBlob({ pageCount, blocks, globalStyle, library }) {
   const pdf = new jsPDF({ unit: 'px', format: [SHEET_WIDTH, SHEET_HEIGHT], compress: true })
+  await registerEmbeddedFonts(pdf)
 
   for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
     if (pageIndex > 0) pdf.addPage([SHEET_WIDTH, SHEET_HEIGHT], 'portrait')

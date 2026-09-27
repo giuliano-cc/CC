@@ -667,7 +667,7 @@ export default function BlockRenderer({
         <div className={`flex flex-col gap-1.5 ${isRowContact ? '' : alignItems}`}>
           {block.title && block.showTitle !== false && (
             <p
-              className={`w-full ${block.titleRule !== false ? 'mb-0.5 border-b border-slate-200 pb-1.5' : ''}`}
+              className={`w-full ${alignClass(block.align)} ${block.titleRule !== false ? 'mb-0.5 border-b border-slate-200 pb-1.5' : ''}`}
               style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
               {block.title}
