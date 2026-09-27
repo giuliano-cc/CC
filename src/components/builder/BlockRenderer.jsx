@@ -15,10 +15,17 @@ function alignClass(align) {
   return align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
 }
 
+// `uppercase`/`startCase` are pure CSS (Tailwind's text-transform utility
+// classes — `capitalize` is CSS's own text-transform:capitalize, which
+// unconditionally capitalizes every word, i.e. "Start Case"). `smallCaps`
+// is a font-variant, not a text-transform, so it's applied as an inline
+// style instead (see textTransformStyle below). `titleCase` needs to
+// actually skip minor words (a/the/of/...), which CSS can't express at
+// all, so it's applied by transforming the displayed string itself (see
+// toTitleCase/displayText below) rather than by any style.
 const TEXT_TRANSFORM_CLASSES = {
   uppercase: 'uppercase',
-  lowercase: 'lowercase',
-  capitalize: 'capitalize',
+  startCase: 'capitalize',
 }
 
 function textStyleClasses(block) {
@@ -29,6 +36,43 @@ function textStyleClasses(block) {
     TEXT_TRANSFORM_CLASSES[block.textTransform] || '',
     alignClass(block.align),
   ].join(' ')
+}
+
+function textTransformStyle(block) {
+  return block.textTransform === 'smallCaps' ? { fontVariant: 'small-caps' } : undefined
+}
+
+// Minor words stay lowercase in Title Case, unless they're the first or
+// last word — the common English title-casing convention (vs. Start
+// Case, which capitalizes every word unconditionally).
+const TITLE_CASE_MINOR_WORDS = new Set([
+  'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in', 'nor', 'of',
+  'on', 'or', 'so', 'the', 'to', 'up', 'yet', 'vs', 'via',
+])
+
+function toTitleCase(text) {
+  const tokens = text.split(/(\s+)/)
+  const wordIndexes = tokens.map((t, i) => (i % 2 === 0 && t ? i : -1)).filter((i) => i !== -1)
+  const lastWordToken = wordIndexes[wordIndexes.length - 1]
+  return tokens
+    .map((token, i) => {
+      if (i % 2 === 1 || !token) return token
+      const lower = token.toLowerCase()
+      const isEdge = i === wordIndexes[0] || i === lastWordToken
+      if (!isEdge && TITLE_CASE_MINOR_WORDS.has(lower)) return lower
+      return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase()
+    })
+    .join('')
+}
+
+// Applied to the actual rendered string (not via a style/class, since
+// only titleCase needs it — everything else is textStyleClasses/
+// textTransformStyle above).
+function displayText(text, block) {
+  if (block.textTransform === 'titleCase' && typeof text === 'string') {
+    return toTitleCase(text)
+  }
+  return text
 }
 
 // Shared inline style for "rich" text blocks (heading/text/quote): font,
@@ -42,6 +86,7 @@ function typographyStyle(block) {
     letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : undefined,
     lineHeight: block.lineHeight || undefined,
     backgroundColor: block.bgColor || undefined,
+    ...textTransformStyle(block),
   }
 }
 
@@ -231,8 +276,11 @@ export default function BlockRenderer({
   switch (block.type) {
     case BLOCK_TYPES.HEADER:
       return (
-        <div className={`border-b border-slate-200 pb-3 text-lg ${textStyleClasses(block)}`}>
-          {resolvedContent}
+        <div
+          className={`border-b border-slate-200 pb-3 text-lg ${textStyleClasses(block)}`}
+          style={textTransformStyle(block)}
+        >
+          {displayText(resolvedContent, block)}
         </div>
       )
 
@@ -288,7 +336,7 @@ export default function BlockRenderer({
           }`}
           style={typographyStyle(block)}
         >
-          {resolvedContent}
+          {displayText(resolvedContent, block)}
         </Tag>
       )
     }
@@ -317,7 +365,7 @@ export default function BlockRenderer({
             >
               {resolvedContent.split('\n').filter(Boolean).map((line, i) => (
                 <li key={i} className={textStyleClasses({ ...block, align: undefined })}>
-                  {line}
+                  {displayText(line, block)}
                 </li>
               ))}
             </ListTag>
@@ -328,7 +376,7 @@ export default function BlockRenderer({
           className={`whitespace-pre-line text-sm leading-relaxed ${textStyleClasses(block)}`}
           style={typographyStyle(block)}
         >
-          {resolvedContent}
+          {displayText(resolvedContent, block)}
         </p>
       )
 
@@ -409,7 +457,7 @@ export default function BlockRenderer({
           className={`border-l-4 border-primary/40 pl-3 text-sm text-slate-600 ${textStyleClasses(block)}`}
           style={typographyStyle(block)}
         >
-          <p>{resolvedContent}</p>
+          <p>{displayText(resolvedContent, block)}</p>
           {resolvedAuthor && (
             <footer className="mt-1.5 text-xs not-italic text-slate-400">— {resolvedAuthor}</footer>
           )}
@@ -419,8 +467,11 @@ export default function BlockRenderer({
 
     case BLOCK_TYPES.FOOTER:
       return (
-        <div className={`border-t border-slate-200 pt-3 text-xs text-slate-500 ${textStyleClasses(block)}`}>
-          {resolvedContent}
+        <div
+          className={`border-t border-slate-200 pt-3 text-xs text-slate-500 ${textStyleClasses(block)}`}
+          style={textTransformStyle(block)}
+        >
+          {displayText(resolvedContent, block)}
         </div>
       )
 

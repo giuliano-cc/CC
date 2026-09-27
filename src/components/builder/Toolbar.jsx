@@ -14,7 +14,7 @@ import {
   Undo2,
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
-import { BLOCK_TYPES, FONT_FAMILY_OPTIONS } from '../../utils/blockTypes'
+import { BLOCK_TYPES, FONT_FAMILY_OPTIONS, TEXT_TRANSFORM_OPTIONS } from '../../utils/blockTypes'
 
 function ToolbarButton({ active, onClick, disabled, children, label }) {
   return (
@@ -182,10 +182,11 @@ export default function Toolbar() {
         title="Text case"
         className="h-8 shrink-0 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-600 outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-30"
       >
-        <option value="">Aa (default)</option>
-        <option value="uppercase">ALL CAPS</option>
-        <option value="capitalize">Capitalize Each Word</option>
-        <option value="lowercase">lowercase</option>
+        {TEXT_TRANSFORM_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
       </select>
 
       <div className="mx-2 h-5 w-px shrink-0 bg-slate-200" />

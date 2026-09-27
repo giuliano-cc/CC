@@ -48,6 +48,19 @@ export const BLOCK_TYPES = {
 // reference below) uses the identical values instead of guessing.
 export const HEADING_SIZE_PX = { sm: 16, md: 24, lg: 30, xl: 48 }
 
+// See textStyleClasses/textTransformStyle/displayText in BlockRenderer.jsx
+// for how each of these is actually applied — 'uppercase' and 'startCase'
+// are plain CSS text-transform, 'smallCaps' is a font-variant, and
+// 'titleCase' transforms the displayed string itself (skipping minor
+// words like "of"/"the"), since CSS has no way to express that.
+export const TEXT_TRANSFORM_OPTIONS = [
+  { value: '', label: 'None' },
+  { value: 'uppercase', label: 'All Caps' },
+  { value: 'smallCaps', label: 'Small Caps' },
+  { value: 'titleCase', label: 'Title Case' },
+  { value: 'startCase', label: 'Start Case' },
+]
+
 export const FONT_FAMILY_OPTIONS = [
   { value: '', label: 'Inherit from global style' },
   { value: 'Inter, system-ui, sans-serif', label: 'Inter' },
