@@ -79,6 +79,17 @@ function GlobalStylePanel() {
     walk(blocks)
   }
 
+  // Clears every row's own color/font override in one go, back to
+  // inheriting the global Primary/Text color and Font — a template built
+  // up over several edits (or one whose blocks were originally created
+  // with a literal color baked in) can end up with more than one row
+  // stuck on an old explicit color, and finding + clicking each row's own
+  // ✕ individually is easy to miss one of.
+  const hasAnyOverride = typographyRows.some((row) => row.color || row.fontFamily)
+  function resetAllTypography() {
+    typographyRows.forEach((row) => applyTypographyChange(row, { color: null, fontFamily: null }))
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <h3 className="text-sm font-semibold text-slate-800">Global Style</h3>
@@ -136,7 +147,19 @@ function GlobalStylePanel() {
 
       {typographyRows.length > 0 && (
         <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-4">
-          <h4 className="text-xs font-semibold text-slate-600">Text styles used in this template</h4>
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="text-xs font-semibold text-slate-600">Text styles used in this template</h4>
+            {hasAnyOverride && (
+              <button
+                type="button"
+                onClick={resetAllTypography}
+                className="shrink-0 text-xs font-medium text-primary hover:underline"
+                title="Clears every row's own color/font, back to the Primary/Text color and Font above"
+              >
+                Reset all to inherit
+              </button>
+            )}
+          </div>
           <p className="-mt-1 text-xs text-slate-400">
             Editing one applies to every block using that style across the template.
           </p>
@@ -707,6 +730,20 @@ function QrCodeProperties({ block, onChange }) {
           className={inputClasses}
         />
       </Field>
+      {block.caption && (
+        <Field label="Caption position">
+          <select
+            value={block.captionPosition || 'bottom'}
+            onChange={(e) => onChange({ captionPosition: e.target.value })}
+            className={inputClasses}
+          >
+            <option value="top">Top</option>
+            <option value="bottom">Bottom</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+          </select>
+        </Field>
+      )}
     </div>
   )
 }

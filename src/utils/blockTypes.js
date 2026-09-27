@@ -319,6 +319,7 @@ export const BLOCK_DEFINITIONS = [
       value: 'https://example.com',
       useLibraryValue: false,
       caption: '',
+      captionPosition: 'bottom',
     },
   },
   {
