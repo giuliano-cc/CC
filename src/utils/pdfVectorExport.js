@@ -947,13 +947,32 @@ async function drawBlock(pdf, block, ctx) {
 // Entry point
 // ---------------------------------------------------------------------
 
+// `document.fonts.ready` only waits for webfonts the page has already
+// *matched* against some rendered text — a family only used on a page of
+// the document that hasn't been scrolled to/rendered yet (or one picked
+// right before hitting "Preview PDF") was never actually requested, so
+// the browser never fetched it. wrapTextToWidth/measureTextWidth would
+// then silently measure against whatever fallback font canvas substitutes
+// instead, while jsPDF's embedded copy (fetched independently in
+// registerEmbeddedFonts, regardless of what's on screen) draws the real
+// glyphs — the same wrapping-vs-drawing mismatch this file's canvas-based
+// measurement exists to avoid, just moved one layer down. `document.fonts
+// .load(...)` (unlike `.ready`) forces the fetch itself, so every font the
+// export could possibly need is genuinely loaded before anything is
+// measured, independent of what happened to be visible before export.
+async function ensureFontsLoadedForMeasurement() {
+  const styles = ['', 'italic ', 'bold ', 'italic bold ']
+  await Promise.all(
+    FONT_FAMILY_OPTIONS.filter((f) => f.value).flatMap((f) =>
+      styles.map((style) => document.fonts.load(`${style}16px ${f.value}`).catch(() => {})),
+    ),
+  )
+}
+
 export async function generatePdfBlob({ pageCount, blocks, globalStyle, library }) {
   const pdf = new jsPDF({ unit: 'px', format: [SHEET_WIDTH, SHEET_HEIGHT], compress: true })
-  // wrapTextToWidth/measureTextWidth (see above) measure with the actual
-  // browser font, so it has to have actually finished loading first — the
-  // earliest a document reaches this function is right after opening the
-  // builder, before a webfont fetched over the network is guaranteed done.
   await document.fonts.ready
+  await ensureFontsLoadedForMeasurement()
   await registerEmbeddedFonts(pdf)
 
   for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
