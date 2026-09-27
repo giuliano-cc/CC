@@ -1414,14 +1414,27 @@ function PositionSizeFields({ block, onChange }) {
   // (`max-content`, overflow visible) instead of staying pinned to the
   // block's current box, then reverting before the next paint — so this
   // also correctly *shrinks* an oversized block, not just grows one.
-  function fitToContent() {
+  // `axis` picks which dimension(s) actually change:
+  //  - 'height': keeps the current width (so text reflows exactly as
+  //    already shown) and measures how tall that makes it — for a
+  //    fixed-width paragraph/column where only the height should shrink
+  //    or grow to stop clipping or leaving empty space below the text.
+  //  - 'width': keeps the current height and measures the content's
+  //    intrinsic (unwrapped) width — for a short line/title that's
+  //    sitting in a box wider or narrower than the text actually needs.
+  //  - 'both' (default): measures both at once, letting the box shrink-
+  //    wrap the text exactly on all four sides.
+  // Both edges stay anchored at the block's own x/y — nothing here moves
+  // the block, only its width/height, so which corner it grows/shrinks
+  // from is whatever the block's own top-left position already is.
+  function fitToContent(axis = 'both') {
     const node = document.querySelector(`[data-block-content="${block.id}"]`)
     if (!node) return
     const prevWidth = node.style.width
     const prevHeight = node.style.height
     const prevOverflow = node.style.overflow
-    node.style.width = 'max-content'
-    node.style.height = 'max-content'
+    if (axis !== 'height') node.style.width = 'max-content'
+    if (axis !== 'width') node.style.height = 'max-content'
     node.style.overflow = 'visible'
     const rect = node.getBoundingClientRect()
     const naturalWidth = rect.width
@@ -1429,11 +1442,14 @@ function PositionSizeFields({ block, onChange }) {
     node.style.width = prevWidth
     node.style.height = prevHeight
     node.style.overflow = prevOverflow
-    if (!naturalWidth || !naturalHeight) return
-    onChange({
-      width: Math.min(SHEET_WIDTH, Math.max(20, Math.ceil(naturalWidth))),
-      height: Math.min(SHEET_HEIGHT, Math.max(20, Math.ceil(naturalHeight))),
-    })
+    const patch = {}
+    if (axis !== 'height' && naturalWidth) {
+      patch.width = Math.min(SHEET_WIDTH, Math.max(20, Math.ceil(naturalWidth)))
+    }
+    if (axis !== 'width' && naturalHeight) {
+      patch.height = Math.min(SHEET_HEIGHT, Math.max(20, Math.ceil(naturalHeight)))
+    }
+    if (Object.keys(patch).length > 0) onChange(patch)
   }
 
   return (
@@ -1477,15 +1493,37 @@ function PositionSizeFields({ block, onChange }) {
           />
         </Field>
       </div>
-      <button
-        type="button"
-        onClick={fitToContent}
-        title="Resize the block to fit its text exactly on all sides"
-        className="flex items-center justify-center gap-1.5 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
-      >
-        <Maximize2 size={13} />
-        Fit to content
-      </button>
+      <Field label="Fit to content">
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => fitToContent('width')}
+            title="Resize width only, keeping the current height"
+            className="flex flex-1 items-center justify-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+          >
+            <Maximize2 size={12} />
+            Width
+          </button>
+          <button
+            type="button"
+            onClick={() => fitToContent('height')}
+            title="Resize height only, keeping the current width"
+            className="flex flex-1 items-center justify-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+          >
+            <Maximize2 size={12} />
+            Height
+          </button>
+          <button
+            type="button"
+            onClick={() => fitToContent('both')}
+            title="Resize both width and height exactly to the content"
+            className="flex flex-1 items-center justify-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+          >
+            <Maximize2 size={12} />
+            Both
+          </button>
+        </div>
+      </Field>
       <div className="flex gap-1.5">
         <button
           type="button"
