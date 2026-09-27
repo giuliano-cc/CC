@@ -157,13 +157,13 @@ function SkillBar({ label, level, color }) {
   )
 }
 
-function SkillDots({ label, level, color, dotSize = 10 }) {
-  const filled = Math.round((Math.max(0, Math.min(100, level)) / 100) * 5)
+function SkillDots({ label, level, color, dotSize = 10, dotCount = 5 }) {
+  const filled = Math.round((Math.max(0, Math.min(100, level)) / 100) * dotCount)
   return (
     <div className="flex items-center justify-between text-xs">
       <span className="font-medium text-slate-700">{label}</span>
       <div className="flex items-center gap-1">
-        {Array.from({ length: 5 }).map((_, i) => (
+        {Array.from({ length: dotCount }).map((_, i) => (
           <span
             key={i}
             className="shrink-0 rounded-full"
@@ -222,6 +222,7 @@ function Chart({ block, items, onUpdateBlock, accentColor }) {
                 level={item.level}
                 color={block.color || accentColor}
                 dotSize={block.dotSize}
+                dotCount={block.dotCount || 5}
               />
             ) : (
               <SkillBar key={i} label={item.label} level={item.level} color={block.color || accentColor} />

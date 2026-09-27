@@ -644,16 +644,28 @@ function SkillsChartProperties({ block, onChange }) {
         </select>
       </Field>
       {block.chartStyle === 'dots' && (
-        <Field label={`Dot size (${block.dotSize ?? 10}px)`}>
-          <input
-            type="range"
-            min={4}
-            max={24}
-            value={block.dotSize ?? 10}
-            onChange={(e) => onChange({ dotSize: Number(e.target.value) })}
-            className="w-full"
-          />
-        </Field>
+        <>
+          <Field label="Number of dots">
+            <select
+              value={block.dotCount ?? 5}
+              onChange={(e) => onChange({ dotCount: Number(e.target.value) })}
+              className={inputClasses}
+            >
+              <option value={5}>5 (20% per dot)</option>
+              <option value={10}>10 (10% per dot, finer)</option>
+            </select>
+          </Field>
+          <Field label={`Dot size (${block.dotSize ?? 10}px)`}>
+            <input
+              type="range"
+              min={4}
+              max={24}
+              value={block.dotSize ?? 10}
+              onChange={(e) => onChange({ dotSize: Number(e.target.value) })}
+              className="w-full"
+            />
+          </Field>
+        </>
       )}
       {!block.useLibrarySkills && (
         <Field label="Skills (one per line: Label|Level 0-100)">
@@ -739,16 +751,28 @@ function LanguagesChartProperties({ block, onChange }) {
         </select>
       </Field>
       {block.chartStyle === 'dots' && (
-        <Field label={`Dot size (${block.dotSize ?? 10}px)`}>
-          <input
-            type="range"
-            min={4}
-            max={24}
-            value={block.dotSize ?? 10}
-            onChange={(e) => onChange({ dotSize: Number(e.target.value) })}
-            className="w-full"
-          />
-        </Field>
+        <>
+          <Field label="Number of dots">
+            <select
+              value={block.dotCount ?? 5}
+              onChange={(e) => onChange({ dotCount: Number(e.target.value) })}
+              className={inputClasses}
+            >
+              <option value={5}>5 (20% per dot)</option>
+              <option value={10}>10 (10% per dot, finer)</option>
+            </select>
+          </Field>
+          <Field label={`Dot size (${block.dotSize ?? 10}px)`}>
+            <input
+              type="range"
+              min={4}
+              max={24}
+              value={block.dotSize ?? 10}
+              onChange={(e) => onChange({ dotSize: Number(e.target.value) })}
+              className="w-full"
+            />
+          </Field>
+        </>
       )}
       {!block.useLibraryLanguages && (
         <Field label="Languages (one per line: Label|Level 0-100)">

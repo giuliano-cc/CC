@@ -295,6 +295,7 @@ export const BLOCK_DEFINITIONS = [
       color: null,
       chartStyle: 'bars',
       dotSize: 10,
+      dotCount: 5,
     },
   },
   {
@@ -315,6 +316,7 @@ export const BLOCK_DEFINITIONS = [
       color: null,
       chartStyle: 'bars',
       dotSize: 10,
+      dotCount: 5,
     },
   },
   {
