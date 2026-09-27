@@ -15,6 +15,7 @@ import {
   RectangleHorizontal,
   Share2,
   Sparkles,
+  Square,
   Text as TextIcon,
   PanelBottom,
 } from 'lucide-react'
@@ -38,6 +39,7 @@ export const BLOCK_TYPES = {
   LANGUAGES_CHART: 'languages_chart',
   EXPERIENCE: 'experience_entries',
   EDUCATION: 'education_entries',
+  SHAPE: 'shape',
 }
 
 // Fonts available in the font-family selectors (toolbar and properties panel).
@@ -106,6 +108,7 @@ export const DEFAULT_BLOCK_SIZE = {
   [BLOCK_TYPES.LEISURE]: { width: 300, height: 150 },
   [BLOCK_TYPES.EXPERIENCE]: { width: 400, height: 320 },
   [BLOCK_TYPES.EDUCATION]: { width: 400, height: 220 },
+  [BLOCK_TYPES.SHAPE]: { width: 220, height: 140 },
 }
 
 // Interchangeable visual styles for the Skills Chart block — click the
@@ -440,6 +443,19 @@ export const BLOCK_DEFINITIONS = [
       items: ['Photography', 'Hiking', 'Reading'],
       useLibraryHobbies: false,
       align: 'left',
+    },
+  },
+  {
+    type: BLOCK_TYPES.SHAPE,
+    label: 'Shape',
+    icon: Square,
+    defaultProps: {
+      shape: 'rectangle',
+      color: '#e2e8f0',
+      borderColor: null,
+      borderWidth: 0,
+      borderRadius: 0,
+      opacity: 1,
     },
   },
 ]

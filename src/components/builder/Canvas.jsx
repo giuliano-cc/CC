@@ -1,8 +1,11 @@
 import { useDroppable } from '@dnd-kit/core'
-import { Plus, X } from 'lucide-react'
+import { useState } from 'react'
+import { Grid3x3, Plus, X } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import FreeBlock from './FreeBlock'
+
+const GRID_SIZE = 20
 
 export function pageDroppableId(pageIndex) {
   return `canvas-page-${pageIndex}`
@@ -15,7 +18,7 @@ export function parsePageDroppableId(id) {
   return match ? Number(match[1]) : null
 }
 
-function Page({ pageIndex, blocks, margin, globalStyle }) {
+function Page({ pageIndex, blocks, margin, globalStyle, showGrid }) {
   const {
     selectedBlockId,
     selectedIds,
@@ -40,11 +43,33 @@ function Page({ pageIndex, blocks, margin, globalStyle }) {
         height: SHEET_HEIGHT,
         fontFamily: globalStyle.fontFamily,
         color: globalStyle.textColor,
+        backgroundColor: globalStyle.pageBackground || '#ffffff',
       }}
-      className={`relative shrink-0 overflow-hidden rounded-sm bg-white shadow-lg transition ${
+      // `z-0`: without an explicit z-index, `relative` alone doesn't
+      // establish a new stacking context, so a block with a negative
+      // z-index (a background Shape sent behind its siblings — see
+      // BuilderContext's addBlock/sendToBack) would resolve that z-index
+      // against some ancestor far above this page instead of just its own
+      // siblings, and disappear behind unrelated things instead of just
+      // the page's own background.
+      className={`relative z-0 shrink-0 overflow-hidden rounded-sm shadow-lg transition ${
         isOver ? 'ring-2 ring-primary/40' : ''
       }`}
     >
+      {showGrid && (
+        <div
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, rgba(15, 23, 42, 0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(15, 23, 42, 0.08) 1px, transparent 1px)',
+            backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+          }}
+          // A purely editor-side alignment aid — like the margin guide
+          // below, excluded from the exported PDF via `pdf-ignore` (see
+          // utils/pdfExport.js).
+          className="pdf-ignore pointer-events-none absolute inset-0"
+        />
+      )}
+
       {margin > 0 && (
         <div
           style={{ inset: margin }}
@@ -83,6 +108,7 @@ function Page({ pageIndex, blocks, margin, globalStyle }) {
 export default function Canvas() {
   const { blocks, globalStyle, pageCount, addPage, removeLastPage } = useBuilder()
   const margin = globalStyle.margin ?? 0
+  const [showGrid, setShowGrid] = useState(false)
 
   return (
     // `justify-start` (not `justify-center`): once enough pages overflow the
@@ -91,7 +117,19 @@ export default function Canvas() {
     // don't let you scroll back into — page 1 (and everything on it) would
     // become unreachable. Left-aligning keeps every page reachable by
     // scrolling right, however many there are.
-    <div className="flex flex-1 items-start justify-start gap-6 overflow-auto bg-slate-100 p-8">
+    <div className="relative flex flex-1 items-start justify-start gap-6 overflow-auto bg-slate-100 p-8">
+      <button
+        type="button"
+        onClick={() => setShowGrid((v) => !v)}
+        title={showGrid ? 'Hide alignment grid' : 'Show alignment grid'}
+        className={`sticky left-8 top-8 z-20 -mr-9 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border shadow-sm transition ${
+          showGrid
+            ? 'border-primary bg-primary/10 text-primary'
+            : 'border-slate-200 bg-white text-slate-500 hover:border-primary hover:text-primary'
+        }`}
+      >
+        <Grid3x3 size={16} />
+      </button>
       {Array.from({ length: pageCount }).map((_, pageIndex) => (
         <div key={pageIndex} className="flex flex-col items-center gap-2">
           <Page
@@ -99,6 +137,7 @@ export default function Canvas() {
             blocks={blocks.filter((b) => (b.page ?? 0) === pageIndex)}
             margin={margin}
             globalStyle={globalStyle}
+            showGrid={showGrid}
           />
           <span className="text-xs text-slate-400">Page {pageIndex + 1}</span>
         </div>

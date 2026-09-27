@@ -41,7 +41,7 @@ export default function TemplateThumbnail({ template }) {
             height: SHEET_HEIGHT,
             transform: `scale(${scale})`,
             transformOrigin: 'top left',
-            background: 'white',
+            background: template.globalStyle?.pageBackground || 'white',
           }}
           className="pointer-events-none relative"
         >

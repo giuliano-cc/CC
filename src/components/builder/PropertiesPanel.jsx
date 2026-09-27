@@ -113,6 +113,28 @@ function GlobalStylePanel() {
           className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
         />
       </Field>
+      <Field label="Page background">
+        <div className="flex items-center gap-1.5">
+          <input
+            type="color"
+            value={globalStyle.pageBackground || '#ffffff'}
+            onChange={(e) =>
+              setGlobalStyle((prev) => ({ ...prev, pageBackground: e.target.value }))
+            }
+            className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
+          />
+          {globalStyle.pageBackground && globalStyle.pageBackground !== '#ffffff' && (
+            <button
+              type="button"
+              onClick={() => setGlobalStyle((prev) => ({ ...prev, pageBackground: '#ffffff' }))}
+              className="shrink-0 rounded-md px-1.5 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              title="Reset to white"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </Field>
       <Field label="Font">
         <FontPicker
           value={globalStyle.fontFamily}
@@ -251,6 +273,7 @@ const BLOCK_LABELS = {
   [BLOCK_TYPES.LANGUAGES_CHART]: 'Languages',
   [BLOCK_TYPES.EXPERIENCE]: 'Experience',
   [BLOCK_TYPES.EDUCATION]: 'Education',
+  [BLOCK_TYPES.SHAPE]: 'Shape',
 }
 
 // Generic "pick a Content Library slot" select, used for fields that bind
@@ -467,6 +490,86 @@ function DividerProperties({ block, onChange }) {
           className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
         />
       </Field>
+    </div>
+  )
+}
+
+function ShapeProperties({ block, onChange }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <Field label="Shape">
+        <select
+          value={block.shape || 'rectangle'}
+          onChange={(e) => onChange({ shape: e.target.value })}
+          className={inputClasses}
+        >
+          <option value="rectangle">Rectangle</option>
+          <option value="circle">Circle</option>
+        </select>
+      </Field>
+      <Field label="Fill color">
+        <div className="flex items-center gap-1.5">
+          <input
+            type="color"
+            value={block.color || '#e2e8f0'}
+            onChange={(e) => onChange({ color: e.target.value })}
+            className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
+          />
+          {block.color && (
+            <button
+              type="button"
+              onClick={() => onChange({ color: null })}
+              className="shrink-0 rounded-md px-1.5 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              title="Remove fill (transparent)"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </Field>
+      <Field label={`Opacity (${Math.round((block.opacity ?? 1) * 100)}%)`}>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={block.opacity ?? 1}
+          onChange={(e) => onChange({ opacity: Number(e.target.value) })}
+          className="w-full"
+        />
+      </Field>
+      {block.shape !== 'circle' && (
+        <Field label={`Corner radius (${block.borderRadius ?? 0}px)`}>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={block.borderRadius ?? 0}
+            onChange={(e) => onChange({ borderRadius: Number(e.target.value) })}
+            className="w-full"
+          />
+        </Field>
+      )}
+      <Field label={`Border width (${block.borderWidth ?? 0}px)`}>
+        <input
+          type="range"
+          min={0}
+          max={12}
+          value={block.borderWidth ?? 0}
+          onChange={(e) => onChange({ borderWidth: Number(e.target.value) })}
+          className="w-full"
+        />
+      </Field>
+      {block.borderWidth > 0 && (
+        <Field label="Border color">
+          <input
+            type="color"
+            value={block.borderColor || '#94a3b8'}
+            onChange={(e) => onChange({ borderColor: e.target.value })}
+            className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
+          />
+        </Field>
+      )}
     </div>
   )
 }
@@ -1297,6 +1400,7 @@ function MultiSelectPanel({ count }) {
 }
 
 function PositionSizeFields({ block, onChange }) {
+  const { sendToBack, bringToFront } = useBuilder()
   if (typeof block.x !== 'number') return null
 
   // Measures the block's own rendered content (see FreeBlock.jsx's
@@ -1382,6 +1486,24 @@ function PositionSizeFields({ block, onChange }) {
         <Maximize2 size={13} />
         Fit to content
       </button>
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          onClick={() => sendToBack(block.id)}
+          title="Move behind every other block on this page"
+          className="flex-1 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+        >
+          Send to back
+        </button>
+        <button
+          type="button"
+          onClick={() => bringToFront(block.id)}
+          title="Move in front of every other block on this page"
+          className="flex-1 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+        >
+          Bring to front
+        </button>
+      </div>
     </div>
   )
 }
@@ -1418,6 +1540,18 @@ function BlockPropertiesPanel({ block, onChange }) {
           Block: {BLOCK_LABELS[block.type]}
         </h3>
         <DividerProperties block={block} onChange={onChange} />
+        <PositionSizeFields block={block} onChange={onChange} />
+      </div>
+    )
+  }
+
+  if (block.type === BLOCK_TYPES.SHAPE) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold text-slate-800">
+          Block: {BLOCK_LABELS[block.type]}
+        </h3>
+        <ShapeProperties block={block} onChange={onChange} />
         <PositionSizeFields block={block} onChange={onChange} />
       </div>
     )

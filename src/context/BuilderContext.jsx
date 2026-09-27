@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, useRef, useState } from 'react'
 import {
+  BLOCK_TYPES,
   cloneBlockWithNewIds,
   createBlockInstance,
   createNestedBlockInstance,
@@ -12,6 +13,7 @@ import { alignToPage, alignToSelection, distribute } from '../utils/align'
 const DEFAULT_GLOBAL_STYLE = {
   primaryColor: '#2563eb',
   textColor: '#1e293b',
+  pageBackground: '#ffffff',
   fontFamily: 'Inter, system-ui, sans-serif',
   margin: 48,
 }
@@ -100,10 +102,19 @@ export function BuilderProvider({
       newBlock.y = clamp(position.y, 0, Math.max(0, SHEET_HEIGHT - newBlock.height))
     }
     newBlock.page = page
-    newBlock.zIndex = zCounter.current++
     setBlocks((prev) => {
       pushHistory(prev)
       const pageSiblings = prev.filter((b) => (b.page ?? 0) === page)
+      // A Shape is almost always meant as a decorative backdrop for other
+      // content, so it starts out behind every existing block on the page
+      // instead of on top of them like a normal drop — otherwise every
+      // freshly-dropped shape would immediately cover whatever was already
+      // there, needing a manual "send to back" just to see the content
+      // again.
+      newBlock.zIndex =
+        type === BLOCK_TYPES.SHAPE
+          ? Math.min(0, ...pageSiblings.map((b) => b.zIndex || 0)) - 1
+          : zCounter.current++
       return [...prev, matchNewBlockToSiblings(newBlock, pageSiblings)]
     })
     setSelectedIds([newBlock.id])
@@ -179,6 +190,22 @@ export function BuilderProvider({
     setBlocks((prev) => updateBlockById(prev, id, { zIndex: nextZ }))
   }, [])
 
+  // The opposite: drops a block behind every other block on its page —
+  // used both for the manual "Send to back" action and, together with
+  // skipping the auto-bring-to-front below, to let a background Shape stay
+  // behind the content it's decorating even while it's being selected and
+  // edited.
+  const sendToBack = useCallback((id) => {
+    setBlocks((prev) => {
+      const block = findBlockById(prev, id)
+      const siblings = prev.filter(
+        (b) => b.id !== id && (b.page ?? 0) === (block?.page ?? 0) && typeof b.zIndex === 'number',
+      )
+      const minZ = Math.min(0, ...siblings.map((b) => b.zIndex || 0))
+      return updateBlockById(prev, id, { zIndex: minZ - 1 })
+    })
+  }, [])
+
   // `additive: true` (shift-click) adds/removes the block from the current
   // selection instead of replacing it, so several free blocks can be
   // selected together for aligning/distributing them as a group.
@@ -197,7 +224,10 @@ export function BuilderProvider({
       } else {
         setSelectedIds([id])
       }
-      bringToFront(id)
+      // A background Shape is deliberately placed behind other content (see
+      // addBlock/sendToBack) — auto-fronting it on every select/drag would
+      // undo that the moment you click it to change its color.
+      if (block?.type !== BLOCK_TYPES.SHAPE) bringToFront(id)
     },
     [bringToFront],
   )
@@ -338,6 +368,7 @@ export function BuilderProvider({
     updateBlock,
     removeBlock,
     bringToFront,
+    sendToBack,
     alignSelection,
     nudgeSelection,
     copySelection,
