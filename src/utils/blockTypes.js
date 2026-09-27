@@ -201,7 +201,12 @@ export const BLOCK_DEFINITIONS = [
     type: BLOCK_TYPES.DIVIDER,
     label: 'Divider',
     icon: Minus,
-    defaultProps: {},
+    defaultProps: {
+      orientation: 'horizontal',
+      lineStyle: 'solid',
+      thickness: 1,
+      color: null,
+    },
   },
   {
     type: BLOCK_TYPES.QUOTE,
