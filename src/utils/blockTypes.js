@@ -61,26 +61,35 @@ export const TEXT_TRANSFORM_OPTIONS = [
   { value: 'startCase', label: 'Start Case' },
 ]
 
+// `category` is the font's broad shape (serif/sans-serif/monospace) — shown
+// next to its name wherever it's picked, so "which one is serif vs sans vs
+// mono" doesn't require recognizing every name by heart.
 export const FONT_FAMILY_OPTIONS = [
-  { value: '', label: 'Inherit from global style' },
-  { value: 'Inter, system-ui, sans-serif', label: 'Inter' },
-  { value: "'Segoe UI', Arial, sans-serif", label: 'Segoe UI' },
-  { value: 'Arial, Helvetica, sans-serif', label: 'Arial' },
-  { value: 'Georgia, serif', label: 'Georgia' },
-  { value: "Georgia, 'Times New Roman', serif", label: 'Georgia (serif)' },
-  { value: "'Times New Roman', Times, serif", label: 'Times New Roman' },
-  { value: "'Courier New', monospace", label: 'Courier New' },
-  { value: "'EB Garamond', Georgia, serif", label: 'EB Garamond' },
-  { value: "Figtree, -apple-system, sans-serif", label: 'Figtree' },
-  { value: "'IBM Plex Sans', -apple-system, sans-serif", label: 'IBM Plex Sans' },
-  { value: "'IBM Plex Mono', ui-monospace, monospace", label: 'IBM Plex Mono' },
-  { value: "Lora, Georgia, serif", label: 'Lora' },
-  { value: "Merriweather, Georgia, serif", label: 'Merriweather' },
-  { value: "'Playfair Display', Georgia, serif", label: 'Playfair Display' },
-  { value: "'Source Sans 3', -apple-system, sans-serif", label: 'Source Sans 3' },
-  { value: "Poppins, -apple-system, sans-serif", label: 'Poppins' },
-  { value: "Roboto, -apple-system, sans-serif", label: 'Roboto' },
+  { value: '', label: 'Inherit from global style', category: null },
+  { value: 'Inter, system-ui, sans-serif', label: 'Inter', category: 'sans-serif' },
+  { value: "'Segoe UI', Arial, sans-serif", label: 'Segoe UI', category: 'sans-serif' },
+  { value: 'Arial, Helvetica, sans-serif', label: 'Arial', category: 'sans-serif' },
+  { value: 'Georgia, serif', label: 'Georgia', category: 'serif' },
+  { value: "Georgia, 'Times New Roman', serif", label: 'Georgia (serif)', category: 'serif' },
+  { value: "'Times New Roman', Times, serif", label: 'Times New Roman', category: 'serif' },
+  { value: "'Courier New', monospace", label: 'Courier New', category: 'monospace' },
+  { value: "'EB Garamond', Georgia, serif", label: 'EB Garamond', category: 'serif' },
+  { value: "Figtree, -apple-system, sans-serif", label: 'Figtree', category: 'sans-serif' },
+  { value: "'IBM Plex Sans', -apple-system, sans-serif", label: 'IBM Plex Sans', category: 'sans-serif' },
+  { value: "'IBM Plex Mono', ui-monospace, monospace", label: 'IBM Plex Mono', category: 'monospace' },
+  { value: "Lora, Georgia, serif", label: 'Lora', category: 'serif' },
+  { value: "Merriweather, Georgia, serif", label: 'Merriweather', category: 'serif' },
+  { value: "'Playfair Display', Georgia, serif", label: 'Playfair Display', category: 'serif' },
+  { value: "'Source Sans 3', -apple-system, sans-serif", label: 'Source Sans 3', category: 'sans-serif' },
+  { value: "Poppins, -apple-system, sans-serif", label: 'Poppins', category: 'sans-serif' },
+  { value: "Roboto, -apple-system, sans-serif", label: 'Roboto', category: 'sans-serif' },
 ]
+
+// Short tag shown next to a font's name (e.g. "Georgia · serif").
+const FONT_CATEGORY_TAG = { serif: 'serif', 'sans-serif': 'sans', monospace: 'mono' }
+export function fontOptionLabel(opt) {
+  return FONT_CATEGORY_TAG[opt.category] ? `${opt.label} · ${FONT_CATEGORY_TAG[opt.category]}` : opt.label
+}
 
 // Default size (in px, on the 794x1123 sheet) for each block type: used
 // both when a block is dragged from the palette and to "seed" a free

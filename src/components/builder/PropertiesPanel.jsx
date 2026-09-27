@@ -19,6 +19,7 @@ import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryCo
 import {
   BLOCK_TYPES,
   FONT_FAMILY_OPTIONS,
+  fontOptionLabel,
   getTemplateTypographyStyles,
   matchesTypographyRow,
   sectionTitleSizeField,
@@ -122,8 +123,8 @@ function GlobalStylePanel() {
           className={inputClasses}
         >
           {FONT_FAMILY_OPTIONS.filter((opt) => opt.value).map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
+            <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>
+              {fontOptionLabel(opt)}
             </option>
           ))}
         </select>
@@ -229,8 +230,8 @@ function GlobalStylePanel() {
                     >
                       <option value="">Inherit from global style</option>
                       {FONT_FAMILY_OPTIONS.filter((opt) => opt.value).map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
+                        <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>
+                          {fontOptionLabel(opt)}
                         </option>
                       ))}
                     </select>
@@ -1316,14 +1317,36 @@ function PositionSizeFields({ block, onChange }) {
   if (typeof block.x !== 'number') return null
 
   // Measures the block's own rendered content (see FreeBlock.jsx's
-  // data-block-content wrapper) and sets the block's height to match, so
-  // it grows or shrinks to fit the text exactly instead of leaving empty
-  // space or clipping it.
+  // data-block-content wrapper) and sets the block's width AND height to
+  // match exactly on all four sides — not just growing height to fit
+  // overflow, which is all `scrollHeight` alone can tell you: a wrapper
+  // sized bigger than its content reports its own (larger) box back as
+  // scrollHeight/scrollWidth, since a shorter/narrower child doesn't make
+  // an already-bigger box "overflow" in the other direction. Measuring the
+  // content's true natural size means briefly letting the node size itself
+  // (`max-content`, overflow visible) instead of staying pinned to the
+  // block's current box, then reverting before the next paint — so this
+  // also correctly *shrinks* an oversized block, not just grows one.
   function fitToContent() {
     const node = document.querySelector(`[data-block-content="${block.id}"]`)
-    const natural = node?.scrollHeight
-    if (!natural) return
-    onChange({ height: Math.min(SHEET_HEIGHT, Math.max(20, natural)) })
+    if (!node) return
+    const prevWidth = node.style.width
+    const prevHeight = node.style.height
+    const prevOverflow = node.style.overflow
+    node.style.width = 'max-content'
+    node.style.height = 'max-content'
+    node.style.overflow = 'visible'
+    const rect = node.getBoundingClientRect()
+    const naturalWidth = rect.width
+    const naturalHeight = rect.height
+    node.style.width = prevWidth
+    node.style.height = prevHeight
+    node.style.overflow = prevOverflow
+    if (!naturalWidth || !naturalHeight) return
+    onChange({
+      width: Math.min(SHEET_WIDTH, Math.max(20, Math.ceil(naturalWidth))),
+      height: Math.min(SHEET_HEIGHT, Math.max(20, Math.ceil(naturalHeight))),
+    })
   }
 
   return (
@@ -1357,26 +1380,25 @@ function PositionSizeFields({ block, onChange }) {
           />
         </Field>
         <Field label="Height (px)">
-          <div className="flex gap-1.5">
-            <input
-              type="number"
-              min={20}
-              max={SHEET_HEIGHT}
-              value={Math.round(block.height)}
-              onChange={(e) => onChange({ height: Number(e.target.value) })}
-              className={`${inputClasses} min-w-0 flex-1`}
-            />
-            <button
-              type="button"
-              onClick={fitToContent}
-              title="Fit height to content"
-              className="flex shrink-0 items-center justify-center rounded-md border border-slate-300 px-2 text-slate-500 transition hover:border-primary hover:text-primary"
-            >
-              <Maximize2 size={14} />
-            </button>
-          </div>
+          <input
+            type="number"
+            min={20}
+            max={SHEET_HEIGHT}
+            value={Math.round(block.height)}
+            onChange={(e) => onChange({ height: Number(e.target.value) })}
+            className={inputClasses}
+          />
         </Field>
       </div>
+      <button
+        type="button"
+        onClick={fitToContent}
+        title="Resize the block to fit its text exactly on all sides"
+        className="flex items-center justify-center gap-1.5 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+      >
+        <Maximize2 size={13} />
+        Fit to content
+      </button>
     </div>
   )
 }
@@ -1654,8 +1676,8 @@ function BlockPropertiesPanel({ block, onChange }) {
               className={inputClasses}
             >
               {FONT_FAMILY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value || undefined }}>
+                  {fontOptionLabel(opt)}
                 </option>
               ))}
             </select>
