@@ -549,7 +549,7 @@ function CollapsibleSection({ title, children }) {
 }
 
 export default function ContentLibraryPage() {
-  const { library, updateSlot, exportLibrary, importLibrary } = useContentLibrary()
+  const { library, language, setLanguage, languages, updateSlot, exportLibrary, importLibrary } = useContentLibrary()
   const importInputRef = useRef(null)
 
   function handleChange(key, value) {
@@ -600,6 +600,20 @@ export default function ContentLibraryPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <div className="flex items-center rounded-md border border-slate-300 p-0.5" title="Content is kept separately per language — switch to write the German version">
+            {languages.map((l) => (
+              <button
+                key={l.key}
+                type="button"
+                onClick={() => setLanguage(l.key)}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                  language === l.key ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
           <input
             ref={importInputRef}
             type="file"

@@ -65,32 +65,82 @@ const DEFAULT_LIBRARY = {
   ...Object.fromEntries(STRUCTURED_LIST_KEYS.map((key) => [`${key}Items`, ''])),
 }
 
-function loadInitialLibrary() {
+export const CONTENT_LANGUAGES = [
+  { key: 'en', label: 'English' },
+  { key: 'de', label: 'Deutsch' },
+]
+
+// Every slot's content is kept once per language (English/German), so the
+// same profile can produce a CV in either without retyping it — a block
+// bound to a slot always reads whichever language is currently active
+// here. `content.en`/`content.de` each have the same shape as the old,
+// single-language flat library did, so `library` (the active language's
+// map, computed below) is exactly what every existing consumer
+// (BlockRenderer.jsx, PropertiesPanel.jsx, pdfVectorExport.js, ...) already
+// expects — none of them need to know this exists.
+function loadInitialState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULT_LIBRARY
-    return { ...DEFAULT_LIBRARY, ...JSON.parse(raw) }
+    if (!raw) return { language: 'en', content: { en: DEFAULT_LIBRARY, de: DEFAULT_LIBRARY } }
+    const parsed = JSON.parse(raw)
+    // Pre-dates the bilingual content model: a flat single-language map.
+    // Its data becomes the English copy so nothing already written is
+    // lost; German starts blank rather than duplicating it, since it was
+    // never actually written in German.
+    if (!parsed.content) {
+      return { language: 'en', content: { en: { ...DEFAULT_LIBRARY, ...parsed }, de: DEFAULT_LIBRARY } }
+    }
+    return {
+      language: CONTENT_LANGUAGES.some((l) => l.key === parsed.language) ? parsed.language : 'en',
+      content: {
+        en: { ...DEFAULT_LIBRARY, ...parsed.content.en },
+        de: { ...DEFAULT_LIBRARY, ...parsed.content.de },
+      },
+    }
   } catch {
-    return DEFAULT_LIBRARY
+    return { language: 'en', content: { en: DEFAULT_LIBRARY, de: DEFAULT_LIBRARY } }
   }
 }
 
 const ContentLibraryContext = createContext(null)
 
 export function ContentLibraryProvider({ children }) {
-  const [library, setLibrary] = useState(loadInitialLibrary)
+  const [state, setState] = useState(loadInitialState)
+  const { language, content } = state
+  const library = content[language]
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(library))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
     } catch {
       // localStorage unavailable, or quota exceeded (e.g. a large photo):
       // content still works for the current session, it just won't persist.
     }
-  }, [library])
+  }, [state])
+
+  function setLanguage(nextLanguage) {
+    setState((prev) => ({ ...prev, language: nextLanguage }))
+  }
 
   function updateSlot(key, value) {
-    setLibrary((prev) => ({ ...prev, [key]: value }))
+    setState((prev) => ({
+      ...prev,
+      content: { ...prev.content, [prev.language]: { ...prev.content[prev.language], [key]: value } },
+    }))
+  }
+
+  // `setLibrary`-shaped setter, kept for the effects below (which update
+  // several keys through the plain "previous library" pattern the rest
+  // of this file already reads naturally) — writes into the active
+  // language only, same as updateSlot.
+  function setLibrary(updater) {
+    setState((prev) => ({
+      ...prev,
+      content: {
+        ...prev.content,
+        [prev.language]: typeof updater === 'function' ? updater(prev.content[prev.language]) : updater,
+      },
+    }))
   }
 
   // Keeps the composed 'contact' text in sync with the four structured
@@ -109,20 +159,30 @@ export function ContentLibraryProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactAddress, contactPhone, contactEmail, contactWebsite])
 
-  // Backup: the whole library as a downloadable JSON file, and the
-  // reverse (replacing the library with a previously exported file).
-  // Independent of localStorage, so content survives a browser change,
-  // a different port, or a cleared cache.
+  // Backup: both languages' content as a downloadable JSON file (not
+  // just whichever one is active — a backup that silently dropped the
+  // other language would be a bad surprise on restore), and the reverse.
+  // Independent of localStorage, so content survives a browser change, a
+  // different port, or a cleared cache.
   function exportLibrary() {
-    return JSON.stringify(library, null, 2)
+    return JSON.stringify(content, null, 2)
   }
 
   function importLibrary(json) {
     const parsed = JSON.parse(json)
-    setLibrary({ ...DEFAULT_LIBRARY, ...parsed })
+    // A pre-bilingual export (a flat single-language map, no 'en'/'de'
+    // keys of its own) becomes the English copy, same as the localStorage
+    // migration above.
+    const isBilingual = parsed && (parsed.en || parsed.de)
+    setState((prev) => ({
+      ...prev,
+      content: isBilingual
+        ? { en: { ...DEFAULT_LIBRARY, ...parsed.en }, de: { ...DEFAULT_LIBRARY, ...parsed.de } }
+        : { en: { ...DEFAULT_LIBRARY, ...parsed }, de: prev.content.de },
+    }))
   }
 
-  const value = { library, updateSlot, exportLibrary, importLibrary }
+  const value = { library, language, setLanguage, languages: CONTENT_LANGUAGES, updateSlot, exportLibrary, importLibrary }
 
   return (
     <ContentLibraryContext.Provider value={value}>

@@ -40,9 +40,38 @@ function Field({ label, children }) {
 const inputClasses =
   'w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20'
 
+// The typography scale's 6 fixed levels, in display order — every new
+// template starts with all of these ready to edit (see
+// DEFAULT_TYPOGRAPHY_SCALE in BuilderContext.jsx), independent of
+// whether any block currently uses that size. H1-H3 reshape every
+// Heading using the matching size preset immediately (xl/lg/md — see
+// HEADING_SCALE_LEVEL_BY_SIZE in BlockRenderer.jsx); P1 reshapes every
+// block's body text left at its own default size. P2/P3 don't apply
+// themselves anywhere on their own — they're additional presets to
+// dial in and then set a specific block's own Body text size to match.
+const TYPOGRAPHY_SCALE_LEVELS = [
+  { key: 'h1', label: 'H1' },
+  { key: 'h2', label: 'H2' },
+  { key: 'h3', label: 'H3' },
+  { key: 'p1', label: 'P1 (body default)' },
+  { key: 'p2', label: 'P2' },
+  { key: 'p3', label: 'P3' },
+]
+
 function GlobalStylePanel() {
   const { globalStyle, setGlobalStyle, blocks, updateBlock } = useBuilder()
   const typographyRows = getTemplateTypographyStyles({ blocks })
+  const typographyScale = globalStyle.typographyScale
+
+  function updateTypographyScale(level, patch) {
+    setGlobalStyle((prev) => ({
+      ...prev,
+      typographyScale: {
+        ...prev.typographyScale,
+        [level]: { ...prev.typographyScale[level], ...patch },
+      },
+    }))
+  }
 
   // Applies an edit made on a typography row to every block across the
   // template that shares that row's identity (same heading level+size, or
@@ -194,6 +223,81 @@ function GlobalStylePanel() {
         The margin shows as a magenta dashed guide on the sheet — it's a
         visual guide only, blocks can still be placed anywhere.
       </p>
+
+      <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-4">
+        <h4 className="text-xs font-semibold text-slate-600">Typography scale</h4>
+        <p className="-mt-1 text-xs text-slate-400">
+          The sizes new Heading/Text blocks start from. H1/H2/H3 apply to
+          every Heading using that size preset (Extra large/Large/Medium);
+          P1 is body text's own default everywhere it hasn't been resized
+          individually. P2/P3 are extra presets to reference or copy into
+          one block's own Body text size.
+        </p>
+        <div className="flex flex-col divide-y divide-slate-100 rounded-md border border-slate-200">
+          {TYPOGRAPHY_SCALE_LEVELS.map(({ key, label }) => {
+            const level = typographyScale[key]
+            const isHeadingLevel = key === 'h1' || key === 'h2' || key === 'h3'
+            const inheritedColor = isHeadingLevel ? globalStyle.primaryColor : globalStyle.textColor
+            return (
+              <div key={key} className="flex flex-col gap-1.5 px-2.5 py-2 text-xs">
+                <span
+                  className="truncate"
+                  style={{
+                    fontWeight: level.bold ? 700 : 400,
+                    color: level.color || inheritedColor,
+                    fontFamily: level.fontFamily || undefined,
+                  }}
+                >
+                  {label}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min={8}
+                    max={96}
+                    value={level.sizePx}
+                    onChange={(e) => updateTypographyScale(key, { sizePx: Number(e.target.value) })}
+                    className={`${inputClasses} !w-14 shrink-0 py-1`}
+                    title="Size (px)"
+                  />
+                  <label className="flex shrink-0 items-center gap-1 text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={level.bold}
+                      onChange={(e) => updateTypographyScale(key, { bold: e.target.checked })}
+                    />
+                    Bold
+                  </label>
+                  <input
+                    type="color"
+                    value={level.color || inheritedColor}
+                    onChange={(e) => updateTypographyScale(key, { color: e.target.value })}
+                    className="h-7 w-7 shrink-0 cursor-pointer rounded-md border border-slate-300"
+                    title={level.color ? 'Color (custom — click × to inherit again)' : 'Color (inherited from Primary/Text color)'}
+                  />
+                  {level.color && (
+                    <button
+                      type="button"
+                      onClick={() => updateTypographyScale(key, { color: null })}
+                      className="shrink-0 rounded-md px-1.5 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      title="Reset to inherit the global Primary/Text color"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <FontPicker
+                    value={level.fontFamily || ''}
+                    onChange={(v) => updateTypographyScale(key, { fontFamily: v || null })}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
       {typographyRows.length > 0 && (
         <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-4">

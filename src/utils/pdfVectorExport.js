@@ -102,6 +102,18 @@ function resolveBodyFont(globalStyle) {
   return globalStyle.bodyFontFamily || globalStyle.fontFamily || ''
 }
 
+// Body text's default size (Global Style's typography scale "P1" — see
+// DEFAULT_TYPOGRAPHY_SCALE in BuilderContext.jsx and the identical
+// fallback in BlockRenderer.jsx), used wherever a block's own fontSize/
+// bodyFontSize is left unset.
+function p1SizePx(globalStyle) {
+  return globalStyle.typographyScale?.p1?.sizePx || 14
+}
+
+// Heading's "sm/md/lg/xl" size preset maps onto the scale's H3/–/H2/H1
+// (mirrors HEADING_SCALE_LEVEL_BY_SIZE in BlockRenderer.jsx).
+const HEADING_SCALE_LEVEL_BY_SIZE = { xl: 'h1', lg: 'h2', md: 'h3' }
+
 // ---------------------------------------------------------------------
 // Text transform (mirrors textStyleClasses/displayText in BlockRenderer.jsx
 // — CSS text-transform/font-variant have no PDF equivalent, so every
@@ -259,12 +271,12 @@ async function drawBlock(pdf, block, ctx) {
       let leftH = drawParagraph(pdf, resolvedName, { x, y, width: leftWidth, lineHeightMult: 1.25 })
 
       if (block.role) {
-        setFont(pdf, resolveBodyFont(globalStyle), { sizePx: 14 })
+        setFont(pdf, resolveBodyFont(globalStyle), { sizePx: p1SizePx(globalStyle) })
         setTextColor(pdf, null, SLATE[500])
         leftH += drawParagraph(pdf, block.role, { x, y: y + leftH, width: leftWidth, lineHeightMult: 1.3 })
       }
       if (resolvedUsp) {
-        setFont(pdf, resolveBodyFont(globalStyle), { italic: true, sizePx: 14 })
+        setFont(pdf, resolveBodyFont(globalStyle), { italic: true, sizePx: p1SizePx(globalStyle) })
         setTextColor(pdf, null, SLATE[600])
         leftH += 4 + drawParagraph(pdf, resolvedUsp, { x, y: y + leftH + 4, width: leftWidth, lineHeightMult: 1.4 })
       }
@@ -302,9 +314,10 @@ async function drawBlock(pdf, block, ctx) {
 
     case BLOCK_TYPES.HEADING: {
       const content = applyTextTransform(resolveContent(block, library), block.textTransform)
-      const sizePx = block.fontSize || HEADING_SIZE_PX[block.size] || HEADING_SIZE_PX.md
-      setFont(pdf, block.fontFamily || resolveTitleFont(globalStyle), { bold: block.bold, italic: block.italic, sizePx })
-      setTextColor(pdf, block.color || globalStyle.primaryColor)
+      const scale = globalStyle.typographyScale?.[HEADING_SCALE_LEVEL_BY_SIZE[block.size]]
+      const sizePx = block.fontSize || scale?.sizePx || HEADING_SIZE_PX[block.size] || HEADING_SIZE_PX.md
+      setFont(pdf, block.fontFamily || scale?.fontFamily || resolveTitleFont(globalStyle), { bold: block.bold, italic: block.italic, sizePx })
+      setTextColor(pdf, block.color || scale?.color || globalStyle.primaryColor)
       const h = drawParagraph(pdf, content, { x, y, width, align: block.align, lineHeightMult: 1.25 })
       if (block.rule) {
         setDrawColor(pdf, '#e2e8f0', SLATE[200])
@@ -345,12 +358,12 @@ async function drawBlock(pdf, block, ctx) {
           }
           const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
           if (subLine) {
-            setFont(pdf, bodyFont, { sizePx: 14 })
+            setFont(pdf, bodyFont, { sizePx: p1SizePx(globalStyle) })
             setTextColor(pdf, null, SLATE[500])
             cursorY += drawParagraph(pdf, subLine, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
           }
           if (item.description) {
-            setFont(pdf, bodyFont, { sizePx: 14 })
+            setFont(pdf, bodyFont, { sizePx: p1SizePx(globalStyle) })
             setTextColor(pdf, null, SLATE[600])
             cursorY += drawParagraph(pdf, item.description, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.5 })
           }
@@ -362,7 +375,7 @@ async function drawBlock(pdf, block, ctx) {
       setFont(pdf, block.fontFamily || bodyFont, {
         bold: block.bold,
         italic: block.italic,
-        sizePx: block.fontSize || 14,
+        sizePx: block.fontSize || p1SizePx(globalStyle),
       })
       setTextColor(pdf, block.color, hexToRgb(globalStyle.textColor))
       const content = applyTextTransform(resolveContent(block, library), block.textTransform)
@@ -473,7 +486,7 @@ async function drawBlock(pdf, block, ctx) {
       setFont(pdf, block.fontFamily || resolveBodyFont(globalStyle), {
         bold: block.bold,
         italic: block.italic !== false,
-        sizePx: block.fontSize || 14,
+        sizePx: block.fontSize || p1SizePx(globalStyle),
       })
       setTextColor(pdf, block.color, SLATE[600])
       let h = drawParagraph(pdf, content, { x: textX, y, width: textWidth, align: block.align, lineHeightMult: 1.5 })
@@ -671,7 +684,7 @@ async function drawBlock(pdf, block, ctx) {
         })
       }
 
-      setFont(pdf, resolveBodyFont(globalStyle), { sizePx: block.bodyFontSize || 14 })
+      setFont(pdf, resolveBodyFont(globalStyle), { sizePx: block.bodyFontSize || p1SizePx(globalStyle) })
       setTextColor(pdf, null, SLATE[600])
       const lineHeightMult = block.lineSpacing || 1.4
 
@@ -704,7 +717,7 @@ async function drawBlock(pdf, block, ctx) {
           align: block.align,
         })
       }
-      setFont(pdf, resolveBodyFont(globalStyle), { sizePx: 14 })
+      setFont(pdf, resolveBodyFont(globalStyle), { sizePx: p1SizePx(globalStyle) })
       setTextColor(pdf, null, SLATE[600])
       cursorY += drawList(pdf, items, { x, y: cursorY, width, lineHeightMult: 1.625 })
       return cursorY - y
@@ -751,12 +764,12 @@ async function drawBlock(pdf, block, ctx) {
           cursorY += drawParagraph(pdf, item.title, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
         }
         if (subAndDate) {
-          setFont(pdf, bodyFont, { sizePx: block.bodyFontSize || 14 })
+          setFont(pdf, bodyFont, { sizePx: block.bodyFontSize || p1SizePx(globalStyle) })
           setTextColor(pdf, null, SLATE[500])
           cursorY += drawParagraph(pdf, subAndDate, { x, y: cursorY, width, align: block.align, lineHeightMult: block.lineSpacing || 1.3 })
         }
         if (descriptionLines.length > 0) {
-          setFont(pdf, bodyFont, { sizePx: block.bodyFontSize || 14 })
+          setFont(pdf, bodyFont, { sizePx: block.bodyFontSize || p1SizePx(globalStyle) })
           setTextColor(pdf, null, SLATE[600])
           cursorY += 2 + drawList(pdf, descriptionLines, { x, y: cursorY + 2, width, lineHeightMult: block.lineSpacing || 1.625 })
         }

@@ -88,8 +88,12 @@ export async function updateTemplate(id, payload) {
 export async function duplicateTemplate(id) {
   if (USE_MOCK) {
     const original = MOCK_TEMPLATES.find((t) => t.id === id)
+    // A deep clone, not a shallow spread — `blocks`/`globalStyle` are
+    // nested objects/arrays, and a shallow copy would leave the
+    // duplicate sharing those same references with the original until
+    // the very first edit replaces them, which is a needless landmine.
     const copy = {
-      ...original,
+      ...structuredClone(original),
       id: String(Date.now()),
       title: `${original.title} (copy)`,
       updatedAt: new Date().toISOString(),

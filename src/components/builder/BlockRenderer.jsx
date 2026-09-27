@@ -91,11 +91,16 @@ function resolveBodyFont(globalStyle) {
 // `null`/`undefined` leave the value inherited from the sheet. `fallbackFont`
 // is the global Title or Body font (whichever this block counts as), used
 // only when the block has no `fontFamily` override of its own.
-function typographyStyle(block, fallbackFont) {
+// `fallbackSizePx` is the Global Style typography scale's "P1" size (see
+// DEFAULT_TYPOGRAPHY_SCALE in BuilderContext.jsx) — body text's own
+// default when the block hasn't set a `fontSize` of its own, so editing
+// P1 there reaches every body paragraph/list/quote that hasn't been
+// individually resized, the same way editing P1 already does.
+function typographyStyle(block, fallbackFont, fallbackSizePx) {
   return {
     color: block.color || undefined,
     fontFamily: block.fontFamily || fallbackFont,
-    fontSize: block.fontSize ? `${block.fontSize}px` : undefined,
+    fontSize: block.fontSize ? `${block.fontSize}px` : fallbackSizePx ? `${fallbackSizePx}px` : undefined,
     letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : undefined,
     lineHeight: block.lineHeight || undefined,
     backgroundColor: block.bgColor || undefined,
@@ -109,6 +114,9 @@ const HEADING_SIZE_CLASSES = {
   lg: 'text-3xl',
   xl: 'text-5xl',
 }
+
+// See the HEADING case below and pdfVectorExport.js's identical mapping.
+const HEADING_SCALE_LEVEL_BY_SIZE = { xl: 'h1', lg: 'h2', md: 'h3' }
 
 // Matches the template's own "section heading" convention (a HEADING
 // block at level h2 — the same look every built-in template already
@@ -350,6 +358,14 @@ export default function BlockRenderer({
     case BLOCK_TYPES.HEADING: {
       const Tag = block.level || 'h1'
       const sizeClass = block.fontSize ? '' : HEADING_SIZE_CLASSES[block.size] || HEADING_SIZE_CLASSES.md
+      // Heading's own "sm/md/lg/xl" size preset maps onto the Global
+      // Style typography scale's H3/–/H2/H1 (xl reads as "H1" here since
+      // it's the biggest of the four, same as "H1 (lg)" already being the
+      // largest row in "Text styles used in this template" below) — 'sm'
+      // stays on the fixed HEADING_SIZE_PX baseline, since it's a small
+      // compact heading rather than part of the H1-H3 scale. Only used
+      // when the block has no `fontSize` of its own.
+      const scale = globalStyle.typographyScale?.[HEADING_SCALE_LEVEL_BY_SIZE[block.size]]
       // A heading with no color of its own tracks the template's primary
       // (accent) color, not the plain body text color it'd otherwise
       // inherit — every built-in template's headings are deliberately
@@ -357,8 +373,9 @@ export default function BlockRenderer({
       // Global Style panel's "Primary color" affect them. An explicit
       // block.color (a one-off override on a specific heading) still wins.
       const style = {
-        ...typographyStyle(block, resolveTitleFont(globalStyle)),
-        color: block.color || globalStyle.primaryColor,
+        ...typographyStyle(block, scale?.fontFamily || resolveTitleFont(globalStyle)),
+        color: block.color || scale?.color || globalStyle.primaryColor,
+        fontSize: block.fontSize ? `${block.fontSize}px` : scale ? `${scale.sizePx}px` : undefined,
       }
       return (
         <Tag
@@ -419,7 +436,7 @@ export default function BlockRenderer({
           return (
             <ListTag
               className={`${block.ordered ? 'list-decimal' : 'list-disc'} space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400 ${alignClass(block.align)}`}
-              style={typographyStyle(block, bodyFont)}
+              style={typographyStyle(block, bodyFont, globalStyle.typographyScale?.p1?.sizePx)}
             >
               {resolvedContent.split('\n').filter(Boolean).map((line, i) => (
                 <li key={i} className={textStyleClasses({ ...block, align: undefined })}>
@@ -432,7 +449,7 @@ export default function BlockRenderer({
       ) : (
         <p
           className={`whitespace-pre-line text-sm leading-relaxed ${textStyleClasses(block)}`}
-          style={typographyStyle(block, bodyFont)}
+          style={typographyStyle(block, bodyFont, globalStyle.typographyScale?.p1?.sizePx)}
         >
           {displayText(resolvedContent, block)}
         </p>
@@ -535,7 +552,7 @@ export default function BlockRenderer({
       return (
         <blockquote
           className={`border-l-4 border-primary/40 pl-3 text-sm text-slate-600 ${textStyleClasses(block)}`}
-          style={typographyStyle(block, resolveBodyFont(globalStyle))}
+          style={typographyStyle(block, resolveBodyFont(globalStyle), globalStyle.typographyScale?.p1?.sizePx)}
         >
           <p>{displayText(resolvedContent, block)}</p>
           {resolvedAuthor && (
@@ -679,7 +696,11 @@ export default function BlockRenderer({
             }`}
             style={{
               fontFamily: resolveBodyFont(globalStyle),
-              fontSize: block.bodyFontSize ? `${block.bodyFontSize}px` : undefined,
+              fontSize: block.bodyFontSize
+                ? `${block.bodyFontSize}px`
+                : globalStyle.typographyScale?.p1?.sizePx
+                  ? `${globalStyle.typographyScale.p1.sizePx}px`
+                  : undefined,
               lineHeight: block.lineSpacing || undefined,
               rowGap: block.lineSpacing && !isRowContact ? `${block.lineSpacing * 6}px` : undefined,
             }}
@@ -760,7 +781,11 @@ export default function BlockRenderer({
             const descriptionLines = (item.description || '').split('\n').filter(Boolean)
             const bodyStyle = {
               fontFamily: bodyFont,
-              fontSize: block.bodyFontSize ? `${block.bodyFontSize}px` : undefined,
+              fontSize: block.bodyFontSize
+                ? `${block.bodyFontSize}px`
+                : globalStyle.typographyScale?.p1?.sizePx
+                  ? `${globalStyle.typographyScale.p1.sizePx}px`
+                  : undefined,
               lineHeight: block.lineSpacing || undefined,
             }
             return (

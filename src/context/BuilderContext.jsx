@@ -16,6 +16,25 @@ import { alignToPage, alignToSelection, distribute } from '../utils/align'
 // wherever they're not set — see resolveTitleFont/resolveBodyFont in
 // BlockRenderer.jsx — so nothing needs migrating and a template that's
 // never touched the new fields keeps looking exactly the same.
+// A ready-to-edit typographic scale every new template starts with —
+// H1/H2/H3 map onto Heading's existing size presets (xl/lg/md — see
+// HEADING_SIZE_PX and the fontSize fallback chain in BlockRenderer.jsx/
+// pdfVectorExport.js), so setting these here reshapes every Heading
+// using that size across the template immediately, the same way editing
+// a row in "Text styles used in this template" already does. P1 is body
+// text's own default size (everywhere a block's own bodyFontSize/fontSize
+// is left unset); P2/P3 are available to reference or apply to a
+// specific block's own Body text size field, without a body-wide effect
+// of their own — only P1 has one, since nothing defaults to P2/P3.
+const DEFAULT_TYPOGRAPHY_SCALE = {
+  h1: { sizePx: 48, bold: true, color: null, fontFamily: null },
+  h2: { sizePx: 30, bold: true, color: null, fontFamily: null },
+  h3: { sizePx: 24, bold: true, color: null, fontFamily: null },
+  p1: { sizePx: 14, bold: false, color: null, fontFamily: null },
+  p2: { sizePx: 12, bold: false, color: null, fontFamily: null },
+  p3: { sizePx: 11, bold: false, color: null, fontFamily: null },
+}
+
 const DEFAULT_GLOBAL_STYLE = {
   primaryColor: '#2563eb',
   textColor: '#1e293b',
@@ -24,6 +43,7 @@ const DEFAULT_GLOBAL_STYLE = {
   titleFontFamily: null,
   bodyFontFamily: null,
   margin: 48,
+  typographyScale: DEFAULT_TYPOGRAPHY_SCALE,
 }
 
 const BuilderContext = createContext(null)
