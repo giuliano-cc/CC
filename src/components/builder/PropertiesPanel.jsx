@@ -373,6 +373,43 @@ function TitleSizeField({ block, onChange }) {
   )
 }
 
+// Font size + line spacing for a block's body content (the entry list in
+// Experience/Education, the field list in Contact Info) — separate from
+// the block's own title size/color, which TitleSizeField controls.
+function BodyTextStyleFields({ block, onChange }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Field label="Body text size (px)">
+        <input
+          type="number"
+          min={8}
+          max={24}
+          placeholder="14"
+          value={block.bodyFontSize || ''}
+          onChange={(e) =>
+            onChange({ bodyFontSize: e.target.value ? Number(e.target.value) : null })
+          }
+          className={inputClasses}
+        />
+      </Field>
+      <Field label="Line spacing">
+        <input
+          type="number"
+          min={1}
+          max={3}
+          step={0.05}
+          placeholder="1.6"
+          value={block.lineSpacing || ''}
+          onChange={(e) =>
+            onChange({ lineSpacing: e.target.value ? Number(e.target.value) : null })
+          }
+          className={inputClasses}
+        />
+      </Field>
+    </div>
+  )
+}
+
 function DividerProperties({ block, onChange }) {
   function setOrientation(orientation) {
     if (orientation === block.orientation) return
@@ -827,6 +864,7 @@ function ContactInfoProperties({ block, onChange }) {
           <option value="row">Row</option>
         </select>
       </Field>
+      <BodyTextStyleFields block={block} onChange={onChange} />
       <Field label="Alignment">
         <select
           value={block.align}
@@ -1008,6 +1046,7 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
           </button>
         </div>
       )}
+      <BodyTextStyleFields block={block} onChange={onChange} />
       <Field label="Alignment">
         <select
           value={block.align}

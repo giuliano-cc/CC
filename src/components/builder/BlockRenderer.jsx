@@ -578,9 +578,14 @@ export default function BlockRenderer({
             </p>
           )}
           <div
-            className={`flex gap-1.5 text-sm text-slate-600 ${
-              isRowContact ? `flex-wrap items-center gap-x-4 ${justify}` : `flex-col ${alignItems}`
+            className={`flex text-sm text-slate-600 ${
+              isRowContact ? `flex-wrap items-center gap-x-4 gap-y-1.5 ${justify}` : `flex-col gap-1.5 ${alignItems}`
             }`}
+            style={{
+              fontSize: block.bodyFontSize ? `${block.bodyFontSize}px` : undefined,
+              lineHeight: block.lineSpacing || undefined,
+              rowGap: block.lineSpacing && !isRowContact ? `${block.lineSpacing * 6}px` : undefined,
+            }}
           >
             {visible.map((f) => (
               <span key={f.key} className="flex items-center gap-2">
@@ -642,16 +647,23 @@ export default function BlockRenderer({
               .filter((v) => v?.trim())
               .join(' – ')
             const descriptionLines = (item.description || '').split('\n').filter(Boolean)
+            const bodyStyle = {
+              fontSize: block.bodyFontSize ? `${block.bodyFontSize}px` : undefined,
+              lineHeight: block.lineSpacing || undefined,
+            }
             return (
               <div key={item.id || i} className="flex flex-col gap-0.5">
                 {item.title && <p className="text-base font-bold">{item.title}</p>}
                 {(subLine || dateRange) && (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-500" style={bodyStyle}>
                     {[subLine, dateRange].filter(Boolean).join(' / ')}
                   </p>
                 )}
                 {descriptionLines.length > 0 && (
-                  <ul className="mt-0.5 list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400">
+                  <ul
+                    className="mt-0.5 list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400"
+                    style={bodyStyle}
+                  >
                     {descriptionLines.map((line, li) => (
                       <li key={li}>{line}</li>
                     ))}

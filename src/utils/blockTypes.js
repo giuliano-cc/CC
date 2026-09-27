@@ -353,6 +353,8 @@ export const BLOCK_DEFINITIONS = [
       showIcons: true,
       align: 'left',
       layout: 'stacked',
+      bodyFontSize: null,
+      lineSpacing: null,
     },
   },
   {
@@ -389,6 +391,8 @@ export const BLOCK_DEFINITIONS = [
       ],
       useLibraryExperience: false,
       align: 'left',
+      bodyFontSize: null,
+      lineSpacing: null,
     },
   },
   {
@@ -415,6 +419,8 @@ export const BLOCK_DEFINITIONS = [
       ],
       useLibraryEducation: false,
       align: 'left',
+      bodyFontSize: null,
+      lineSpacing: null,
     },
   },
   {
