@@ -76,9 +76,10 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, zoom }) {
             backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
             backgroundPosition: `${GRID_OFFSET_X}px ${GRID_OFFSET_Y}px`,
           }}
-          // A purely editor-side alignment aid — like the margin guide
-          // below, excluded from the exported PDF via `pdf-ignore` (see
-          // utils/pdfExport.js).
+          // A purely editor-side alignment aid, like the margin guide
+          // below — `pdf-ignore` is now vestigial (the PDF export draws
+          // straight from block data, see utils/pdfVectorExport.js, never
+          // from this DOM), kept only in case anything else still reads it.
           className="pdf-ignore pointer-events-none absolute inset-0"
         />
       )}
@@ -86,11 +87,11 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, zoom }) {
       {(margins.top > 0 || margins.right > 0 || margins.bottom > 0 || margins.left > 0) && (
         <div
           style={{ top: margins.top, right: margins.right, bottom: margins.bottom, left: margins.left }}
-          // `pdf-ignore`: a purely editor-side guide, excluded when
-          // rendering the PDF preview (see utils/pdfExport.js). Magenta
-          // (rather than the grid's neutral gray) so the margin — the one
-          // guide that actually constrains where content is meant to sit —
-          // reads as distinct from the grid/alignment guides at a glance.
+          // A purely editor-side guide (see the note on `pdf-ignore` just
+          // above). Magenta (rather than the grid's neutral gray) so the
+          // margin — the one guide that actually constrains where content
+          // is meant to sit — reads as distinct from the grid/alignment
+          // guides at a glance.
           className="pdf-ignore pointer-events-none absolute rounded-sm border border-dashed border-fuchsia-500"
         />
       )}

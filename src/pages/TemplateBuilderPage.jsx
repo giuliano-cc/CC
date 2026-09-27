@@ -17,7 +17,7 @@ import { BLOCK_TYPES } from '../utils/blockTypes'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../utils/layout'
 import { CV_TEMPLATES, TEMPLATE_CONTENT_MAPS } from '../utils/cvTemplates'
 import { parseSocialLinks } from '../utils/socialIcons'
-import { generatePdfBlob } from '../utils/pdfExport'
+import { generatePdfBlob } from '../utils/pdfVectorExport'
 import {
   createTemplate,
   getTemplateById,
@@ -146,15 +146,15 @@ function BuilderContent({ initialTitle }) {
     toast.success('Content applied from your library')
   }
 
-  // Renders every page to an image and assembles a PDF, entirely
-  // client-side. Deselecting first removes selection outlines/resize
-  // handles from the capture; a tick lets that re-render before we snapshot.
+  // Draws every page as real vector PDF content straight from the block
+  // data (see utils/pdfVectorExport.js) — entirely client-side, and
+  // without ever touching the editor's own DOM, so there's no selection
+  // outline/resize handle to worry about hiding first.
   async function handlePreviewPdf() {
     selectBlock(null)
     setPdfState({ blobUrl: null, isGenerating: true })
-    await new Promise((resolve) => setTimeout(resolve, 50))
     try {
-      const blob = await generatePdfBlob(pageCount)
+      const blob = await generatePdfBlob({ pageCount, blocks, globalStyle, library })
       const blobUrl = URL.createObjectURL(blob)
       setPdfState({ blobUrl, isGenerating: false })
     } catch {
