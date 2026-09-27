@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Crop, Download, Trash2, Upload, User } from 'lucide-react'
+import { ChevronDown, Crop, Download, Trash2, Upload, User } from 'lucide-react'
 import { CONTENT_SLOTS, useContentLibrary } from '../context/ContentLibraryContext'
 import ImageCropModal from '../components/builder/ImageCropModal'
 import { formatSocialLinks, parseSocialLinks, SOCIAL_PLATFORMS } from '../utils/socialIcons'
@@ -16,8 +16,30 @@ import {
 } from '../utils/contentLists'
 
 const cardClasses = 'flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4'
+// `resize-y`, not `resize-none`: a textarea's box is just a starting size,
+// not a hard limit — a long "Professional Profile" or "Cover Letter Body"
+// shouldn't be stuck scrolling in a 5-row window. Harmless on <input>
+// (resize only ever applies to a textarea anyway).
 const inputClasses =
-  'w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20'
+  'w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20'
+
+// Groups CONTENT_SLOTS into collapsible sections, purely for how the
+// Content Library page organizes itself — every key from CONTENT_SLOTS
+// (other than a `group` sub-field, e.g. the four contact fields folded
+// into "Contact") must appear in exactly one of these lists.
+const SECTIONS = [
+  { title: 'Identity', keys: ['name', 'title', 'usp', 'photo', 'signature'] },
+  { title: 'Profile & Quote', keys: ['profileSummary', 'quote', 'quoteAuthor'] },
+  { title: 'Experience & Education', keys: ['experience', 'education'] },
+  {
+    title: 'Skills & Languages',
+    keys: ['coreCompetencies', 'skills', 'languages', 'keywords', 'achievements'],
+  },
+  { title: 'Portfolio', keys: ['selectedWorks', 'selectedClients', 'certifications', 'publications'] },
+  { title: 'Contact & Links', keys: ['contact', 'socialLinks', 'qrValue'] },
+  { title: 'Additional', keys: ['references', 'additionalInfo', 'hobbies'] },
+  { title: 'Cover Letter', keys: ['coverLetterBody'] },
+]
 
 // Shared by any 'image' Content Library slot (Profile Photo, Signature):
 // `variant` picks the preview shape/crop defaults, since a face photo and
@@ -405,6 +427,121 @@ function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, onUp
   )
 }
 
+// One CONTENT_SLOTS card — the same field-type dispatch this page always
+// had, just pulled out so it can be reused inside each collapsible
+// section instead of one long inline map.
+function SlotCard({ slot, library, onChange, onBlur }) {
+  return (
+    <div className={cardClasses}>
+      <label className="text-sm font-semibold text-slate-800" htmlFor={slot.key}>
+        {slot.label}
+      </label>
+      {slot.isList && <p className="-mt-1 text-xs text-slate-400">One item per line.</p>}
+      {slot.type === 'checklist' && (
+        <p className="-mt-1 text-xs text-slate-400">Uncheck an item to hide it from the CV without deleting it.</p>
+      )}
+
+      {slot.type === 'image' && (
+        <PhotoField
+          value={library[slot.key]}
+          onChange={(v) => onChange(slot.key, v)}
+          variant={slot.key === 'signature' ? 'signature' : 'photo'}
+        />
+      )}
+
+      {slot.type === 'social' && (
+        <SocialLinksField value={library[slot.key]} onChange={(v) => onChange(slot.key, v)} />
+      )}
+
+      {slot.type === 'contactGroup' && <ContactGroupField library={library} onChange={onChange} />}
+
+      {slot.type === 'checklist' && (
+        <ChecklistField
+          itemsJson={library[`${slot.key}Items`]}
+          fallbackText={library[slot.key]}
+          onUpdate={(items) => {
+            onChange(`${slot.key}Items`, JSON.stringify(items))
+            onChange(slot.key, composeChecklistText(items))
+            toast.success('Content saved', { id: 'content-library-save' })
+          }}
+        />
+      )}
+
+      {slot.type === 'languages' && (
+        <LanguagesField
+          itemsJson={library[`${slot.key}Items`]}
+          fallbackText={library[slot.key]}
+          onUpdate={(items) => {
+            onChange(`${slot.key}Items`, JSON.stringify(items))
+            onChange(slot.key, composeLanguagesText(items))
+            toast.success('Content saved', { id: 'content-library-save' })
+          }}
+        />
+      )}
+
+      {slot.type === 'entries' && (
+        <EntriesField
+          itemsJson={library[`${slot.key}Items`]}
+          fallbackText={library[slot.key]}
+          titleLabel={slot.key === 'education' ? 'Degree' : 'Job Role'}
+          subtitleLabel={slot.key === 'education' ? 'Institution Name' : 'Company Name'}
+          onUpdate={(items) => {
+            onChange(`${slot.key}Items`, JSON.stringify(items))
+            onChange(slot.key, composeEntriesText(items))
+            toast.success('Content saved', { id: 'content-library-save' })
+          }}
+        />
+      )}
+
+      {!slot.type && (
+        <textarea
+          id={slot.key}
+          rows={slot.multiline ? 5 : 2}
+          value={library[slot.key]}
+          onChange={(e) => onChange(slot.key, e.target.value)}
+          onBlur={onBlur}
+          placeholder={
+            slot.key === 'qrValue'
+              ? 'https://your-portfolio.com'
+              : slot.key === 'usp'
+                ? 'What makes you different in one short line'
+                : slot.isList
+                  ? 'Item 1\nItem 2\nItem 3'
+                  : 'Write the content here...'
+          }
+          className={inputClasses}
+        />
+      )}
+    </div>
+  )
+}
+
+// A collapsible group of SlotCards — open by default (nothing is hidden
+// on first load), collapsible from then on so a long library doesn't mean
+// endless scrolling once most sections are already filled in.
+function CollapsibleSection({ title, children }) {
+  const [isOpen, setIsOpen] = useState(true)
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+      >
+        <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {isOpen && (
+        <div className="grid grid-cols-1 gap-4 border-t border-slate-100 p-4 md:grid-cols-2">{children}</div>
+      )}
+    </section>
+  )
+}
+
 export default function ContentLibraryPage() {
   const { library, updateSlot, exportLibrary, importLibrary } = useContentLibrary()
   const importInputRef = useRef(null)
@@ -483,93 +620,23 @@ export default function ContentLibraryPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        {CONTENT_SLOTS.filter((slot) => !slot.group).map((slot) => (
-          <div key={slot.key} className={cardClasses}>
-            <label className="text-sm font-semibold text-slate-800" htmlFor={slot.key}>
-              {slot.label}
-            </label>
-            {slot.isList && (
-              <p className="-mt-1 text-xs text-slate-400">One item per line.</p>
-            )}
-            {slot.type === 'checklist' && (
-              <p className="-mt-1 text-xs text-slate-400">Uncheck an item to hide it from the CV without deleting it.</p>
-            )}
-
-            {slot.type === 'image' && (
-              <PhotoField
-                value={library[slot.key]}
-                onChange={(v) => handleChange(slot.key, v)}
-                variant={slot.key === 'signature' ? 'signature' : 'photo'}
-              />
-            )}
-
-            {slot.type === 'social' && (
-              <SocialLinksField value={library[slot.key]} onChange={(v) => handleChange(slot.key, v)} />
-            )}
-
-            {slot.type === 'contactGroup' && (
-              <ContactGroupField library={library} onChange={handleChange} />
-            )}
-
-            {slot.type === 'checklist' && (
-              <ChecklistField
-                itemsJson={library[`${slot.key}Items`]}
-                fallbackText={library[slot.key]}
-                onUpdate={(items) => {
-                  handleChange(`${slot.key}Items`, JSON.stringify(items))
-                  handleChange(slot.key, composeChecklistText(items))
-                  toast.success('Content saved', { id: 'content-library-save' })
-                }}
-              />
-            )}
-
-            {slot.type === 'languages' && (
-              <LanguagesField
-                itemsJson={library[`${slot.key}Items`]}
-                fallbackText={library[slot.key]}
-                onUpdate={(items) => {
-                  handleChange(`${slot.key}Items`, JSON.stringify(items))
-                  handleChange(slot.key, composeLanguagesText(items))
-                  toast.success('Content saved', { id: 'content-library-save' })
-                }}
-              />
-            )}
-
-            {slot.type === 'entries' && (
-              <EntriesField
-                itemsJson={library[`${slot.key}Items`]}
-                fallbackText={library[slot.key]}
-                titleLabel={slot.key === 'education' ? 'Degree' : 'Job Role'}
-                subtitleLabel={slot.key === 'education' ? 'Institution Name' : 'Company Name'}
-                onUpdate={(items) => {
-                  handleChange(`${slot.key}Items`, JSON.stringify(items))
-                  handleChange(slot.key, composeEntriesText(items))
-                  toast.success('Content saved', { id: 'content-library-save' })
-                }}
-              />
-            )}
-
-            {!slot.type && (
-              <textarea
-                id={slot.key}
-                rows={slot.multiline ? 5 : 2}
-                value={library[slot.key]}
-                onChange={(e) => handleChange(slot.key, e.target.value)}
-                onBlur={handleBlur}
-                placeholder={
-                  slot.key === 'qrValue'
-                    ? 'https://your-portfolio.com'
-                    : slot.key === 'usp'
-                      ? 'What makes you different in one short line'
-                      : slot.isList
-                        ? 'Item 1\nItem 2\nItem 3'
-                        : 'Write the content here...'
-                }
-                className={inputClasses}
-              />
-            )}
-          </div>
+      <div className="flex flex-col gap-4">
+        {SECTIONS.map((section) => (
+          <CollapsibleSection key={section.title} title={section.title}>
+            {section.keys.map((key) => {
+              const slot = CONTENT_SLOTS.find((s) => s.key === key)
+              if (!slot) return null
+              return (
+                <SlotCard
+                  key={slot.key}
+                  slot={slot}
+                  library={library}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+              )
+            })}
+          </CollapsibleSection>
         ))}
       </div>
     </div>
