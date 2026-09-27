@@ -732,10 +732,14 @@ export default function BlockRenderer({
         : block.items || []
       const items = block.sortByDate !== false ? sortEntriesByDate(rawItems) : rawItems
       const bodyFont = resolveBodyFont(globalStyle)
+      // Falls back to the plain Text color (not left unset) so it's
+      // never stuck on the browser's default black regardless of what
+      // Global Style's Text color / entry-title row say — matching the
+      // fallback the Global Style "Text styles used" row itself displays.
       const entryTitleStyle = {
         fontSize: block.entryTitleFontSize ? `${block.entryTitleFontSize}px` : undefined,
-        color: block.entryTitleColor || undefined,
-        fontFamily: resolveTitleFont(globalStyle),
+        color: block.entryTitleColor || globalStyle.textColor,
+        fontFamily: block.entryTitleFontFamily || resolveTitleFont(globalStyle),
       }
       return (
         <div className={`flex flex-col gap-3 ${alignClass(block.align)}`}>

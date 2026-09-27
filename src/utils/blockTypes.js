@@ -391,6 +391,7 @@ export const BLOCK_DEFINITIONS = [
       // sized/colored independently.
       entryTitleFontSize: null,
       entryTitleColor: null,
+      entryTitleFontFamily: null,
       sortByDate: true,
       items: [
         {
@@ -434,6 +435,7 @@ export const BLOCK_DEFINITIONS = [
       fontSize: null,
       entryTitleFontSize: null,
       entryTitleColor: null,
+      entryTitleFontFamily: null,
       sortByDate: true,
       items: [
         {
@@ -737,6 +739,24 @@ export function getTemplateTypographyStyles(template) {
           size,
         )
       }
+      // An Experience/Education block's per-entry title ("Job Role",
+      // "Associate Director", ...) is neither the block's own section
+      // title (handled above via hasSectionTitle/titleColor) nor its body
+      // text — it's rendered per array item, so it can't be walked as its
+      // own block. Both block types share one merged row (like Body text
+      // does for every Text block) so styling entry titles stays a single
+      // global control instead of two near-identical ones.
+      if (block.type === BLOCK_TYPES.EXPERIENCE || block.type === BLOCK_TYPES.EDUCATION) {
+        addRow(
+          'entryTitle',
+          'Entry title (Experience / Education)',
+          block.entryTitleFontSize || 16,
+          true,
+          block.entryTitleColor,
+          block.entryTitleFontFamily,
+          'entryTitle',
+        )
+      }
       if (block.type === BLOCK_TYPES.COLUMNS) {
         block.columns?.forEach((column) => walk(column.items))
       }
@@ -759,6 +779,9 @@ export function matchesTypographyRow(block, row) {
       return (block.titleSize || 'md') === row.size
     }
     return false
+  }
+  if (row.matchType === 'entryTitle') {
+    return block.type === BLOCK_TYPES.EXPERIENCE || block.type === BLOCK_TYPES.EDUCATION
   }
   return block.type === row.matchType
 }

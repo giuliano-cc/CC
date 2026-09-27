@@ -67,6 +67,17 @@ function GlobalStylePanel() {
             if (color !== undefined) translated.titleColor = color
             if (fontSize !== undefined) translated[sectionTitleSizeField(block)] = fontSize
             updateBlock(block.id, translated)
+          } else if (row.matchType === 'entryTitle') {
+            // Entry titles are always bold (no toggle of their own — see
+            // the Chart's/section title's own "always bold" comment above)
+            // and use their own dedicated fields so they never collide
+            // with the block's own section-title color/font/size.
+            const { color, fontSize, fontFamily, bold: _bold, ...rest } = patch
+            const translated = { ...rest }
+            if (color !== undefined) translated.entryTitleColor = color
+            if (fontSize !== undefined) translated.entryTitleFontSize = fontSize
+            if (fontFamily !== undefined) translated.entryTitleFontFamily = fontFamily
+            updateBlock(block.id, translated)
           } else {
             updateBlock(block.id, patch)
           }
@@ -233,10 +244,14 @@ function GlobalStylePanel() {
                       className={`${inputClasses} !w-14 shrink-0 py-1`}
                       title="Size (px)"
                     />
-                    <label className="flex shrink-0 items-center gap-1 text-slate-600">
+                    <label
+                      className={`flex shrink-0 items-center gap-1 ${row.matchType === 'entryTitle' ? 'text-slate-300' : 'text-slate-600'}`}
+                      title={row.matchType === 'entryTitle' ? 'Entry titles are always bold' : undefined}
+                    >
                       <input
                         type="checkbox"
                         checked={row.bold}
+                        disabled={row.matchType === 'entryTitle'}
                         onChange={(e) => applyTypographyChange(row, { bold: e.target.checked })}
                       />
                       Bold
@@ -501,29 +516,38 @@ function BodyTextStyleFields({ block, onChange }) {
 // section title (above) and from BodyTextStyleFields (the subtitle/date
 // line and description below), so each can be sized/colored on its own.
 function EntryTitleStyleFields({ block, onChange }) {
+  const { globalStyle } = useBuilder()
   return (
-    <div className="flex items-center gap-1.5">
-      <Field label="Entry title size (px)">
-        <input
-          type="number"
-          min={8}
-          max={36}
-          placeholder="16"
-          value={block.entryTitleFontSize || ''}
-          onChange={(e) =>
-            onChange({ entryTitleFontSize: e.target.value ? Number(e.target.value) : null })
-          }
-          className={inputClasses}
+    <div className="flex flex-col gap-2">
+      <Field label="Entry title font">
+        <FontPicker
+          value={block.entryTitleFontFamily || ''}
+          onChange={(v) => onChange({ entryTitleFontFamily: v || null })}
         />
       </Field>
-      <Field label="Entry title color">
-        <input
-          type="color"
-          value={block.entryTitleColor || '#1e293b'}
-          onChange={(e) => onChange({ entryTitleColor: e.target.value })}
-          className="h-9 w-full rounded-md border border-slate-200"
-        />
-      </Field>
+      <div className="flex items-center gap-1.5">
+        <Field label="Entry title size (px)">
+          <input
+            type="number"
+            min={8}
+            max={36}
+            placeholder="16"
+            value={block.entryTitleFontSize || ''}
+            onChange={(e) =>
+              onChange({ entryTitleFontSize: e.target.value ? Number(e.target.value) : null })
+            }
+            className={inputClasses}
+          />
+        </Field>
+        <Field label="Entry title color">
+          <input
+            type="color"
+            value={block.entryTitleColor || globalStyle.textColor}
+            onChange={(e) => onChange({ entryTitleColor: e.target.value })}
+            className="h-9 w-full rounded-md border border-slate-200"
+          />
+        </Field>
+      </div>
     </div>
   )
 }
