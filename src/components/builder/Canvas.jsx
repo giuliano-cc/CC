@@ -2,18 +2,8 @@ import { useDroppable } from '@dnd-kit/core'
 import { useState } from 'react'
 import { Grid3x3, Plus, X } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
-import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
+import { GRID_OFFSET_X, GRID_OFFSET_Y, GRID_SIZE, SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import FreeBlock from './FreeBlock'
-
-const GRID_SIZE = 20
-// The sheet's own dimensions (794×1123) aren't exact multiples of the grid
-// size, so a grid starting flush at the top-left corner leaves a thinner
-// leftover strip on the right/bottom than on the left/top — visually
-// off-center against the page, and easy to mistake for the margin guide
-// being uneven. Centering the pattern (splitting that leftover strip
-// evenly on both sides) keeps it symmetrical regardless of the sheet size.
-const GRID_OFFSET_X = ((SHEET_WIDTH % GRID_SIZE) / 2 + GRID_SIZE) % GRID_SIZE
-const GRID_OFFSET_Y = ((SHEET_HEIGHT % GRID_SIZE) / 2 + GRID_SIZE) % GRID_SIZE
 
 export function pageDroppableId(pageIndex) {
   return `canvas-page-${pageIndex}`
@@ -37,6 +27,13 @@ function Page({ pageIndex, blocks, margin, globalStyle, showGrid }) {
     setActivePage,
   } = useBuilder()
   const { setNodeRef, isOver } = useDroppable({ id: pageDroppableId(pageIndex) })
+  // Smart alignment guides: while a block is being dragged/resized on this
+  // page, FreeBlock reports back which lines it just snapped to (another
+  // block's edge/center, the margin, or the page's own center) so they can
+  // be drawn as thin lines spanning the whole page — otherwise a snap is
+  // silent and easy to miss, especially against the page center, which
+  // isn't marked by anything else on the sheet.
+  const [guides, setGuides] = useState(null)
 
   return (
     <div
@@ -104,10 +101,27 @@ function Page({ pageIndex, blocks, margin, globalStyle, showGrid }) {
           margin={margin}
           siblings={blocks.filter((b) => b.id !== block.id && typeof b.x === 'number')}
           globalStyle={globalStyle}
+          snapToGrid={showGrid}
+          onGuides={setGuides}
           onSelect={selectBlock}
           onRemove={removeBlock}
           onAddNestedItem={addNestedItem}
           onChangeGeometry={(geometry) => updateBlock(block.id, geometry)}
+        />
+      ))}
+
+      {guides?.vLines.map((x) => (
+        <div
+          key={`v-${x}`}
+          style={{ left: x }}
+          className="pdf-ignore pointer-events-none absolute inset-y-0 z-30 w-px bg-primary"
+        />
+      ))}
+      {guides?.hLines.map((y) => (
+        <div
+          key={`h-${y}`}
+          style={{ top: y }}
+          className="pdf-ignore pointer-events-none absolute inset-x-0 z-30 h-px bg-primary"
         />
       ))}
     </div>

@@ -1,7 +1,14 @@
 import { useRef } from 'react'
 import { Trash2 } from 'lucide-react'
 import { BLOCK_TYPES } from '../../utils/blockTypes'
-import { clamp, SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
+import {
+  clamp,
+  GRID_OFFSET_X,
+  GRID_OFFSET_Y,
+  nearestGridLine,
+  SHEET_HEIGHT,
+  SHEET_WIDTH,
+} from '../../utils/layout'
 import BlockRenderer from './BlockRenderer'
 
 const MIN_WIDTH = 60
@@ -45,6 +52,45 @@ const getX = (b) => b.x
 const getY = (b) => b.y
 const getWidth = (b) => b.width
 const getHeight = (b) => b.height
+const GUIDE_EPS = 0.5
+
+// Which alignment lines to draw (see Canvas.jsx's `guides` overlay) after a
+// move/resize: an edge or center of this block that now lines up exactly
+// with a sibling's edge/center, a margin line, or the page's own center —
+// same alignments `getSnapTargets`/the margin/page-center targets above
+// already snap the position to, just re-checked here in absolute page
+// coordinates (rather than pre-offset by this block's own size) so the
+// line is drawn where the alignment actually is, whichever edge (or the
+// center) it was that matched.
+function computeGuides({ x, y, width, height }, siblings, margin) {
+  const left = x
+  const right = x + width
+  const centerX = x + width / 2
+  const top = y
+  const bottom = y + height
+  const centerY = y + height / 2
+
+  const vCandidates = [margin, SHEET_WIDTH - margin, SHEET_WIDTH / 2]
+  const hCandidates = [margin, SHEET_HEIGHT - margin, SHEET_HEIGHT / 2]
+  siblings.forEach((s) => {
+    vCandidates.push(s.x, s.x + s.width, s.x + s.width / 2)
+    hCandidates.push(s.y, s.y + s.height, s.y + s.height / 2)
+  })
+
+  const vLines = new Set()
+  const hLines = new Set()
+  vCandidates.forEach((v) => {
+    if (Math.abs(v - left) < GUIDE_EPS || Math.abs(v - right) < GUIDE_EPS || Math.abs(v - centerX) < GUIDE_EPS) {
+      vLines.add(Math.round(v))
+    }
+  })
+  hCandidates.forEach((h) => {
+    if (Math.abs(h - top) < GUIDE_EPS || Math.abs(h - bottom) < GUIDE_EPS || Math.abs(h - centerY) < GUIDE_EPS) {
+      hLines.add(Math.round(h))
+    }
+  })
+  return { vLines: [...vLines], hLines: [...hLines] }
+}
 
 const RESIZE_HANDLES = [
   { key: 'nw', className: '-left-1.5 -top-1.5 cursor-nwse-resize', x: -1, y: -1 },
@@ -65,6 +111,8 @@ export default function FreeBlock({
   margin = 0,
   siblings = [],
   globalStyle,
+  snapToGrid = false,
+  onGuides,
   onSelect,
   onRemove,
   onAddNestedItem,
@@ -141,12 +189,22 @@ export default function FreeBlock({
       let y = clamp(state.origY + dy, 0, Math.max(0, SHEET_HEIGHT - block.height))
       const xTargets = getSnapTargets(siblings, block.width, getX, getWidth)
       const yTargets = getSnapTargets(siblings, block.height, getY, getHeight)
+      // Centering this block on the page itself — not just on/against a
+      // sibling — is common enough (a name/title, a photo) to deserve its
+      // own snap target.
+      xTargets.push(SHEET_WIDTH / 2 - block.width / 2)
+      yTargets.push(SHEET_HEIGHT / 2 - block.height / 2)
       if (margin > 0) {
         xTargets.push(margin, SHEET_WIDTH - margin - block.width)
         yTargets.push(margin, SHEET_HEIGHT - margin - block.height)
       }
+      if (snapToGrid) {
+        xTargets.push(nearestGridLine(x, GRID_OFFSET_X))
+        yTargets.push(nearestGridLine(y, GRID_OFFSET_Y))
+      }
       x = snapTo(x, xTargets)
       y = snapTo(y, yTargets)
+      onGuides?.(computeGuides({ x, y, width: block.width, height: block.height }, siblings, margin))
       onChangeGeometry({ x, y })
       return
     }
@@ -167,6 +225,7 @@ export default function FreeBlock({
       width = clamp(state.origWidth + dx, MIN_WIDTH, SHEET_WIDTH - state.origX)
       const targets = [...rightEdgeTargets]
       if (margin > 0) targets.push(SHEET_WIDTH - margin)
+      if (snapToGrid) targets.push(nearestGridLine(x + width, GRID_OFFSET_X))
       width = snapTo(x + width, targets) - x
     } else if (handle.x === -1) {
       const maxDx = state.origWidth - MIN_WIDTH
@@ -175,6 +234,7 @@ export default function FreeBlock({
       x = state.origX + clampedDx
       const targets = [...leftEdgeTargets]
       if (margin > 0) targets.push(margin)
+      if (snapToGrid) targets.push(nearestGridLine(x, GRID_OFFSET_X))
       const snappedX = snapTo(x, targets)
       width += x - snappedX
       x = snappedX
@@ -184,6 +244,7 @@ export default function FreeBlock({
       height = clamp(state.origHeight + dy, MIN_HEIGHT, SHEET_HEIGHT - state.origY)
       const targets = [...bottomEdgeTargets]
       if (margin > 0) targets.push(SHEET_HEIGHT - margin)
+      if (snapToGrid) targets.push(nearestGridLine(y + height, GRID_OFFSET_Y))
       height = snapTo(y + height, targets) - y
     } else if (handle.y === -1) {
       const maxDy = state.origHeight - MIN_HEIGHT
@@ -192,16 +253,19 @@ export default function FreeBlock({
       y = state.origY + clampedDy
       const targets = [...topEdgeTargets]
       if (margin > 0) targets.push(margin)
+      if (snapToGrid) targets.push(nearestGridLine(y, GRID_OFFSET_Y))
       const snappedY = snapTo(y, targets)
       height += y - snappedY
       y = snappedY
     }
 
+    onGuides?.(computeGuides({ x, y, width, height }, siblings, margin))
     onChangeGeometry({ x, y, width, height })
   }
 
   function handlePointerUp() {
     dragState.current = null
+    onGuides?.(null)
     window.removeEventListener('pointermove', handlePointerMove)
     window.removeEventListener('pointerup', handlePointerUp)
   }
