@@ -76,6 +76,12 @@ function pdfFontStyle(bold, italic) {
   return 'normal'
 }
 
+// The last font `setFont` was called with — tracked purely so
+// `drawParagraph` (below) can measure text the same way the browser
+// would, without every one of its ~20 call sites needing to repeat the
+// family/bold/italic that was already just set moments earlier.
+let currentFontState = { family: '', bold: false, italic: false }
+
 function setFont(pdf, fontFamilyValue, { bold = false, italic = false, sizePx }) {
   const style = pdfFontStyle(bold, italic)
   const embedded = resolveEmbeddedFont(fontFamilyValue, style)
@@ -85,6 +91,61 @@ function setFont(pdf, fontFamilyValue, { bold = false, italic = false, sizePx })
     pdf.setFont(pdfFontName(fontFamilyValue), style)
   }
   if (sizePx) pdf.setFontSize(sizePx)
+  currentFontState = { family: fontFamilyValue, bold, italic }
+}
+
+// A single offscreen 2D context, reused for every measurement — creating
+// a canvas per call would work too, just wastefully.
+let measureCtx = null
+function getMeasureCtx() {
+  if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d')
+  return measureCtx
+}
+
+// The CSS `font` shorthand for whatever `setFont` was last called with,
+// at a given point size — passed straight to a canvas 2D context, which
+// (unlike jsPDF's own width tables, read from the embedded font file
+// after its woff2->ttf conversion) uses the exact same font-shaping
+// engine the browser's own CSS layout does, since it's the same browser.
+function cssFontString(fontFamilyValue, { bold, italic, sizePx }) {
+  return `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${sizePx}px ${fontFamilyValue || 'sans-serif'}`
+}
+
+// Greedy word-wrap using the browser's own text measurement instead of
+// jsPDF's `splitTextToSize` (which measures against the *embedded* font's
+// own width table — accurate for drawing glyphs, but a woff2->ttf
+// conversion doesn't always reproduce metrics identical enough to the
+// original webfont's real on-screen widths). Since every block here is
+// absolutely positioned rather than flowing, a paragraph that wraps to
+// even one more or fewer line than the browser did silently overlaps or
+// gaps against whatever's positioned right after it. Splits on existing '\n'
+// as hard breaks first, matching `white-space: pre-line`, then wraps each
+// paragraph's words to `maxWidth`.
+function wrapTextToWidth(text, cssFont, maxWidth) {
+  const ctx = getMeasureCtx()
+  ctx.font = cssFont
+  const lines = []
+  text.split('\n').forEach((paragraph) => {
+    const words = paragraph.split(' ')
+    let line = ''
+    words.forEach((word) => {
+      const candidate = line ? `${line} ${word}` : word
+      if (line && ctx.measureText(candidate).width > maxWidth) {
+        lines.push(line)
+        line = word
+      } else {
+        line = candidate
+      }
+    })
+    lines.push(line)
+  })
+  return lines
+}
+
+function measureTextWidth(text, cssFont) {
+  const ctx = getMeasureCtx()
+  ctx.font = cssFont
+  return ctx.measureText(text).width
 }
 
 function setTextColor(pdf, hex, fallback) {
@@ -170,7 +231,8 @@ function drawParagraph(pdf, rawText, { x, y, width, align = 'left', lineHeightMu
   const text = rawText ?? ''
   if (!text.trim()) return 0
   const fontSize = pdf.getFontSize()
-  const lines = pdf.splitTextToSize(text, Math.max(10, width))
+  const cssFont = cssFontString(currentFontState.family, { ...currentFontState, sizePx: fontSize })
+  const lines = wrapTextToWidth(text, cssFont, Math.max(10, width))
   const lineHeight = fontSize * lineHeightMult
   let cursorY = y + fontSize * 0.85
   lines.forEach((line) => {
@@ -193,10 +255,8 @@ function drawInlineTitleSub(
   { x, y, width, align = 'left', titleFont, subFont, titleSizePx, subSizePx, titleColor, subColor, gap = 6 },
 ) {
   const fontSize = titleSizePx || subSizePx || pdf.getFontSize()
-  setFont(pdf, titleFont, { bold: true, sizePx: titleSizePx })
-  const titleWidth = pdf.getTextWidth(titleText)
-  setFont(pdf, subFont, { sizePx: subSizePx })
-  const subWidth = pdf.getTextWidth(subText)
+  const titleWidth = measureTextWidth(titleText, cssFontString(titleFont, { bold: true, sizePx: titleSizePx || fontSize }))
+  const subWidth = measureTextWidth(subText, cssFontString(subFont, { sizePx: subSizePx || fontSize }))
   const totalWidth = titleWidth + gap + subWidth
   const startX = align === 'center' ? x + (width - totalWidth) / 2 : align === 'right' ? x + width - totalWidth : x
   const baselineY = y + fontSize * 0.85
@@ -678,7 +738,11 @@ async function drawBlock(pdf, block, ctx) {
         setTextColor(pdf, null, SLATE[500])
         if (isHorizontal) {
           const capX = captionPosition === 'left' ? x : x + size + 10
-          pdf.text(pdf.splitTextToSize(block.caption, width - size - 10), capX, y + size / 2)
+          pdf.text(
+            wrapTextToWidth(block.caption, cssFontString(resolveBodyFont(globalStyle), { sizePx: 12 }), width - size - 10),
+            capX,
+            y + size / 2,
+          )
         } else {
           pdf.text(block.caption, x + width / 2, y + size + 14, { align: 'center' })
         }
@@ -885,6 +949,11 @@ async function drawBlock(pdf, block, ctx) {
 
 export async function generatePdfBlob({ pageCount, blocks, globalStyle, library }) {
   const pdf = new jsPDF({ unit: 'px', format: [SHEET_WIDTH, SHEET_HEIGHT], compress: true })
+  // wrapTextToWidth/measureTextWidth (see above) measure with the actual
+  // browser font, so it has to have actually finished loading first — the
+  // earliest a document reaches this function is right after opening the
+  // builder, before a webfont fetched over the network is guaranteed done.
+  await document.fonts.ready
   await registerEmbeddedFonts(pdf)
 
   for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
