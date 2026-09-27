@@ -19,9 +19,13 @@ const cardClasses = 'flex flex-col gap-2 rounded-xl border border-slate-200 bg-w
 const inputClasses =
   'w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20'
 
-function PhotoField({ value, onChange }) {
+// Shared by any 'image' Content Library slot (Profile Photo, Signature):
+// `variant` picks the preview shape/crop defaults, since a face photo and
+// a signature scan are cropped very differently.
+function PhotoField({ value, onChange, variant = 'photo' }) {
   const fileInputRef = useRef(null)
   const [isCropping, setIsCropping] = useState(false)
+  const isSignature = variant === 'signature'
 
   function handleFile(event) {
     const file = event.target.files?.[0]
@@ -29,7 +33,7 @@ function PhotoField({ value, onChange }) {
     const reader = new FileReader()
     reader.onload = () => {
       onChange(reader.result)
-      toast.success('Photo saved', { id: 'content-library-save' })
+      toast.success(`${isSignature ? 'Signature' : 'Photo'} saved`, { id: 'content-library-save' })
     }
     reader.readAsDataURL(file)
     event.target.value = ''
@@ -37,9 +41,13 @@ function PhotoField({ value, onChange }) {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 text-slate-300">
+      <div
+        className={`flex shrink-0 items-center justify-center overflow-hidden border border-slate-200 bg-slate-50 text-slate-300 ${
+          isSignature ? 'h-16 w-32 rounded-md' : 'h-16 w-16 rounded-full'
+        }`}
+      >
         {value ? (
-          <img src={value} alt="Profile" className="h-full w-full object-cover" />
+          <img src={value} alt={isSignature ? 'Signature' : 'Profile'} className="h-full w-full object-contain" />
         ) : (
           <User size={24} />
         )}
@@ -51,7 +59,7 @@ function PhotoField({ value, onChange }) {
         className="flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
       >
         <Upload size={13} />
-        Upload photo
+        Upload {isSignature ? 'signature' : 'photo'}
       </button>
       {value && (
         <>
@@ -76,13 +84,13 @@ function PhotoField({ value, onChange }) {
       {isCropping && (
         <ImageCropModal
           imageSrc={value}
-          initialAspect={1}
-          initialShape="circle"
+          initialAspect={isSignature ? 2.5 : 1}
+          initialShape={isSignature ? 'rect' : 'circle'}
           onCancel={() => setIsCropping(false)}
           onApply={(dataUrl) => {
             onChange(dataUrl)
             setIsCropping(false)
-            toast.success('Photo saved', { id: 'content-library-save' })
+            toast.success(`${isSignature ? 'Signature' : 'Photo'} saved`, { id: 'content-library-save' })
           }}
         />
       )}
@@ -489,7 +497,11 @@ export default function ContentLibraryPage() {
             )}
 
             {slot.type === 'image' && (
-              <PhotoField value={library[slot.key]} onChange={(v) => handleChange(slot.key, v)} />
+              <PhotoField
+                value={library[slot.key]}
+                onChange={(v) => handleChange(slot.key, v)}
+                variant={slot.key === 'signature' ? 'signature' : 'photo'}
+              />
             )}
 
             {slot.type === 'social' && (

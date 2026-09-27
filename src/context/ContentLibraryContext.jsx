@@ -50,6 +50,7 @@ export const CONTENT_SLOTS = [
   { key: 'qrValue', label: 'QR Code Link', multiline: false },
   { key: 'hobbies', label: 'Leisure / Hobbies', type: 'checklist' },
   { key: 'coverLetterBody', label: 'Cover Letter Body', multiline: true },
+  { key: 'signature', label: 'Signature', type: 'image' },
 ]
 
 // Checklist/languages slots also keep a JSON-encoded "*Items" key (the

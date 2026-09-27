@@ -1,4 +1,10 @@
-import { BLOCK_TYPES, CHART_STYLES, HEADING_SIZE_PX, NESTABLE_BLOCK_DEFINITIONS } from '../../utils/blockTypes'
+import {
+  BLOCK_TYPES,
+  CHART_STYLES,
+  CONTENT_LIBRARY_PALETTE_ITEMS,
+  HEADING_SIZE_PX,
+  NESTABLE_BLOCK_DEFINITIONS,
+} from '../../utils/blockTypes'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
 import { parseChecklist, parseEntries, parseLanguages } from '../../utils/contentLists'
@@ -587,18 +593,33 @@ export default function BlockRenderer({
                     value=""
                     onClick={(event) => event.stopPropagation()}
                     onChange={(event) => {
-                      const type = event.target.value
+                      const value = event.target.value
                       event.target.value = ''
-                      if (type) onAddItem(colIndex, type)
+                      if (!value) return
+                      if (value.startsWith('content-')) {
+                        const item = CONTENT_LIBRARY_PALETTE_ITEMS.find((i) => i.key === value)
+                        if (item) onAddItem(colIndex, item.blockType, item.extraProps)
+                      } else {
+                        onAddItem(colIndex, value)
+                      }
                     }}
                     className="rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] font-medium text-primary outline-none"
                   >
                     <option value="">+ Add block</option>
-                    {NESTABLE_BLOCK_DEFINITIONS.map((def) => (
-                      <option key={def.type} value={def.type}>
-                        {def.label}
-                      </option>
-                    ))}
+                    <optgroup label="Blocks">
+                      {NESTABLE_BLOCK_DEFINITIONS.map((def) => (
+                        <option key={def.type} value={def.type}>
+                          {def.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Content Library">
+                      {CONTENT_LIBRARY_PALETTE_ITEMS.map((item) => (
+                        <option key={item.key} value={item.key}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
               )}

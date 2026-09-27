@@ -116,8 +116,9 @@ export function BuilderProvider({
   // Adds a simple block (heading/text) inside a column of a COLUMNS
   // block: a column's items stay in vertical flow (they aren't free on the
   // sheet), but they're still selectable/editable like all the others.
-  const addNestedItem = useCallback((columnsBlockId, columnIndex, type) => {
-    const newItem = createNestedBlockInstance(type)
+  const addNestedItem = useCallback((columnsBlockId, columnIndex, type, extraProps) => {
+    let newItem = createNestedBlockInstance(type)
+    if (extraProps) newItem = { ...newItem, ...extraProps }
     setBlocks((prev) => {
       pushHistory(prev)
       return updateBlockById(prev, columnsBlockId, (block) => ({

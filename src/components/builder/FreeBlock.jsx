@@ -233,7 +233,9 @@ export default function FreeBlock({
           interactive={block.type === BLOCK_TYPES.COLUMNS && isSelected}
           selectedId={selectedBlockId}
           onSelectItem={onSelect}
-          onAddItem={(columnIndex, type) => onAddNestedItem(block.id, columnIndex, type)}
+          onAddItem={(columnIndex, type, extraProps) =>
+            onAddNestedItem(block.id, columnIndex, type, extraProps)
+          }
           onUpdateBlock={onChangeGeometry}
           globalStyle={globalStyle}
         />

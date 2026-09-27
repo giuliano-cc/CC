@@ -1385,11 +1385,11 @@ function BlockPropertiesPanel({ block, onChange }) {
 
       {isImage && (
         <>
-          <Field label="Photo from library">
+          <Field label="Image from library">
             <LibrarySlotSelect
               value={block.imageSlot}
               onChange={(v) => onChange({ imageSlot: v })}
-              filter={(s) => s.key === 'photo'}
+              filter={(s) => s.type === 'image'}
               placeholder="— none —"
             />
           </Field>
