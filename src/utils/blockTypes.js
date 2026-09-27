@@ -608,9 +608,15 @@ export const NESTABLE_BLOCK_DEFINITIONS = BLOCK_DEFINITIONS.filter(
 // (Contact Info, Leisure, Experience, Education, Technical Skills,
 // Languages, and the ones needing a non-text editor: photo/social/QR/
 // contact group) are left out here — that block type is the better way
-// to add them, and is still offered above.
-const CONTENT_LIBRARY_PALETTE_SKIP_TYPES = new Set(['image', 'social', 'contactGroup', 'languages', 'entries'])
-const CONTENT_LIBRARY_PALETTE_SKIP_KEYS = new Set(['skills', 'hobbies', 'qrValue'])
+// to add them, and is still offered above. An 'entries' slot with its
+// own dedicated block (experience/education) is skipped the same way;
+// `selectedWorks` is also type 'entries' but has no dedicated block of
+// its own, so it stays — the only way to add it is a Text block bound
+// to it (see the TEXT case in BlockRenderer.jsx, which renders an
+// 'entries'-bound Text block structurally), so it needs to be reachable
+// from this palette directly.
+const CONTENT_LIBRARY_PALETTE_SKIP_TYPES = new Set(['image', 'social', 'contactGroup', 'languages'])
+const CONTENT_LIBRARY_PALETTE_SKIP_KEYS = new Set(['skills', 'hobbies', 'qrValue', 'experience', 'education'])
 export const CONTENT_LIBRARY_PALETTE_ITEMS = CONTENT_SLOTS.filter(
   (slot) =>
     !slot.group &&

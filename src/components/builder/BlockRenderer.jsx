@@ -407,23 +407,48 @@ export default function BlockRenderer({
       // Works: Title / City, Country / Description) renders each entry
       // structurally instead of as flat text — the same shape as the
       // dedicated Experience/Education blocks, just without their own
-      // date fields.
+      // date fields. The block's own Font/Size/Text color fields (the
+      // same ones a plain paragraph already reads via typographyStyle)
+      // apply here too, to the title and description — overriding the
+      // title/body font and the default P1 body size when set, exactly
+      // like every other Text block.
+      const p1SizePx = globalStyle.typographyScale?.p1?.sizePx
+      const entryTitleFont = block.fontFamily || resolveTitleFont(globalStyle)
+      const entryBodyFont = block.fontFamily || bodyFont
+      const entrySizePx = block.fontSize || p1SizePx
       const body = boundSlot?.type === 'entries' ? (
         <div className={`flex flex-col gap-3 ${alignClass(block.align)}`}>
           {parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]).map((item, i) => (
             <div key={item.id || i} className="flex flex-col gap-0.5">
               {item.title && (
-                <p className="text-base font-bold" style={{ fontFamily: resolveTitleFont(globalStyle) }}>
+                <p
+                  className="text-base font-bold"
+                  style={{
+                    fontFamily: entryTitleFont,
+                    fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
+                    color: block.color || undefined,
+                  }}
+                >
                   {item.title}
                 </p>
               )}
               {(item.subtitle || item.location) && (
-                <p className="text-sm text-slate-500" style={{ fontFamily: bodyFont }}>
+                <p
+                  className="text-sm text-slate-500"
+                  style={{ fontFamily: entryBodyFont, fontSize: entrySizePx ? `${entrySizePx}px` : undefined }}
+                >
                   {[item.subtitle, item.location].filter((v) => v?.trim()).join(', ')}
                 </p>
               )}
               {item.description && (
-                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600" style={{ fontFamily: bodyFont }}>
+                <p
+                  className="whitespace-pre-line text-sm leading-relaxed text-slate-600"
+                  style={{
+                    fontFamily: entryBodyFont,
+                    fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
+                    color: block.color || undefined,
+                  }}
+                >
                   {item.description}
                 </p>
               )}

@@ -349,22 +349,28 @@ async function drawBlock(pdf, block, ctx) {
       }
 
       if (boundSlot?.type === 'entries') {
+        // The block's own Font/Size/Text color — same fields a plain
+        // paragraph already reads below — apply here too, overriding the
+        // title/body font and the default P1 body size when set.
+        const entryTitleFont = block.fontFamily || resolveTitleFont(globalStyle)
+        const entryBodyFont = block.fontFamily || bodyFont
+        const entrySizePx = block.fontSize || p1SizePx(globalStyle)
         const items = parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key])
         items.forEach((item) => {
           if (item.title) {
-            setFont(pdf, resolveTitleFont(globalStyle), { bold: true, sizePx: 16 })
-            setTextColor(pdf, null, hexToRgb(globalStyle.textColor))
+            setFont(pdf, entryTitleFont, { bold: true, sizePx: entrySizePx })
+            setTextColor(pdf, block.color, hexToRgb(globalStyle.textColor))
             cursorY += drawParagraph(pdf, item.title, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
           }
           const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
           if (subLine) {
-            setFont(pdf, bodyFont, { sizePx: p1SizePx(globalStyle) })
+            setFont(pdf, entryBodyFont, { sizePx: entrySizePx })
             setTextColor(pdf, null, SLATE[500])
             cursorY += drawParagraph(pdf, subLine, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
           }
           if (item.description) {
-            setFont(pdf, bodyFont, { sizePx: p1SizePx(globalStyle) })
-            setTextColor(pdf, null, SLATE[600])
+            setFont(pdf, entryBodyFont, { sizePx: entrySizePx })
+            setTextColor(pdf, block.color, SLATE[600])
             cursorY += drawParagraph(pdf, item.description, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.5 })
           }
           cursorY += 10

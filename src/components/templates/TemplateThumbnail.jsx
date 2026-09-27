@@ -9,11 +9,18 @@ export default function TemplateThumbnail({ template }) {
   const containerWidth = useElementWidth(containerRef)
   const scale = containerWidth ? containerWidth / SHEET_WIDTH : 0
 
+  // A4's own proportions (SHEET_HEIGHT/SHEET_WIDTH), not a fixed height —
+  // a fixed height cropped whatever didn't fit in it instead of shrinking
+  // the whole page down to fit, so the card never actually looked like a
+  // small page, just the top slice of one.
+  const aspectRatio = `${SHEET_WIDTH} / ${SHEET_HEIGHT}`
+
   if (!template.blocks?.length) {
     return (
       <div
         ref={containerRef}
-        className="flex h-40 w-full items-center justify-center bg-slate-50 text-slate-300"
+        style={{ aspectRatio }}
+        className="flex w-full items-center justify-center bg-slate-50 text-slate-300"
       >
         <FileText size={40} />
       </div>
@@ -31,8 +38,8 @@ export default function TemplateThumbnail({ template }) {
   return (
     <div
       ref={containerRef}
-      className="h-40 w-full overflow-hidden bg-slate-100"
-      style={{ fontFamily: template.globalStyle?.fontFamily, color: template.globalStyle?.textColor }}
+      className="w-full overflow-hidden bg-slate-100"
+      style={{ aspectRatio, fontFamily: template.globalStyle?.fontFamily, color: template.globalStyle?.textColor }}
     >
       {scale > 0 && (
         <div
