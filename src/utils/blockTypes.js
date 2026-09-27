@@ -85,12 +85,6 @@ export const FONT_FAMILY_OPTIONS = [
   { value: "Roboto, -apple-system, sans-serif", label: 'Roboto', category: 'sans-serif' },
 ]
 
-// Short tag shown next to a font's name (e.g. "Georgia · serif").
-const FONT_CATEGORY_TAG = { serif: 'serif', 'sans-serif': 'sans', monospace: 'mono' }
-export function fontOptionLabel(opt) {
-  return FONT_CATEGORY_TAG[opt.category] ? `${opt.label} · ${FONT_CATEGORY_TAG[opt.category]}` : opt.label
-}
-
 // Default size (in px, on the 794x1123 sheet) for each block type: used
 // both when a block is dragged from the palette and to "seed" a free
 // position for legacy blocks missing x/y/w/h (see utils/layout.js).

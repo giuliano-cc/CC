@@ -14,7 +14,8 @@ import {
   Undo2,
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
-import { BLOCK_TYPES, FONT_FAMILY_OPTIONS, TEXT_TRANSFORM_OPTIONS, fontOptionLabel } from '../../utils/blockTypes'
+import { BLOCK_TYPES, TEXT_TRANSFORM_OPTIONS } from '../../utils/blockTypes'
+import FontPicker from './FontPicker'
 
 function ToolbarButton({ active, onClick, disabled, children, label }) {
   return (
@@ -153,17 +154,11 @@ export default function Toolbar() {
 
       {hasTypography && (
         <>
-          <select
+          <FontPicker
             value={selectedBlock.fontFamily || ''}
-            onChange={(e) => updateBlock(selectedBlock.id, { fontFamily: e.target.value || null })}
-            className="h-8 shrink-0 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-600 outline-none focus:border-primary"
-          >
-            {FONT_FAMILY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value || undefined }}>
-                {fontOptionLabel(opt)}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => updateBlock(selectedBlock.id, { fontFamily: v || null })}
+            className="h-8 w-32 shrink-0 text-xs [&>button]:h-8 [&>button]:py-0 [&>button]:text-xs"
+          />
 
           <input
             type="number"

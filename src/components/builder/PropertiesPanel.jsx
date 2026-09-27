@@ -18,8 +18,6 @@ import { useBuilder } from '../../context/BuilderContext'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import {
   BLOCK_TYPES,
-  FONT_FAMILY_OPTIONS,
-  fontOptionLabel,
   getTemplateTypographyStyles,
   matchesTypographyRow,
   sectionTitleSizeField,
@@ -27,6 +25,7 @@ import {
 import { emptyEntry } from '../../utils/contentLists'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import { SOCIAL_PLATFORMS } from '../../utils/socialIcons'
+import FontPicker from './FontPicker'
 import ImageCropModal from './ImageCropModal'
 
 function Field({ label, children }) {
@@ -115,19 +114,11 @@ function GlobalStylePanel() {
         />
       </Field>
       <Field label="Font">
-        <select
+        <FontPicker
           value={globalStyle.fontFamily}
-          onChange={(e) =>
-            setGlobalStyle((prev) => ({ ...prev, fontFamily: e.target.value }))
-          }
-          className={inputClasses}
-        >
-          {FONT_FAMILY_OPTIONS.filter((opt) => opt.value).map((opt) => (
-            <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>
-              {fontOptionLabel(opt)}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setGlobalStyle((prev) => ({ ...prev, fontFamily: v }))}
+          includeInherit={false}
+        />
       </Field>
       <Field label="Page margin (px)">
         <input
@@ -222,19 +213,11 @@ function GlobalStylePanel() {
                     )}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <select
+                    <FontPicker
                       value={row.fontFamily || ''}
-                      onChange={(e) => applyTypographyChange(row, { fontFamily: e.target.value || null })}
-                      className={`${inputClasses} py-1`}
-                      title="Font — leave as inherited to use the global one"
-                    >
-                      <option value="">Inherit from global style</option>
-                      {FONT_FAMILY_OPTIONS.filter((opt) => opt.value).map((opt) => (
-                        <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value }}>
-                          {fontOptionLabel(opt)}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => applyTypographyChange(row, { fontFamily: v || null })}
+                      className="flex-1"
+                    />
                   </div>
                 </div>
               )
@@ -1670,17 +1653,7 @@ function BlockPropertiesPanel({ block, onChange }) {
       {hasTypography && (
         <>
           <Field label="Font">
-            <select
-              value={block.fontFamily || ''}
-              onChange={(e) => onChange({ fontFamily: e.target.value || null })}
-              className={inputClasses}
-            >
-              {FONT_FAMILY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value} style={{ fontFamily: opt.value || undefined }}>
-                  {fontOptionLabel(opt)}
-                </option>
-              ))}
-            </select>
+            <FontPicker value={block.fontFamily || ''} onChange={(v) => onChange({ fontFamily: v || null })} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Size (px)">
