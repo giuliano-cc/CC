@@ -26,7 +26,7 @@ export const CONTENT_SLOTS = [
   // (see utils/contentLists.js parseEntries/composeEntriesText) — library[key]
   // stays the plain-text, derived version every existing binding expects.
   { key: 'experience', label: 'Work Experience', type: 'entries' },
-  { key: 'selectedWorks', label: 'Selected Works', multiline: true, isList: true },
+  { key: 'selectedWorks', label: 'Selected Works', type: 'entries' },
   { key: 'selectedClients', label: 'Selected Clients', multiline: true, isList: true },
   { key: 'education', label: 'Education', type: 'entries' },
   { key: 'skills', label: 'Technical Skills', type: 'checklist' },

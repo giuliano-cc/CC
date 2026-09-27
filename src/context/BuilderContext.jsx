@@ -10,11 +10,19 @@ import { findBlockById, removeBlockById, updateBlockById } from '../utils/blockT
 import { clamp, seedFreeLayout, SHEET_HEIGHT, SHEET_WIDTH } from '../utils/layout'
 import { alignToPage, alignToSelection, distribute } from '../utils/align'
 
+// `fontFamily` is kept as the legacy single-font value (a template saved
+// before titles and body text had independent fonts still has only
+// this), and both `titleFontFamily`/`bodyFontFamily` fall back to it
+// wherever they're not set — see resolveTitleFont/resolveBodyFont in
+// BlockRenderer.jsx — so nothing needs migrating and a template that's
+// never touched the new fields keeps looking exactly the same.
 const DEFAULT_GLOBAL_STYLE = {
   primaryColor: '#2563eb',
   textColor: '#1e293b',
   pageBackground: '#ffffff',
   fontFamily: 'Inter, system-ui, sans-serif',
+  titleFontFamily: null,
+  bodyFontFamily: null,
   margin: 48,
 }
 

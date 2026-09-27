@@ -53,7 +53,7 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, zoom }) {
       style={{
         width: SHEET_WIDTH,
         height: SHEET_HEIGHT,
-        fontFamily: globalStyle.fontFamily,
+        fontFamily: globalStyle.bodyFontFamily || globalStyle.fontFamily,
         color: globalStyle.textColor,
         backgroundColor: globalStyle.pageBackground || '#ffffff',
       }}

@@ -99,6 +99,53 @@ function entryDateRange(entry) {
   return range
 }
 
+const MONTH_NAMES = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+]
+
+// Best-effort parse of a free-text date ("January 2024", "Jan 2024",
+// "01/2024", "2024", ...) into a single sortable number (higher = more
+// recent) — entry dates are typed freely, not picked from a real date
+// input, so this can't assume a fixed format. Returns null when nothing
+// resembling a date is found, so an entry with unparseable text can be
+// told apart from a genuinely early one instead of sorting as if it were
+// year zero.
+function parseDateForSort(text) {
+  if (!text?.trim()) return null
+  const monthYear = /([a-zA-Z]+)\.?\s+(\d{4})/.exec(text)
+  if (monthYear) {
+    const monthIndex = MONTH_NAMES.findIndex((m) => m.startsWith(monthYear[1].toLowerCase()))
+    if (monthIndex !== -1) return Number(monthYear[2]) * 12 + monthIndex
+  }
+  const slash = /(\d{1,2})[/.](\d{4})/.exec(text)
+  if (slash) return Number(slash[2]) * 12 + (Number(slash[1]) - 1)
+  const yearOnly = /(\d{4})/.exec(text)
+  if (yearOnly) return Number(yearOnly[1]) * 12
+  return null
+}
+
+// Sorts entries most-recent-first: any "current"/ongoing entry leads
+// (they're more recent than a finished one by definition), then by
+// whichever of end/start date parses to the latest point in time.
+// Entries whose dates don't parse at all keep their original relative
+// order and sink below every entry that did parse, rather than being
+// scattered in among them by accident.
+export function sortEntriesByDate(items) {
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      if (a.item.current !== b.item.current) return a.item.current ? -1 : 1
+      const aKey = parseDateForSort(a.item.endDate) ?? parseDateForSort(a.item.startDate)
+      const bKey = parseDateForSort(b.item.endDate) ?? parseDateForSort(b.item.startDate)
+      if (aKey === null && bKey === null) return a.index - b.index
+      if (aKey === null) return 1
+      if (bKey === null) return -1
+      return bKey - aKey
+    })
+    .map((entry) => entry.item)
+}
+
 export function composeEntriesText(items) {
   return items
     .filter((item) => item.title?.trim() || item.subtitle?.trim() || item.description?.trim())

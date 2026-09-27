@@ -135,13 +135,26 @@ function GlobalStylePanel() {
           )}
         </div>
       </Field>
-      <Field label="Font">
+      <Field label="Title font">
         <FontPicker
-          value={globalStyle.fontFamily}
-          onChange={(v) => setGlobalStyle((prev) => ({ ...prev, fontFamily: v }))}
+          value={globalStyle.titleFontFamily || globalStyle.fontFamily}
+          onChange={(v) => setGlobalStyle((prev) => ({ ...prev, titleFontFamily: v }))}
           includeInherit={false}
         />
       </Field>
+      <Field label="Body font">
+        <FontPicker
+          value={globalStyle.bodyFontFamily || globalStyle.fontFamily}
+          onChange={(v) => setGlobalStyle((prev) => ({ ...prev, bodyFontFamily: v }))}
+          includeInherit={false}
+        />
+      </Field>
+      <p className="-mt-2 text-xs text-slate-400">
+        Title font is used for every heading and section title (Experience,
+        Education, chart titles, ...); Body font for paragraph text, entry
+        descriptions, and contact/list items — every block on every page
+        that hasn't been given its own font override.
+      </p>
       <div className="flex flex-col gap-1.5">
         <span className="text-xs font-medium text-slate-500">Page margins (px)</span>
         <div className="grid grid-cols-2 gap-3">
@@ -415,6 +428,37 @@ function TitleSizeField({ block, onChange }) {
   )
 }
 
+// Whether a section-title block (Contact Info, Leisure, Experience,
+// Education, the two charts) shows its title at all, and whether that
+// title gets the underline rule below it — both default on, so hiding
+// either is an explicit opt-out rather than needing the title text
+// cleared out (which a Text block's own showTitle checkbox never
+// required either, so this brings the two in line with each other).
+function TitleVisibilityFields({ block, onChange }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={block.showTitle !== false}
+          onChange={(e) => onChange({ showTitle: e.target.checked })}
+        />
+        Show title
+      </label>
+      {block.showTitle !== false && (
+        <label className="flex items-center gap-1.5 text-xs text-slate-600">
+          <input
+            type="checkbox"
+            checked={block.titleRule !== false}
+            onChange={(e) => onChange({ titleRule: e.target.checked })}
+          />
+          Show line under title
+        </label>
+      )}
+    </div>
+  )
+}
+
 // Font size + line spacing for a block's body content (the entry list in
 // Experience/Education, the field list in Contact Info) — separate from
 // the block's own title size/color, which TitleSizeField controls.
@@ -446,6 +490,38 @@ function BodyTextStyleFields({ block, onChange }) {
             onChange({ lineSpacing: e.target.value ? Number(e.target.value) : null })
           }
           className={inputClasses}
+        />
+      </Field>
+    </div>
+  )
+}
+
+// Style controls for the entry title line itself (e.g. "Associate
+// Director") in Experience/Education — separate from the block's own
+// section title (above) and from BodyTextStyleFields (the subtitle/date
+// line and description below), so each can be sized/colored on its own.
+function EntryTitleStyleFields({ block, onChange }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Field label="Entry title size (px)">
+        <input
+          type="number"
+          min={8}
+          max={36}
+          placeholder="16"
+          value={block.entryTitleFontSize || ''}
+          onChange={(e) =>
+            onChange({ entryTitleFontSize: e.target.value ? Number(e.target.value) : null })
+          }
+          className={inputClasses}
+        />
+      </Field>
+      <Field label="Entry title color">
+        <input
+          type="color"
+          value={block.entryTitleColor || '#1e293b'}
+          onChange={(e) => onChange({ entryTitleColor: e.target.value })}
+          className="h-9 w-full rounded-md border border-slate-200"
         />
       </Field>
     </div>
@@ -733,6 +809,7 @@ function SkillsChartProperties({ block, onChange }) {
         />
       </Field>
       <TitleSizeField block={block} onChange={onChange} />
+      <TitleVisibilityFields block={block} onChange={onChange} />
       <Field label="Style">
         <select
           value={block.chartStyle || 'bars'}
@@ -840,6 +917,7 @@ function LanguagesChartProperties({ block, onChange }) {
         />
       </Field>
       <TitleSizeField block={block} onChange={onChange} />
+      <TitleVisibilityFields block={block} onChange={onChange} />
       <Field label="Style">
         <select
           value={block.chartStyle || 'bars'}
@@ -1071,6 +1149,7 @@ function ContactInfoProperties({ block, onChange }) {
         />
       </Field>
       <TitleSizeField block={block} onChange={onChange} />
+      <TitleVisibilityFields block={block} onChange={onChange} />
       <Field label="Content from library">
         <select
           value={block.useLibraryContact ? 'contact' : ''}
@@ -1143,6 +1222,7 @@ function LeisureProperties({ block, onChange }) {
         />
       </Field>
       <TitleSizeField block={block} onChange={onChange} />
+      <TitleVisibilityFields block={block} onChange={onChange} />
       <Field label="Content from library">
         <select
           value={block.useLibraryHobbies ? 'hobbies' : ''}
@@ -1210,6 +1290,15 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
         />
       </Field>
       <TitleSizeField block={block} onChange={onChange} />
+      <TitleVisibilityFields block={block} onChange={onChange} />
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={block.sortByDate !== false}
+          onChange={(e) => onChange({ sortByDate: e.target.checked })}
+        />
+        Sort entries most recent first
+      </label>
       <Field label="Content from library">
         <select
           value={usesLibrary ? 'library' : ''}
@@ -1295,6 +1384,7 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
           </button>
         </div>
       )}
+      <EntryTitleStyleFields block={block} onChange={onChange} />
       <BodyTextStyleFields block={block} onChange={onChange} />
       <Field label="Alignment">
         <select

@@ -331,7 +331,7 @@ function LanguagesField({ itemsJson, fallbackText, onUpdate }) {
 // subtitle (Company / Institution), an optional location, a date range
 // with a "current/ongoing" flag, and a description (rendered as bullet
 // lines by the matching builder block — see BLOCK_TYPES.EXPERIENCE/EDUCATION).
-function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, onUpdate }) {
+function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, showSubtitle = true, showDates = true, onUpdate }) {
   const items = parseEntries(itemsJson, fallbackText)
 
   function set(next) {
@@ -371,13 +371,15 @@ function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, onUp
             </button>
           </div>
           <div className="flex items-center gap-1.5">
-            <input
-              type="text"
-              value={item.subtitle}
-              onChange={(e) => updateItem(i, { subtitle: e.target.value })}
-              placeholder={subtitleLabel}
-              className={`${inputClasses} min-w-0 flex-1`}
-            />
+            {showSubtitle && (
+              <input
+                type="text"
+                value={item.subtitle}
+                onChange={(e) => updateItem(i, { subtitle: e.target.value })}
+                placeholder={subtitleLabel}
+                className={`${inputClasses} min-w-0 flex-1`}
+              />
+            )}
             <input
               type="text"
               value={item.location}
@@ -386,31 +388,33 @@ function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, onUp
               className={`${inputClasses} min-w-0 flex-1`}
             />
           </div>
-          <div className="flex items-center gap-1.5">
-            <input
-              type="text"
-              value={item.startDate}
-              onChange={(e) => updateItem(i, { startDate: e.target.value })}
-              placeholder="Start (e.g. Jan 2022)"
-              className={`${inputClasses} min-w-0 flex-1`}
-            />
-            <input
-              type="text"
-              value={item.endDate}
-              onChange={(e) => updateItem(i, { endDate: e.target.value })}
-              placeholder="End (e.g. Jan 2024)"
-              disabled={item.current}
-              className={`${inputClasses} min-w-0 flex-1 disabled:bg-slate-50 disabled:text-slate-400`}
-            />
-            <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600">
+          {showDates && (
+            <div className="flex items-center gap-1.5">
               <input
-                type="checkbox"
-                checked={item.current}
-                onChange={(e) => updateItem(i, { current: e.target.checked })}
+                type="text"
+                value={item.startDate}
+                onChange={(e) => updateItem(i, { startDate: e.target.value })}
+                placeholder="Start (e.g. Jan 2022)"
+                className={`${inputClasses} min-w-0 flex-1`}
               />
-              Present
-            </label>
-          </div>
+              <input
+                type="text"
+                value={item.endDate}
+                onChange={(e) => updateItem(i, { endDate: e.target.value })}
+                placeholder="End (e.g. Jan 2024)"
+                disabled={item.current}
+                className={`${inputClasses} min-w-0 flex-1 disabled:bg-slate-50 disabled:text-slate-400`}
+              />
+              <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={item.current}
+                  onChange={(e) => updateItem(i, { current: e.target.checked })}
+                />
+                Present
+              </label>
+            </div>
+          )}
           <textarea
             rows={2}
             value={item.description}
@@ -483,8 +487,10 @@ function SlotCard({ slot, library, onChange, onBlur }) {
         <EntriesField
           itemsJson={library[`${slot.key}Items`]}
           fallbackText={library[slot.key]}
-          titleLabel={slot.key === 'education' ? 'Degree' : 'Job Role'}
+          titleLabel={slot.key === 'education' ? 'Degree' : slot.key === 'selectedWorks' ? 'Project Title' : 'Job Role'}
           subtitleLabel={slot.key === 'education' ? 'Institution Name' : 'Company Name'}
+          showSubtitle={slot.key !== 'selectedWorks'}
+          showDates={slot.key !== 'selectedWorks'}
           onUpdate={(items) => {
             onChange(`${slot.key}Items`, JSON.stringify(items))
             onChange(slot.key, composeEntriesText(items))

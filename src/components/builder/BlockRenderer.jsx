@@ -7,7 +7,7 @@ import {
 } from '../../utils/blockTypes'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
-import { parseChecklist, parseEntries, parseLanguages } from '../../utils/contentLists'
+import { parseChecklist, parseEntries, parseLanguages, sortEntriesByDate } from '../../utils/contentLists'
 import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
 
@@ -75,13 +75,26 @@ function displayText(text, block) {
   return text
 }
 
+// Global Style's Title/Body font fields fall back to the legacy single
+// `fontFamily` (a template saved before they existed only has that one),
+// and ultimately to `undefined` (inherit the page's own — see Canvas.jsx,
+// which sets the page itself to the body font) if neither is set either.
+function resolveTitleFont(globalStyle) {
+  return globalStyle.titleFontFamily || globalStyle.fontFamily || undefined
+}
+function resolveBodyFont(globalStyle) {
+  return globalStyle.bodyFontFamily || globalStyle.fontFamily || undefined
+}
+
 // Shared inline style for "rich" text blocks (heading/text/quote): font,
 // size in px, letter spacing, line height, text and background color.
-// `null`/`undefined` leave the value inherited from the sheet.
-function typographyStyle(block) {
+// `null`/`undefined` leave the value inherited from the sheet. `fallbackFont`
+// is the global Title or Body font (whichever this block counts as), used
+// only when the block has no `fontFamily` override of its own.
+function typographyStyle(block, fallbackFont) {
   return {
     color: block.color || undefined,
-    fontFamily: block.fontFamily || undefined,
+    fontFamily: block.fontFamily || fallbackFont,
     fontSize: block.fontSize ? `${block.fontSize}px` : undefined,
     letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : undefined,
     lineHeight: block.lineHeight || undefined,
@@ -112,9 +125,9 @@ const HEADING_SIZE_CLASSES = {
 // "border-b border-slate-200 pb-1.5" classes (on this element or, for a
 // title that sits in a row with a button, on the row) to also match the
 // underline rule those headings use.
-function sectionTitleStyle(block, color) {
+function sectionTitleStyle(block, color, fallbackFont) {
   const sizePx = block.fontSize || HEADING_SIZE_PX[block.titleSize || 'md'] || HEADING_SIZE_PX.md
-  return { fontSize: `${sizePx}px`, fontWeight: 700, color, fontFamily: block.fontFamily || undefined }
+  return { fontSize: `${sizePx}px`, fontWeight: 700, color, fontFamily: block.fontFamily || fallbackFont }
 }
 
 // A block can be "linked" to a Content Library entry (block.contentSlot):
@@ -182,13 +195,14 @@ function SkillDots({ label, level, color, dotSize = 10, dotCount = 5 }) {
 // Shared by the Technical Skills and Languages chart blocks: same three
 // styles (bars/dots/tags), same "cycle style" hover button, same dot-size
 // control — only the underlying items differ.
-function Chart({ block, items, onUpdateBlock, accentColor }) {
+function Chart({ block, items, onUpdateBlock, accentColor, titleFont }) {
   const chartStyle = block.chartStyle || 'bars'
+  const showTitle = block.title && block.showTitle !== false
   return (
     <div className="group/chart flex flex-col gap-3">
-      <div className={`flex items-end justify-between ${block.title ? 'border-b border-slate-200 pb-1.5' : ''}`}>
-        {block.title && (
-          <p style={sectionTitleStyle(block, block.titleColor || accentColor)}>{block.title}</p>
+      <div className={`flex items-end justify-between ${showTitle && block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}`}>
+        {showTitle && (
+          <p style={sectionTitleStyle(block, block.titleColor || accentColor, titleFont)}>{block.title}</p>
         )}
         {onUpdateBlock && (
           <button
@@ -305,7 +319,7 @@ export default function BlockRenderer({
           <div>
             <p
               className="whitespace-pre-line text-lg font-bold leading-tight"
-              style={{ color: block.color || undefined }}
+              style={{ color: block.color || undefined, fontFamily: resolveTitleFont(globalStyle) }}
             >
               {resolvedName}
             </p>
@@ -342,7 +356,10 @@ export default function BlockRenderer({
       // accent-colored section titles, so this is what actually lets the
       // Global Style panel's "Primary color" affect them. An explicit
       // block.color (a one-off override on a specific heading) still wins.
-      const style = { ...typographyStyle(block), color: block.color || globalStyle.primaryColor }
+      const style = {
+        ...typographyStyle(block, resolveTitleFont(globalStyle)),
+        color: block.color || globalStyle.primaryColor,
+      }
       return (
         <Tag
           className={`whitespace-pre-line ${sizeClass} ${textStyleClasses(block)} ${
@@ -364,18 +381,44 @@ export default function BlockRenderer({
       // existed have no showTitle field at all and stay untitled, since
       // the built-in templates already pair these bindings with their own
       // separate Heading block.
-      const slotLabel = block.contentSlot
-        ? CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.label
-        : null
-      const title = block.showTitle === true && slotLabel ? slotLabel : null
+      const boundSlot = block.contentSlot ? CONTENT_SLOTS.find((s) => s.key === block.contentSlot) : null
+      const title = block.showTitle === true && boundSlot?.label ? boundSlot.label : null
+      const bodyFont = resolveBodyFont(globalStyle)
 
-      const body = block.list ? (
+      // A Text block bound to an "entries" library slot (e.g. Selected
+      // Works: Title / City, Country / Description) renders each entry
+      // structurally instead of as flat text — the same shape as the
+      // dedicated Experience/Education blocks, just without their own
+      // date fields.
+      const body = boundSlot?.type === 'entries' ? (
+        <div className="flex flex-col gap-3">
+          {parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]).map((item, i) => (
+            <div key={item.id || i} className="flex flex-col gap-0.5">
+              {item.title && (
+                <p className="text-base font-bold" style={{ fontFamily: resolveTitleFont(globalStyle) }}>
+                  {item.title}
+                </p>
+              )}
+              {(item.subtitle || item.location) && (
+                <p className="text-sm text-slate-500" style={{ fontFamily: bodyFont }}>
+                  {[item.subtitle, item.location].filter((v) => v?.trim()).join(', ')}
+                </p>
+              )}
+              {item.description && (
+                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600" style={{ fontFamily: bodyFont }}>
+                  {item.description}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : block.list ? (
         (() => {
           const ListTag = block.ordered ? 'ol' : 'ul'
           return (
             <ListTag
               className={`${block.ordered ? 'list-decimal' : 'list-disc'} space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400 ${alignClass(block.align)}`}
-              style={typographyStyle(block)}
+              style={typographyStyle(block, bodyFont)}
             >
               {resolvedContent.split('\n').filter(Boolean).map((line, i) => (
                 <li key={i} className={textStyleClasses({ ...block, align: undefined })}>
@@ -388,7 +431,7 @@ export default function BlockRenderer({
       ) : (
         <p
           className={`whitespace-pre-line text-sm leading-relaxed ${textStyleClasses(block)}`}
-          style={typographyStyle(block)}
+          style={typographyStyle(block, bodyFont)}
         >
           {displayText(resolvedContent, block)}
         </p>
@@ -398,10 +441,11 @@ export default function BlockRenderer({
       return (
         <div className="flex flex-col gap-1.5">
           <p
-            className="border-b border-slate-200 pb-1.5"
+            className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
             style={sectionTitleStyle(
               { titleSize: block.titleSize, fontFamily: block.fontFamily, fontSize: block.titleFontSize },
               block.titleColor || globalStyle.primaryColor,
+              resolveTitleFont(globalStyle),
             )}
           >
             {title}
@@ -490,7 +534,7 @@ export default function BlockRenderer({
       return (
         <blockquote
           className={`border-l-4 border-primary/40 pl-3 text-sm text-slate-600 ${textStyleClasses(block)}`}
-          style={typographyStyle(block)}
+          style={typographyStyle(block, resolveBodyFont(globalStyle))}
         >
           <p>{displayText(resolvedContent, block)}</p>
           {resolvedAuthor && (
@@ -521,7 +565,15 @@ export default function BlockRenderer({
             .filter((i) => i.visible && i.text?.trim())
             .map((i) => ({ label: i.text, level: 75 }))
         : block.items
-      return <Chart block={block} items={items} onUpdateBlock={onUpdateBlock} accentColor={globalStyle.primaryColor} />
+      return (
+        <Chart
+          block={block}
+          items={items}
+          onUpdateBlock={onUpdateBlock}
+          accentColor={globalStyle.primaryColor}
+          titleFont={resolveTitleFont(globalStyle)}
+        />
+      )
     }
 
     case BLOCK_TYPES.LANGUAGES_CHART: {
@@ -530,7 +582,15 @@ export default function BlockRenderer({
             .filter((i) => i.name?.trim())
             .map((i) => ({ label: i.name, level: i.level }))
         : block.items
-      return <Chart block={block} items={items} onUpdateBlock={onUpdateBlock} accentColor={globalStyle.primaryColor} />
+      return (
+        <Chart
+          block={block}
+          items={items}
+          onUpdateBlock={onUpdateBlock}
+          accentColor={globalStyle.primaryColor}
+          titleFont={resolveTitleFont(globalStyle)}
+        />
+      )
     }
 
     case BLOCK_TYPES.QR_CODE: {
@@ -604,10 +664,10 @@ export default function BlockRenderer({
         block.align === 'center' ? 'justify-center' : block.align === 'right' ? 'justify-end' : 'justify-start'
       return (
         <div className={`flex flex-col gap-1.5 ${isRowContact ? '' : alignItems}`}>
-          {block.title && (
+          {block.title && block.showTitle !== false && (
             <p
-              className="mb-0.5 w-full border-b border-slate-200 pb-1.5"
-              style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor)}
+              className={`w-full ${block.titleRule !== false ? 'mb-0.5 border-b border-slate-200 pb-1.5' : ''}`}
+              style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
               {block.title}
             </p>
@@ -617,6 +677,7 @@ export default function BlockRenderer({
               isRowContact ? `flex-wrap items-center gap-x-4 gap-y-1.5 ${justify}` : `flex-col gap-1.5 ${alignItems}`
             }`}
             style={{
+              fontFamily: resolveBodyFont(globalStyle),
               fontSize: block.bodyFontSize ? `${block.bodyFontSize}px` : undefined,
               lineHeight: block.lineSpacing || undefined,
               rowGap: block.lineSpacing && !isRowContact ? `${block.lineSpacing * 6}px` : undefined,
@@ -641,15 +702,18 @@ export default function BlockRenderer({
         : block.items
       return (
         <div className={`flex flex-col gap-2 ${alignClass(block.align)}`}>
-          {block.title && (
+          {block.title && block.showTitle !== false && (
             <p
-              className="border-b border-slate-200 pb-1.5"
-              style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor)}
+              className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
+              style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
               {block.title}
             </p>
           )}
-          <ul className="list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400">
+          <ul
+            className="list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400"
+            style={{ fontFamily: resolveBodyFont(globalStyle) }}
+          >
             {items.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
@@ -663,15 +727,22 @@ export default function BlockRenderer({
       const isExperience = block.type === BLOCK_TYPES.EXPERIENCE
       const librarySlot = isExperience ? 'experience' : 'education'
       const usesLibrary = isExperience ? block.useLibraryExperience : block.useLibraryEducation
-      const items = usesLibrary
+      const rawItems = usesLibrary
         ? parseEntries(library[`${librarySlot}Items`], library[librarySlot])
         : block.items || []
+      const items = block.sortByDate !== false ? sortEntriesByDate(rawItems) : rawItems
+      const bodyFont = resolveBodyFont(globalStyle)
+      const entryTitleStyle = {
+        fontSize: block.entryTitleFontSize ? `${block.entryTitleFontSize}px` : undefined,
+        color: block.entryTitleColor || undefined,
+        fontFamily: resolveTitleFont(globalStyle),
+      }
       return (
         <div className={`flex flex-col gap-3 ${alignClass(block.align)}`}>
-          {block.title && (
+          {block.title && block.showTitle !== false && (
             <p
-              className="border-b border-slate-200 pb-1.5"
-              style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor)}
+              className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
+              style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
               {block.title}
             </p>
@@ -683,12 +754,17 @@ export default function BlockRenderer({
               .join(' – ')
             const descriptionLines = (item.description || '').split('\n').filter(Boolean)
             const bodyStyle = {
+              fontFamily: bodyFont,
               fontSize: block.bodyFontSize ? `${block.bodyFontSize}px` : undefined,
               lineHeight: block.lineSpacing || undefined,
             }
             return (
               <div key={item.id || i} className="flex flex-col gap-0.5">
-                {item.title && <p className="text-base font-bold">{item.title}</p>}
+                {item.title && (
+                  <p className="text-base font-bold" style={entryTitleStyle}>
+                    {item.title}
+                  </p>
+                )}
                 {(subLine || dateRange) && (
                   <p className="text-sm text-slate-500" style={bodyStyle}>
                     {[subLine, dateRange].filter(Boolean).join(' / ')}

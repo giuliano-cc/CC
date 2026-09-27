@@ -199,6 +199,7 @@ export const BLOCK_DEFINITIONS = [
       // can be matched to a sibling heading's size without resizing the
       // paragraph itself.
       showTitle: true,
+      titleRule: true,
       titleSize: 'md',
       titleColor: null,
       // A separate override from the body's own `fontSize` above, so
@@ -281,6 +282,8 @@ export const BLOCK_DEFINITIONS = [
     icon: BarChart3,
     defaultProps: {
       title: 'Technical Skills',
+      showTitle: true,
+      titleRule: true,
       titleSize: 'md',
       titleColor: null,
       fontFamily: null,
@@ -304,6 +307,8 @@ export const BLOCK_DEFINITIONS = [
     icon: LanguagesIcon,
     defaultProps: {
       title: 'Languages',
+      showTitle: true,
+      titleRule: true,
       titleSize: 'md',
       titleColor: null,
       fontFamily: null,
@@ -350,6 +355,8 @@ export const BLOCK_DEFINITIONS = [
     icon: Contact,
     defaultProps: {
       title: 'Contact Info',
+      showTitle: true,
+      titleRule: true,
       titleSize: 'md',
       titleColor: null,
       fontFamily: null,
@@ -372,10 +379,19 @@ export const BLOCK_DEFINITIONS = [
     icon: Briefcase,
     defaultProps: {
       title: 'Experience',
+      showTitle: true,
+      titleRule: true,
       titleSize: 'md',
       titleColor: null,
       fontFamily: null,
       fontSize: null,
+      // The per-entry title ("Job Role") — separate from the block's own
+      // section title above, and from `bodyFontSize` below (the
+      // subtitle/date line and description), so each of the three can be
+      // sized/colored independently.
+      entryTitleFontSize: null,
+      entryTitleColor: null,
+      sortByDate: true,
       items: [
         {
           id: 'exp-default-1',
@@ -410,10 +426,15 @@ export const BLOCK_DEFINITIONS = [
     icon: GraduationCap,
     defaultProps: {
       title: 'Education',
+      showTitle: true,
+      titleRule: true,
       titleSize: 'md',
       titleColor: null,
       fontFamily: null,
       fontSize: null,
+      entryTitleFontSize: null,
+      entryTitleColor: null,
+      sortByDate: true,
       items: [
         {
           id: 'edu-default-1',
@@ -438,6 +459,8 @@ export const BLOCK_DEFINITIONS = [
     icon: Sparkles,
     defaultProps: {
       title: 'Hobbies & Interests',
+      showTitle: true,
+      titleRule: true,
       titleSize: 'md',
       titleColor: null,
       fontFamily: null,
@@ -486,7 +509,7 @@ export const SECTION_TITLE_TYPES = [
 // defaultProps and the TEXT case in BlockRenderer.jsx). Both kinds share
 // the same `titleSize`/`titleColor` fields.
 function hasSectionTitle(block) {
-  if (SECTION_TITLE_TYPES.includes(block.type)) return !!block.title
+  if (SECTION_TITLE_TYPES.includes(block.type)) return !!block.title && block.showTitle !== false
   if (block.type === BLOCK_TYPES.TEXT) return block.showTitle === true && !!block.contentSlot
   return false
 }
