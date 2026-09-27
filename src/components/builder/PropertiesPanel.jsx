@@ -141,59 +141,80 @@ function GlobalStylePanel() {
             Editing one applies to every block using that style across the template.
           </p>
           <div className="flex flex-col divide-y divide-slate-100 rounded-md border border-slate-200">
-            {typographyRows.map((row) => (
-              <div key={row.key} className="flex flex-col gap-1.5 px-2.5 py-2 text-xs">
-                <span
-                  className="truncate"
-                  style={{
-                    fontWeight: row.bold ? 700 : 400,
-                    color: row.color || globalStyle.textColor,
-                    fontFamily: row.fontFamily || undefined,
-                  }}
-                >
-                  {row.label}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="number"
-                    min={8}
-                    max={96}
-                    value={row.sizePx}
-                    onChange={(e) => applyTypographyChange(row, { fontSize: Number(e.target.value) })}
-                    className={`${inputClasses} !w-14 shrink-0 py-1`}
-                    title="Size (px)"
-                  />
-                  <label className="flex shrink-0 items-center gap-1 text-slate-600">
+            {typographyRows.map((row) => {
+              // Headings (and section titles, which merge into an H2 row)
+              // track the primary/accent color by default; body text and
+              // quotes track the plain text color — matching each render
+              // path's own fallback, so this preview never lies about what
+              // "inherited" actually looks like.
+              const inheritedColor =
+                row.matchType === BLOCK_TYPES.HEADING ? globalStyle.primaryColor : globalStyle.textColor
+              return (
+                <div key={row.key} className="flex flex-col gap-1.5 px-2.5 py-2 text-xs">
+                  <span
+                    className="truncate"
+                    style={{
+                      fontWeight: row.bold ? 700 : 400,
+                      color: row.color || inheritedColor,
+                      fontFamily: row.fontFamily || undefined,
+                    }}
+                  >
+                    {row.label}
+                  </span>
+                  <div className="flex items-center gap-1.5">
                     <input
-                      type="checkbox"
-                      checked={row.bold}
-                      onChange={(e) => applyTypographyChange(row, { bold: e.target.checked })}
+                      type="number"
+                      min={8}
+                      max={96}
+                      value={row.sizePx}
+                      onChange={(e) => applyTypographyChange(row, { fontSize: Number(e.target.value) })}
+                      className={`${inputClasses} !w-14 shrink-0 py-1`}
+                      title="Size (px)"
                     />
-                    Bold
-                  </label>
-                  <input
-                    type="color"
-                    value={row.color || globalStyle.textColor}
-                    onChange={(e) => applyTypographyChange(row, { color: e.target.value })}
-                    className="h-7 w-7 shrink-0 cursor-pointer rounded-md border border-slate-300"
-                    title="Color"
-                  />
+                    <label className="flex shrink-0 items-center gap-1 text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={row.bold}
+                        onChange={(e) => applyTypographyChange(row, { bold: e.target.checked })}
+                      />
+                      Bold
+                    </label>
+                    <input
+                      type="color"
+                      value={row.color || inheritedColor}
+                      onChange={(e) => applyTypographyChange(row, { color: e.target.value })}
+                      className="h-7 w-7 shrink-0 cursor-pointer rounded-md border border-slate-300"
+                      title={row.color ? 'Color (custom — click × to inherit again)' : 'Color (inherited from Primary color)'}
+                    />
+                    {row.color && (
+                      <button
+                        type="button"
+                        onClick={() => applyTypographyChange(row, { color: null })}
+                        className="shrink-0 rounded-md px-1.5 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        title="Reset to inherit the global Primary/Text color"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={row.fontFamily || ''}
+                      onChange={(e) => applyTypographyChange(row, { fontFamily: e.target.value || null })}
+                      className={`${inputClasses} py-1`}
+                      title="Font — leave as inherited to use the global one"
+                    >
+                      <option value="">Inherit from global style</option>
+                      {FONT_FAMILY_OPTIONS.filter((opt) => opt.value).map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <select
-                  value={row.fontFamily || ''}
-                  onChange={(e) => applyTypographyChange(row, { fontFamily: e.target.value || null })}
-                  className={`${inputClasses} py-1`}
-                  title="Font — leave as inherited to use the global one"
-                >
-                  <option value="">Inherit from global style</option>
-                  {FONT_FAMILY_OPTIONS.filter((opt) => opt.value).map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -419,6 +440,7 @@ function ColumnsProperties({ block }) {
 }
 
 function SkillsChartProperties({ block, onChange }) {
+  const { globalStyle } = useBuilder()
   const linesValue = (block.items || []).map((i) => `${i.label}|${i.level}`).join('\n')
 
   function handleLinesChange(text) {
@@ -498,18 +520,31 @@ function SkillsChartProperties({ block, onChange }) {
         </Field>
       )}
       <Field label="Bar color">
-        <input
-          type="color"
-          value={block.color || '#2563eb'}
-          onChange={(e) => onChange({ color: e.target.value })}
-          className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
-        />
+        <div className="flex items-center gap-1.5">
+          <input
+            type="color"
+            value={block.color || globalStyle.primaryColor}
+            onChange={(e) => onChange({ color: e.target.value })}
+            className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
+          />
+          {block.color && (
+            <button
+              type="button"
+              onClick={() => onChange({ color: null })}
+              className="shrink-0 rounded-md px-1.5 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              title="Reset to inherit the global Primary color"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </Field>
     </div>
   )
 }
 
 function LanguagesChartProperties({ block, onChange }) {
+  const { globalStyle } = useBuilder()
   const linesValue = (block.items || []).map((i) => `${i.label}|${i.level}`).join('\n')
 
   function handleLinesChange(text) {
@@ -580,12 +615,24 @@ function LanguagesChartProperties({ block, onChange }) {
         </Field>
       )}
       <Field label="Bar color">
-        <input
-          type="color"
-          value={block.color || '#2563eb'}
-          onChange={(e) => onChange({ color: e.target.value })}
-          className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
-        />
+        <div className="flex items-center gap-1.5">
+          <input
+            type="color"
+            value={block.color || globalStyle.primaryColor}
+            onChange={(e) => onChange({ color: e.target.value })}
+            className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
+          />
+          {block.color && (
+            <button
+              type="button"
+              onClick={() => onChange({ color: null })}
+              className="shrink-0 rounded-md px-1.5 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              title="Reset to inherit the global Primary color"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </Field>
     </div>
   )
@@ -693,6 +740,16 @@ function SocialIconsProperties({ block, onChange }) {
           </button>
         </div>
       )}
+      <Field label="Layout">
+        <select
+          value={block.layout || 'row'}
+          onChange={(e) => onChange({ layout: e.target.value })}
+          className={inputClasses}
+        >
+          <option value="row">Row</option>
+          <option value="stacked">Stacked</option>
+        </select>
+      </Field>
       <Field label="Alignment">
         <select
           value={block.align}
@@ -760,6 +817,16 @@ function ContactInfoProperties({ block, onChange }) {
         />
         Show icons next to each field
       </label>
+      <Field label="Layout">
+        <select
+          value={block.layout || 'stacked'}
+          onChange={(e) => onChange({ layout: e.target.value })}
+          className={inputClasses}
+        >
+          <option value="stacked">Stacked</option>
+          <option value="row">Row</option>
+        </select>
+      </Field>
       <Field label="Alignment">
         <select
           value={block.align}

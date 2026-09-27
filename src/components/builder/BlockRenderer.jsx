@@ -150,7 +150,7 @@ function SkillBar({ label, level, color }) {
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
         <div
           className="h-full rounded-full"
-          style={{ width: `${Math.max(0, Math.min(100, level))}%`, backgroundColor: color || '#2563eb' }}
+          style={{ width: `${Math.max(0, Math.min(100, level))}%`, backgroundColor: color }}
         />
       </div>
     </div>
@@ -170,7 +170,7 @@ function SkillDots({ label, level, color, dotSize = 10 }) {
             style={{
               width: dotSize,
               height: dotSize,
-              backgroundColor: i < filled ? color || '#2563eb' : '#e2e8f0',
+              backgroundColor: i < filled ? color : '#e2e8f0',
             }}
           />
         ))}
@@ -209,16 +209,22 @@ function Chart({ block, items, onUpdateBlock, accentColor }) {
       {chartStyle === 'tags' ? (
         <div className="flex flex-wrap gap-2">
           {items.map((item, i) => (
-            <SkillTag key={i} label={item.label} color={block.color} />
+            <SkillTag key={i} label={item.label} color={block.color || accentColor} />
           ))}
         </div>
       ) : (
         <div className="flex flex-col gap-2.5">
           {items.map((item, i) =>
             chartStyle === 'dots' ? (
-              <SkillDots key={i} label={item.label} level={item.level} color={block.color} dotSize={block.dotSize} />
+              <SkillDots
+                key={i}
+                label={item.label}
+                level={item.level}
+                color={block.color || accentColor}
+                dotSize={block.dotSize}
+              />
             ) : (
-              <SkillBar key={i} label={item.label} level={item.level} color={block.color} />
+              <SkillBar key={i} label={item.label} level={item.level} color={block.color || accentColor} />
             ),
           )}
         </div>
@@ -231,7 +237,7 @@ function SkillTag({ label, color }) {
   return (
     <span
       className="rounded-full px-2.5 py-1 text-xs font-medium text-white"
-      style={{ backgroundColor: color || '#2563eb' }}
+      style={{ backgroundColor: color }}
     >
       {label}
     </span>
@@ -519,10 +525,22 @@ export default function BlockRenderer({
       const items = block.useLibraryLinks
         ? parseSocialLinks(library.socialLinks).filter((i) => i.url)
         : block.items.filter((i) => i.url)
-      const justify =
-        block.align === 'center' ? 'justify-center' : block.align === 'right' ? 'justify-end' : 'justify-start'
+      const isStackedSocial = block.layout === 'stacked'
+      const justify = isStackedSocial
+        ? block.align === 'center'
+          ? 'items-center'
+          : block.align === 'right'
+            ? 'items-end'
+            : 'items-start'
+        : block.align === 'center'
+          ? 'justify-center'
+          : block.align === 'right'
+            ? 'justify-end'
+            : 'justify-start'
       return (
-        <div className={`flex flex-wrap items-center gap-4 ${justify}`}>
+        <div
+          className={`flex gap-4 ${isStackedSocial ? `flex-col ${justify}` : `flex-wrap items-center ${justify}`}`}
+        >
           {items.map((item, i) => (
             <SocialBadge key={i} platform={item.platform} url={item.url} />
           ))}
@@ -545,9 +563,12 @@ export default function BlockRenderer({
             { key: 'website', value: block.website, Icon: Globe },
           ]
       const visible = fields.filter((f) => f.value?.trim())
+      const isRowContact = block.layout === 'row'
       const alignItems = block.align === 'center' ? 'items-center' : block.align === 'right' ? 'items-end' : 'items-start'
+      const justify =
+        block.align === 'center' ? 'justify-center' : block.align === 'right' ? 'justify-end' : 'justify-start'
       return (
-        <div className={`flex flex-col gap-1.5 ${alignItems}`}>
+        <div className={`flex flex-col gap-1.5 ${isRowContact ? '' : alignItems}`}>
           {block.title && (
             <p
               className="mb-0.5 w-full border-b border-slate-200 pb-1.5"
@@ -556,7 +577,11 @@ export default function BlockRenderer({
               {block.title}
             </p>
           )}
-          <div className={`flex flex-col gap-1.5 text-sm text-slate-600 ${alignItems}`}>
+          <div
+            className={`flex gap-1.5 text-sm text-slate-600 ${
+              isRowContact ? `flex-wrap items-center gap-x-4 ${justify}` : `flex-col ${alignItems}`
+            }`}
+          >
             {visible.map((f) => (
               <span key={f.key} className="flex items-center gap-2">
                 {block.showIcons && <f.Icon size={14} className="shrink-0 text-slate-400" />}

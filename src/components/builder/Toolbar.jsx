@@ -140,9 +140,17 @@ export default function Toolbar() {
             type="color"
             value={selectedBlock.color || '#1e293b'}
             onChange={(e) => updateBlock(selectedBlock.id, { color: e.target.value })}
-            title="Text color"
+            title={selectedBlock.color ? 'Text color (custom)' : 'Text color (inherited)'}
             className="h-8 w-8 shrink-0 cursor-pointer rounded-md border border-slate-200"
           />
+          {selectedBlock.color && (
+            <ToolbarButton
+              label="Reset text color to inherit"
+              onClick={() => updateBlock(selectedBlock.id, { color: null })}
+            >
+              <span className="text-xs">✕</span>
+            </ToolbarButton>
+          )}
 
           <div className="mx-2 h-5 w-px shrink-0 bg-slate-200" />
         </>

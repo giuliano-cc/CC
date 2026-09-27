@@ -332,6 +332,7 @@ export const BLOCK_DEFINITIONS = [
       ],
       useLibraryLinks: false,
       align: 'left',
+      layout: 'row',
     },
   },
   {
@@ -351,6 +352,7 @@ export const BLOCK_DEFINITIONS = [
       useLibraryContact: false,
       showIcons: true,
       align: 'left',
+      layout: 'stacked',
     },
   },
   {
