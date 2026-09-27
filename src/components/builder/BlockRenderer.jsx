@@ -329,12 +329,19 @@ export default function BlockRenderer({
     case BLOCK_TYPES.HEADING: {
       const Tag = block.level || 'h1'
       const sizeClass = block.fontSize ? '' : HEADING_SIZE_CLASSES[block.size] || HEADING_SIZE_CLASSES.md
+      // A heading with no color of its own tracks the template's primary
+      // (accent) color, not the plain body text color it'd otherwise
+      // inherit — every built-in template's headings are deliberately
+      // accent-colored section titles, so this is what actually lets the
+      // Global Style panel's "Primary color" affect them. An explicit
+      // block.color (a one-off override on a specific heading) still wins.
+      const style = { ...typographyStyle(block), color: block.color || globalStyle.primaryColor }
       return (
         <Tag
           className={`whitespace-pre-line ${sizeClass} ${textStyleClasses(block)} ${
             block.rule ? 'border-b border-slate-200 pb-1.5' : ''
           }`}
-          style={typographyStyle(block)}
+          style={style}
         >
           {displayText(resolvedContent, block)}
         </Tag>

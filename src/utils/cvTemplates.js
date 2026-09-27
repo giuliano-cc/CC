@@ -10,7 +10,7 @@
 // notes). Like the resume blocks on page 0, these have no x/y — they
 // auto-stack top to bottom the first time the template loads (see
 // utils/layout.js seedFreeLayout), and can be freely moved from there.
-function secondCvPageBlocks(prefix, accentColor) {
+function secondCvPageBlocks(prefix) {
   return [
     {
       id: `${prefix}-p2-works-h`,
@@ -20,7 +20,7 @@ function secondCvPageBlocks(prefix, accentColor) {
       align: 'left',
       bold: true,
       size: 'md',
-      color: accentColor,
+      color: null,
       rule: true,
       page: 1,
     },
@@ -40,7 +40,7 @@ function secondCvPageBlocks(prefix, accentColor) {
       align: 'left',
       bold: true,
       size: 'md',
-      color: accentColor,
+      color: null,
       rule: true,
       page: 1,
     },
@@ -61,7 +61,7 @@ function secondCvPageBlocks(prefix, accentColor) {
       align: 'left',
       bold: true,
       size: 'md',
-      color: accentColor,
+      color: null,
       rule: true,
       page: 1,
     },
@@ -82,7 +82,7 @@ function secondCvPageBlocks(prefix, accentColor) {
       align: 'left',
       bold: true,
       size: 'md',
-      color: accentColor,
+      color: null,
       rule: true,
       page: 1,
     },
@@ -103,7 +103,7 @@ function secondCvPageBlocks(prefix, accentColor) {
       align: 'left',
       bold: true,
       size: 'md',
-      color: accentColor,
+      color: null,
       rule: true,
       page: 1,
     },
@@ -123,7 +123,7 @@ function secondCvPageBlocks(prefix, accentColor) {
       align: 'left',
       bold: true,
       size: 'md',
-      color: accentColor,
+      color: null,
       rule: true,
       page: 1,
     },
@@ -142,7 +142,7 @@ function secondCvPageBlocks(prefix, accentColor) {
 // the resume it follows, bound to the same Content Library slots
 // (name/contact) so they never fall out of sync, plus its own Cover
 // Letter Body slot.
-function coverLetterBlocks(prefix, accentColor) {
+function coverLetterBlocks(prefix) {
   return [
     {
       id: `${prefix}-cl-name`,
@@ -154,7 +154,7 @@ function coverLetterBlocks(prefix, accentColor) {
       italic: false,
       underline: false,
       size: 'sm',
-      color: accentColor,
+      color: null,
       rule: false,
       contentSlot: 'name',
       page: 2,
@@ -320,8 +320,8 @@ export const CV_TEMPLATES = [
           },
         ],
       },
-      ...secondCvPageBlocks('cv1', null),
-      ...coverLetterBlocks('cv1', null),
+      ...secondCvPageBlocks('cv1'),
+      ...coverLetterBlocks('cv1'),
     ],
   },
 
@@ -381,8 +381,8 @@ export const CV_TEMPLATES = [
         ],
       },
       { id: 'cv2-footer', type: 'footer', content: '© 2026 Your Studio. All rights reserved.', align: 'center', bold: false, italic: false, underline: false },
-      ...secondCvPageBlocks('cv2', '#166534'),
-      ...coverLetterBlocks('cv2', '#166534'),
+      ...secondCvPageBlocks('cv2'),
+      ...coverLetterBlocks('cv2'),
     ],
   },
 
@@ -478,8 +478,8 @@ export const CV_TEMPLATES = [
           },
         ],
       },
-      ...secondCvPageBlocks('cv3', null),
-      ...coverLetterBlocks('cv3', null),
+      ...secondCvPageBlocks('cv3'),
+      ...coverLetterBlocks('cv3'),
     ],
   },
 
@@ -571,8 +571,8 @@ export const CV_TEMPLATES = [
         ],
       },
       { id: 'cv4-contact', type: 'footer', content: 'email@example.com · portfolio-site.com', align: 'center', bold: false, italic: false, underline: false },
-      ...secondCvPageBlocks('cv4', '#ef4444'),
-      ...coverLetterBlocks('cv4', '#ef4444'),
+      ...secondCvPageBlocks('cv4'),
+      ...coverLetterBlocks('cv4'),
     ],
   },
 
@@ -588,7 +588,7 @@ export const CV_TEMPLATES = [
       fontFamily: "'Segoe UI', Arial, sans-serif",
     },
     blocks: [
-      { id: 'cv5-title', type: 'heading', content: 'Your Name', level: 'h1', align: 'left', bold: true, size: 'xl', color: '#dc2626' },
+      { id: 'cv5-title', type: 'heading', content: 'Your Name', level: 'h1', align: 'left', bold: true, size: 'xl', color: null },
       {
         id: 'cv5-cols',
         type: 'columns',
@@ -601,7 +601,7 @@ export const CV_TEMPLATES = [
                 id: 'cv5-edu',
                 type: 'education_entries',
                 title: 'Education',
-                titleColor: '#dc2626',
+                titleColor: null,
                 titleSize: 'sm',
                 items: [
                   {
@@ -628,7 +628,7 @@ export const CV_TEMPLATES = [
                 useLibraryEducation: false,
                 align: 'left',
               },
-              { id: 'cv5-skills-h', type: 'heading', content: 'Skills', level: 'h2', align: 'left', bold: true, size: 'sm', color: '#dc2626' },
+              { id: 'cv5-skills-h', type: 'heading', content: 'Skills', level: 'h2', align: 'left', bold: true, size: 'sm', color: null },
               { id: 'cv5-skills-t', type: 'text', content: 'Skill 1\nSkill 2\nSkill 3', align: 'left', list: true },
             ],
           },
@@ -638,7 +638,7 @@ export const CV_TEMPLATES = [
                 id: 'cv5-exp',
                 type: 'experience_entries',
                 title: 'Experience',
-                titleColor: '#dc2626',
+                titleColor: null,
                 titleSize: 'sm',
                 items: [
                   {
@@ -669,8 +669,8 @@ export const CV_TEMPLATES = [
           },
         ],
       },
-      ...secondCvPageBlocks('cv5', '#dc2626'),
-      ...coverLetterBlocks('cv5', '#dc2626'),
+      ...secondCvPageBlocks('cv5'),
+      ...coverLetterBlocks('cv5'),
     ],
   },
 ]
