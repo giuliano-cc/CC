@@ -6,6 +6,14 @@ import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import FreeBlock from './FreeBlock'
 
 const GRID_SIZE = 20
+// The sheet's own dimensions (794×1123) aren't exact multiples of the grid
+// size, so a grid starting flush at the top-left corner leaves a thinner
+// leftover strip on the right/bottom than on the left/top — visually
+// off-center against the page, and easy to mistake for the margin guide
+// being uneven. Centering the pattern (splitting that leftover strip
+// evenly on both sides) keeps it symmetrical regardless of the sheet size.
+const GRID_OFFSET_X = ((SHEET_WIDTH % GRID_SIZE) / 2 + GRID_SIZE) % GRID_SIZE
+const GRID_OFFSET_Y = ((SHEET_HEIGHT % GRID_SIZE) / 2 + GRID_SIZE) % GRID_SIZE
 
 export function pageDroppableId(pageIndex) {
   return `canvas-page-${pageIndex}`
@@ -62,6 +70,7 @@ function Page({ pageIndex, blocks, margin, globalStyle, showGrid }) {
             backgroundImage:
               'linear-gradient(to right, rgba(15, 23, 42, 0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(15, 23, 42, 0.08) 1px, transparent 1px)',
             backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+            backgroundPosition: `${GRID_OFFSET_X}px ${GRID_OFFSET_Y}px`,
           }}
           // A purely editor-side alignment aid — like the margin guide
           // below, excluded from the exported PDF via `pdf-ignore` (see
