@@ -188,19 +188,16 @@ function ContactGroupField({ library, onChange }) {
   return (
     <div className="grid grid-cols-2 gap-2">
       {fields.map((field) => (
-        <div key={field.key} className="flex flex-col gap-1">
-          <label className="text-xs text-slate-500" htmlFor={field.key}>
-            {field.label}
-          </label>
+        <label key={field.key} className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">{field.label}</span>
           <input
-            id={field.key}
             type="text"
             value={library[field.key]}
             onChange={(e) => onChange(field.key, e.target.value)}
             placeholder={field.placeholder}
             className={inputClasses}
           />
-        </div>
+        </label>
       ))}
     </div>
   )
@@ -431,28 +428,13 @@ function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, show
   )
 }
 
-// One CONTENT_SLOTS card — the same field-type dispatch this page always
-// had, just pulled out so it can be reused inside each collapsible
-// section instead of one long inline map.
-function SlotCard({ slot, library, onChange, onBlur }) {
+// The field-type dispatch for one slot in one language — same logic this
+// page always had, just no longer assuming there's only one language's
+// value to read/write (see SlotCard below, which renders this once per
+// language for anything other than a shared 'image' slot).
+function SlotField({ slot, library, onChange, onBlur }) {
   return (
-    <div className={cardClasses}>
-      <label className="text-sm font-semibold text-slate-800" htmlFor={slot.key}>
-        {slot.label}
-      </label>
-      {slot.isList && <p className="-mt-1 text-xs text-slate-400">One item per line.</p>}
-      {slot.type === 'checklist' && (
-        <p className="-mt-1 text-xs text-slate-400">Uncheck an item to hide it from the CV without deleting it.</p>
-      )}
-
-      {slot.type === 'image' && (
-        <PhotoField
-          value={library[slot.key]}
-          onChange={(v) => onChange(slot.key, v)}
-          variant={slot.key === 'signature' ? 'signature' : 'photo'}
-        />
-      )}
-
+    <>
       {slot.type === 'social' && (
         <SocialLinksField value={library[slot.key]} onChange={(v) => onChange(slot.key, v)} />
       )}
@@ -500,7 +482,6 @@ function SlotCard({ slot, library, onChange, onBlur }) {
 
       {!slot.type && (
         <textarea
-          id={slot.key}
           rows={slot.multiline ? 5 : 2}
           value={library[slot.key]}
           onChange={(e) => onChange(slot.key, e.target.value)}
@@ -517,6 +498,55 @@ function SlotCard({ slot, library, onChange, onBlur }) {
           className={inputClasses}
         />
       )}
+    </>
+  )
+}
+
+// One CONTENT_SLOTS card. A photo/signature ('image' type) is shared
+// across languages (see ContentLibraryContext.jsx) so it's uploaded once;
+// everything else renders side by side, one column per language, instead
+// of behind a single toggle — so writing the German version next to the
+// English one (or copying a date/number that doesn't need translating)
+// never means navigating away and losing your place.
+function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
+  if (slot.type === 'image') {
+    return (
+      <div className={cardClasses}>
+        <label className="text-sm font-semibold text-slate-800" htmlFor={slot.key}>
+          {slot.label}
+        </label>
+        <p className="-mt-1 text-xs text-slate-400">Shared across languages — no need to upload it twice.</p>
+        <PhotoField
+          value={libraries[languages[0].key][slot.key]}
+          onChange={(v) => onChange(slot.key, v)}
+          variant={slot.key === 'signature' ? 'signature' : 'photo'}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className={cardClasses}>
+      <label className="text-sm font-semibold text-slate-800">{slot.label}</label>
+      {slot.isList && <p className="-mt-1 text-xs text-slate-400">One item per line.</p>}
+      {slot.type === 'checklist' && (
+        <p className="-mt-1 text-xs text-slate-400">Uncheck an item to hide it from the CV without deleting it.</p>
+      )}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {languages.map((lang) => (
+          <div key={lang.key} className="flex flex-col gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2.5">
+            <span className="w-fit rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              {lang.label}
+            </span>
+            <SlotField
+              slot={slot}
+              library={libraries[lang.key]}
+              onChange={(key, value) => onChange(key, value, lang.key)}
+              onBlur={onBlur}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -540,19 +570,18 @@ function CollapsibleSection({ title, children }) {
           className={`shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
-      {isOpen && (
-        <div className="grid grid-cols-1 gap-4 border-t border-slate-100 p-4 md:grid-cols-2">{children}</div>
-      )}
+      {isOpen && <div className="flex flex-col gap-4 border-t border-slate-100 p-4">{children}</div>}
     </section>
   )
 }
 
 export default function ContentLibraryPage() {
-  const { library, language, setLanguage, languages, updateSlot, exportLibrary, importLibrary } = useContentLibrary()
+  const { getLibrary, languages, updateSlot, exportLibrary, importLibrary } = useContentLibrary()
   const importInputRef = useRef(null)
+  const libraries = Object.fromEntries(languages.map((l) => [l.key, getLibrary(l.key)]))
 
-  function handleChange(key, value) {
-    updateSlot(key, value)
+  function handleChange(key, value, lang) {
+    updateSlot(key, value, lang)
   }
 
   function handleBlur() {
@@ -593,26 +622,16 @@ export default function ContentLibraryPage() {
           <h1 className="text-xl font-semibold text-slate-900">Content Library</h1>
           <p className="text-sm text-slate-500">
             Write your CV content once here: name, title, profile, skills,
-            experience, photo, social links... Then, in the builder, either
-            link a block to one of these contents, or open any template and
-            click "Fill with my content" to apply everything at once.
+            experience, photo, social links... English and German are
+            written side by side below — a photo/signature is shared
+            between them, no need to upload it twice. Then, in the
+            builder, pick which language each document reads (Global
+            Style → Content language), link a block to one of these
+            contents, or open any template and click "Fill with my
+            content" to apply everything at once.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <div className="flex items-center rounded-md border border-slate-300 p-0.5" title="Content is kept separately per language — switch to write the German version">
-            {languages.map((l) => (
-              <button
-                key={l.key}
-                type="button"
-                onClick={() => setLanguage(l.key)}
-                className={`rounded px-2.5 py-1 text-xs font-medium transition ${
-                  language === l.key ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
           <input
             ref={importInputRef}
             type="file"
@@ -649,7 +668,8 @@ export default function ContentLibraryPage() {
                 <SlotCard
                   key={slot.key}
                   slot={slot}
-                  library={library}
+                  libraries={libraries}
+                  languages={languages}
                   onChange={handleChange}
                   onBlur={handleBlur}
                 />

@@ -142,8 +142,9 @@ function sectionTitleStyle(block, color, fallbackFont) {
 // in that case the displayed text is read from the library instead of
 // block.content, so the same content can be tried on different templates
 // without having to rewrite it.
-function useResolvedContent(block) {
-  const { library } = useContentLibrary()
+function useResolvedContent(block, globalStyle) {
+  const { getLibrary } = useContentLibrary()
+  const library = getLibrary(globalStyle.contentLanguage)
   if (block.contentSlot && block.contentSlot in library) {
     return library[block.contentSlot]
   }
@@ -299,8 +300,9 @@ export default function BlockRenderer({
   onUpdateBlock,
   globalStyle = {},
 }) {
-  const resolvedContent = useResolvedContent(block)
-  const { library } = useContentLibrary()
+  const resolvedContent = useResolvedContent(block, globalStyle)
+  const { getLibrary } = useContentLibrary()
+  const library = getLibrary(globalStyle.contentLanguage)
 
   switch (block.type) {
     case BLOCK_TYPES.HEADER:

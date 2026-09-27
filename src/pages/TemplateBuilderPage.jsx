@@ -30,7 +30,8 @@ function BuilderContent({ initialTitle }) {
   const isNew = !id || id === 'new'
   const { blocks, addBlock, updateBlock, pageCount, globalStyle, selectBlock, resetTo } = useBuilder()
   const builtInTemplate = CV_TEMPLATES.find((t) => t.id === id)
-  const { library } = useContentLibrary()
+  const { getLibrary } = useContentLibrary()
+  const library = getLibrary(globalStyle.contentLanguage)
 
   const [title, setTitle] = useState(initialTitle)
   const [isSaving, setIsSaving] = useState(false)

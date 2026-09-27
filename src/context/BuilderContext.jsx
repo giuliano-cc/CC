@@ -44,6 +44,11 @@ const DEFAULT_GLOBAL_STYLE = {
   bodyFontFamily: null,
   margin: 48,
   typographyScale: DEFAULT_TYPOGRAPHY_SCALE,
+  // Which Content Library language this document reads (see
+  // ContentLibraryContext.jsx's getLibrary) — a per-document choice, not a
+  // single global one, so an English and a German CV built from the same
+  // library content can exist side by side.
+  contentLanguage: 'en',
 }
 
 const BuilderContext = createContext(null)

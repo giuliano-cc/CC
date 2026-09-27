@@ -60,6 +60,7 @@ const TYPOGRAPHY_SCALE_LEVELS = [
 
 function GlobalStylePanel() {
   const { globalStyle, setGlobalStyle, blocks, updateBlock } = useBuilder()
+  const { languages } = useContentLibrary()
   const typographyRows = getTemplateTypographyStyles({ blocks })
   const typographyScale = globalStyle.typographyScale
 
@@ -133,6 +134,24 @@ function GlobalStylePanel() {
   return (
     <div className="flex flex-col gap-4">
       <h3 className="text-sm font-semibold text-slate-800">Global Style</h3>
+      <Field label="Content language">
+        <select
+          value={globalStyle.contentLanguage || 'en'}
+          onChange={(e) => setGlobalStyle((prev) => ({ ...prev, contentLanguage: e.target.value }))}
+          className={inputClasses}
+        >
+          {languages.map((l) => (
+            <option key={l.key} value={l.key}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <p className="-mt-2 text-xs text-slate-400">
+        Every block linked to the Content Library (and "Fill with my
+        content") reads this document's own language — write both versions
+        once in the library, then pick which one each document uses here.
+      </p>
       <Field label="Primary color">
         <input
           type="color"
@@ -1541,7 +1560,9 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
 // then on the displayed text is read from there, so the content stays the
 // same when switching from one template to another.
 function ContentSlotBinder({ block, onChange }) {
-  const { library } = useContentLibrary()
+  const { globalStyle } = useBuilder()
+  const { getLibrary } = useContentLibrary()
+  const library = getLibrary(globalStyle.contentLanguage)
 
   return (
     <Field label="Content from library">
@@ -1611,9 +1632,12 @@ function ImageUploadField({ onChange }) {
 // Content Library photo when imageSlot is bound) and writes the cropped
 // result back to wherever it came from.
 function ImageCropButton({ block, onChange }) {
-  const { library, updateSlot } = useContentLibrary()
+  const { getLibrary, updateSlot } = useContentLibrary()
   const [isCropping, setIsCropping] = useState(false)
-  const currentSrc = block.imageSlot ? library[block.imageSlot] : block.src
+  // `imageSlot` only ever binds to a shared 'image' slot (Photo/Signature —
+  // see ContentLibraryContext.jsx), which every language's library resolves
+  // to the same value, so no particular language needs to be passed here.
+  const currentSrc = block.imageSlot ? getLibrary()[block.imageSlot] : block.src
   if (!currentSrc) return null
 
   return (

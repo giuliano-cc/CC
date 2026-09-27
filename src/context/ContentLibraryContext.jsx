@@ -60,8 +60,18 @@ const STRUCTURED_LIST_KEYS = CONTENT_SLOTS.filter((s) =>
   ['checklist', 'languages', 'entries'].includes(s.type),
 ).map((s) => s.key)
 
-const DEFAULT_LIBRARY = {
-  ...Object.fromEntries(CONTENT_SLOTS.map((slot) => [slot.key, ''])),
+// 'image' slots (Profile Photo, Signature) are a scan/photo of the same
+// person, never wording — there's nothing to translate, so they're kept
+// once, shared across every language, instead of duplicated per language
+// like the rest of the library. `getLibrary(lang)` below merges them into
+// whichever language map is requested, so every existing consumer keeps
+// reading `library.photo`/`library.signature` unchanged.
+const IMAGE_SLOT_KEYS = CONTENT_SLOTS.filter((s) => s.type === 'image').map((s) => s.key)
+
+const DEFAULT_SHARED = Object.fromEntries(IMAGE_SLOT_KEYS.map((key) => [key, '']))
+
+const DEFAULT_LANGUAGE_LIBRARY = {
+  ...Object.fromEntries(CONTENT_SLOTS.filter((slot) => slot.type !== 'image').map((slot) => [slot.key, ''])),
   ...Object.fromEntries(STRUCTURED_LIST_KEYS.map((key) => [`${key}Items`, ''])),
 }
 
@@ -70,35 +80,72 @@ export const CONTENT_LANGUAGES = [
   { key: 'de', label: 'Deutsch' },
 ]
 
-// Every slot's content is kept once per language (English/German), so the
-// same profile can produce a CV in either without retyping it — a block
-// bound to a slot always reads whichever language is currently active
-// here. `content.en`/`content.de` each have the same shape as the old,
-// single-language flat library did, so `library` (the active language's
-// map, computed below) is exactly what every existing consumer
-// (BlockRenderer.jsx, PropertiesPanel.jsx, pdfVectorExport.js, ...) already
-// expects — none of them need to know this exists.
+function isValidLanguage(lang) {
+  return CONTENT_LANGUAGES.some((l) => l.key === lang)
+}
+
+// Picks whichever of the given per-language maps has something in each
+// image slot (English first, then German) — used both to migrate a
+// library saved before photo/signature were shared, and to fold a
+// bilingual import's own images into the shared store.
+function extractShared(...maps) {
+  return Object.fromEntries(
+    IMAGE_SLOT_KEYS.map((key) => [key, maps.map((m) => m?.[key]).find((v) => v?.trim()) || '']),
+  )
+}
+
+// Every slot's *wording* is kept once per language (English/German), so
+// the same profile can produce a CV in either without retyping it — a
+// document picks which language it reads via its own globalStyle.
+// contentLanguage (see BuilderContext.jsx/PropertiesPanel.jsx's "Content
+// language" field), not a single global switch, so different documents
+// can sit in different languages at once. `content.en`/`content.de` each
+// have the same shape as the old, single-language flat library did, and
+// `getLibrary(lang)` (the per-language map merged with the shared image
+// slots) is exactly what every existing consumer (BlockRenderer.jsx,
+// PropertiesPanel.jsx, pdfVectorExport.js, ...) already expects — none of
+// them need to know this exists.
+function blankState() {
+  return { shared: DEFAULT_SHARED, content: { en: DEFAULT_LANGUAGE_LIBRARY, de: DEFAULT_LANGUAGE_LIBRARY } }
+}
+
+// Builds a full state from whatever en/de/shared maps were found (each
+// optional) — shared usage between loadInitialState (localStorage) and
+// importLibrary (a backup file), which hit the same three legacy shapes
+// but nested differently (see the comments at each call site below).
+// `sharedMap` missing (not just empty) means it pre-dates the shared
+// image store entirely, so it's derived from whichever language already
+// had that image.
+function buildState(enMap, deMap, sharedMap) {
+  return {
+    shared: sharedMap ? { ...DEFAULT_SHARED, ...sharedMap } : { ...DEFAULT_SHARED, ...extractShared(enMap, deMap) },
+    content: {
+      en: { ...DEFAULT_LANGUAGE_LIBRARY, ...enMap },
+      de: { ...DEFAULT_LANGUAGE_LIBRARY, ...deMap },
+    },
+  }
+}
+
 function loadInitialState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { language: 'en', content: { en: DEFAULT_LIBRARY, de: DEFAULT_LIBRARY } }
+    if (!raw) return blankState()
     const parsed = JSON.parse(raw)
-    // Pre-dates the bilingual content model: a flat single-language map.
-    // Its data becomes the English copy so nothing already written is
-    // lost; German starts blank rather than duplicating it, since it was
-    // never actually written in German.
-    if (!parsed.content) {
-      return { language: 'en', content: { en: { ...DEFAULT_LIBRARY, ...parsed }, de: DEFAULT_LIBRARY } }
+    // Every shape this key has ever been saved in nests the two languages
+    // under `content` (the current `{ shared, content: { en, de } }`, and
+    // the old bilingual `{ language, content: { en, de } }` saved before
+    // photo/signature had a shared store of their own) — `parsed.shared`
+    // simply won't exist yet for the older one.
+    if (parsed.content && (parsed.content.en || parsed.content.de)) {
+      return buildState(parsed.content.en, parsed.content.de, parsed.shared)
     }
-    return {
-      language: CONTENT_LANGUAGES.some((l) => l.key === parsed.language) ? parsed.language : 'en',
-      content: {
-        en: { ...DEFAULT_LIBRARY, ...parsed.content.en },
-        de: { ...DEFAULT_LIBRARY, ...parsed.content.de },
-      },
-    }
+    // Pre-dates the bilingual content model entirely: a flat single-
+    // language map (no `content` wrapper at all). Becomes the English
+    // copy so nothing already written is lost; German starts blank rather
+    // than duplicating it, since it was never actually written in German.
+    return buildState(parsed, null, null)
   } catch {
-    return { language: 'en', content: { en: DEFAULT_LIBRARY, de: DEFAULT_LIBRARY } }
+    return blankState()
   }
 }
 
@@ -106,8 +153,7 @@ const ContentLibraryContext = createContext(null)
 
 export function ContentLibraryProvider({ children }) {
   const [state, setState] = useState(loadInitialState)
-  const { language, content } = state
-  const library = content[language]
+  const { shared, content } = state
 
   useEffect(() => {
     try {
@@ -118,71 +164,89 @@ export function ContentLibraryProvider({ children }) {
     }
   }, [state])
 
-  function setLanguage(nextLanguage) {
-    setState((prev) => ({ ...prev, language: nextLanguage }))
+  // The merged map every existing consumer expects: a language's own
+  // wording plus the shared image slots. Falls back to English for an
+  // unrecognized/missing language (e.g. a template saved before this
+  // field existed, or a corrupted value).
+  function getLibrary(lang) {
+    const safeLang = isValidLanguage(lang) ? lang : 'en'
+    return { ...content[safeLang], ...shared }
   }
 
-  function updateSlot(key, value) {
-    setState((prev) => ({
-      ...prev,
-      content: { ...prev.content, [prev.language]: { ...prev.content[prev.language], [key]: value } },
-    }))
-  }
-
-  // `setLibrary`-shaped setter, kept for the effects below (which update
-  // several keys through the plain "previous library" pattern the rest
-  // of this file already reads naturally) — writes into the active
-  // language only, same as updateSlot.
-  function setLibrary(updater) {
-    setState((prev) => ({
-      ...prev,
-      content: {
-        ...prev.content,
-        [prev.language]: typeof updater === 'function' ? updater(prev.content[prev.language]) : updater,
-      },
-    }))
-  }
-
-  // Keeps the composed 'contact' text in sync with the four structured
-  // fields, so existing contactsSlot/contentSlot bindings (which read
-  // 'contact' as one newline-joined string) keep working unchanged. Only
-  // kicks in once at least one structured field has something in it, so a
-  // legacy freeform 'contact' value typed before this feature isn't wiped.
-  const { contactAddress, contactPhone, contactEmail, contactWebsite, contact } = library
-  useEffect(() => {
-    const parts = [contactAddress, contactPhone, contactEmail, contactWebsite].filter((v) => v?.trim())
-    if (parts.length === 0) return
-    const composed = parts.join('\n')
-    if (composed !== contact) {
-      setLibrary((prev) => ({ ...prev, contact: composed }))
+  // `lang` only matters for a non-image slot — an image slot always
+  // writes to the shared store regardless of which language is passed,
+  // so every existing imageSlot caller (which never passed one) keeps
+  // working unchanged.
+  function updateSlot(key, value, lang) {
+    if (IMAGE_SLOT_KEYS.includes(key)) {
+      setState((prev) => ({ ...prev, shared: { ...prev.shared, [key]: value } }))
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contactAddress, contactPhone, contactEmail, contactWebsite])
+    const safeLang = isValidLanguage(lang) ? lang : 'en'
+    setState((prev) => ({
+      ...prev,
+      content: { ...prev.content, [safeLang]: { ...prev.content[safeLang], [key]: value } },
+    }))
+  }
 
-  // Backup: both languages' content as a downloadable JSON file (not
-  // just whichever one is active — a backup that silently dropped the
-  // other language would be a bad surprise on restore), and the reverse.
-  // Independent of localStorage, so content survives a browser change, a
-  // different port, or a cleared cache.
+  // Keeps each language's composed 'contact' text in sync with its own
+  // four structured fields, so existing contactsSlot/contentSlot bindings
+  // (which read 'contact' as one newline-joined string) keep working
+  // unchanged. Only touches a language once at least one of its
+  // structured fields has something in it, so a legacy freeform 'contact'
+  // value typed before this feature isn't wiped. Runs on every content
+  // change but bails out (same object reference, no re-render) once
+  // nothing is actually out of sync, so it can't loop on itself.
+  useEffect(() => {
+    setState((prev) => {
+      let changed = false
+      const nextContent = { ...prev.content }
+      CONTENT_LANGUAGES.forEach(({ key: lang }) => {
+        const lib = prev.content[lang]
+        const parts = [lib.contactAddress, lib.contactPhone, lib.contactEmail, lib.contactWebsite].filter((v) =>
+          v?.trim(),
+        )
+        if (parts.length === 0) return
+        const composed = parts.join('\n')
+        if (composed !== lib.contact) {
+          nextContent[lang] = { ...lib, contact: composed }
+          changed = true
+        }
+      })
+      return changed ? { ...prev, content: nextContent } : prev
+    })
+  }, [content])
+
+  // Backup: both languages' content plus the shared images, as a
+  // downloadable JSON file (not just one language — a backup that
+  // silently dropped the other language, or the photo, would be a bad
+  // surprise on restore), and the reverse. Independent of localStorage,
+  // so content survives a browser change, a different port, or a cleared
+  // cache.
   function exportLibrary() {
-    return JSON.stringify(content, null, 2)
+    return JSON.stringify({ ...content, shared }, null, 2)
   }
 
   function importLibrary(json) {
     const parsed = JSON.parse(json)
-    // A pre-bilingual export (a flat single-language map, no 'en'/'de'
-    // keys of its own) becomes the English copy, same as the localStorage
-    // migration above.
-    const isBilingual = parsed && (parsed.en || parsed.de)
-    setState((prev) => ({
-      ...prev,
-      content: isBilingual
-        ? { en: { ...DEFAULT_LIBRARY, ...parsed.en }, de: { ...DEFAULT_LIBRARY, ...parsed.de } }
-        : { en: { ...DEFAULT_LIBRARY, ...parsed }, de: prev.content.de },
-    }))
+    // A bilingual export is flat — `{ en, de, shared }` at the top level,
+    // exactly what exportLibrary above produces (no `content` wrapper,
+    // unlike the localStorage shape — see loadInitialState). A pre-
+    // bilingual export (a flat single-language map, no 'en'/'de' keys of
+    // its own) becomes the English copy, same as the localStorage
+    // migration; German (and any image already saved) is kept rather than
+    // wiped, since the import has nothing to say about them.
+    if (parsed && (parsed.en || parsed.de)) {
+      setState(buildState(parsed.en, parsed.de, parsed.shared))
+    } else {
+      setState((prev) => ({
+        shared: { ...prev.shared, ...extractShared(parsed) },
+        content: { en: { ...DEFAULT_LANGUAGE_LIBRARY, ...parsed }, de: prev.content.de },
+      }))
+    }
   }
 
-  const value = { library, language, setLanguage, languages: CONTENT_LANGUAGES, updateSlot, exportLibrary, importLibrary }
+  const value = { getLibrary, languages: CONTENT_LANGUAGES, updateSlot, exportLibrary, importLibrary }
 
   return (
     <ContentLibraryContext.Provider value={value}>
