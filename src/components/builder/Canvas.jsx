@@ -23,6 +23,7 @@ function Page({ pageIndex, blocks, margin, globalStyle }) {
     removeBlock,
     addNestedItem,
     updateBlock,
+    setActivePage,
   } = useBuilder()
   const { setNodeRef, isOver } = useDroppable({ id: pageDroppableId(pageIndex) })
 
@@ -30,7 +31,10 @@ function Page({ pageIndex, blocks, margin, globalStyle }) {
     <div
       ref={setNodeRef}
       id={`pdf-page-${pageIndex}`}
-      onClick={() => selectBlock(null)}
+      onClick={() => {
+        selectBlock(null)
+        setActivePage(pageIndex)
+      }}
       style={{
         width: SHEET_WIDTH,
         height: SHEET_HEIGHT,

@@ -26,6 +26,12 @@ export function BuilderProvider({
 }) {
   const [blocks, setBlocks] = useState(() => seedFreeLayout(initialBlocks))
   const [selectedIds, setSelectedIds] = useState([])
+  // Which page a paste (or a block dropped without a specific position)
+  // targets — the page the user last clicked into, whether that landed on
+  // a block or empty canvas, so copying a block on page 1 and then
+  // clicking onto page 2 (even without selecting anything there) pastes
+  // onto page 2, not back onto page 1.
+  const [activePage, setActivePage] = useState(0)
 
   // Undo/redo history, tracked at the `blocks` level. Discrete actions
   // (add/remove/align) always push a snapshot; continuous ones (dragging,
@@ -44,6 +50,8 @@ export function BuilderProvider({
   const futureRef = useRef([])
   const blocksRef = useRef(blocks)
   blocksRef.current = blocks
+  const activePageRef = useRef(activePage)
+  activePageRef.current = activePage
   const lastEditRef = useRef({ id: null, time: 0 })
   const [, bumpHistoryVersion] = useReducer((v) => v + 1, 0)
   const HISTORY_LIMIT = 50
@@ -99,6 +107,7 @@ export function BuilderProvider({
       return [...prev, matchNewBlockToSiblings(newBlock, pageSiblings)]
     })
     setSelectedIds([newBlock.id])
+    setActivePage(page)
     return newBlock
   }, [])
 
@@ -179,6 +188,8 @@ export function BuilderProvider({
         setSelectedIds([])
         return
       }
+      const block = findBlockById(blocksRef.current, id)
+      if (block && typeof block.page === 'number') setActivePage(block.page)
       if (options?.additive) {
         setSelectedIds((prev) =>
           prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id],
@@ -269,10 +280,16 @@ export function BuilderProvider({
   const pasteSelection = useCallback(() => {
     if (clipboardRef.current.length === 0) return
     const offset = 24
+    // Pastes onto whichever page the user last clicked into (selecting a
+    // block there, or just clicking its empty canvas) — not necessarily
+    // the page the copied block(s) came from — so copying on page 1 and
+    // clicking over to page 2 pastes there instead of bouncing back.
+    const targetPage = activePageRef.current
     const copies = clipboardRef.current.map((b) => {
       const clone = cloneBlockWithNewIds(b)
       clone.x = clamp(b.x + offset, 0, Math.max(0, SHEET_WIDTH - clone.width))
       clone.y = clamp(b.y + offset, 0, Math.max(0, SHEET_HEIGHT - clone.height))
+      clone.page = targetPage
       clone.zIndex = zCounter.current++
       return clone
     })
@@ -314,6 +331,8 @@ export function BuilderProvider({
     selectedBlockId,
     selectedIds,
     selectBlock,
+    activePage,
+    setActivePage,
     addBlock,
     addNestedItem,
     updateBlock,
