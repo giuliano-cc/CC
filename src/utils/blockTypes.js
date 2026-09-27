@@ -571,8 +571,23 @@ export const CONTENT_LIBRARY_PALETTE_ITEMS = CONTENT_SLOTS.filter(
   },
 }))
 
-function generateId() {
+export function generateId() {
   return `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+// Deep-clones a block (or nested item) for copy/paste/duplicate, giving it
+// (and, for a Columns block, every item nested inside its columns) a fresh
+// id — pasting the same block twice must never leave two blocks sharing an
+// id, which would make selecting/editing one silently affect both.
+export function cloneBlockWithNewIds(block) {
+  const clone = { ...structuredClone(block), id: generateId() }
+  if (clone.type === BLOCK_TYPES.COLUMNS) {
+    clone.columns = clone.columns.map((column) => ({
+      ...column,
+      items: column.items.map((item) => cloneBlockWithNewIds(item)),
+    }))
+  }
+  return clone
 }
 
 // Creates a top-level block, free to move on the sheet: it gets a default

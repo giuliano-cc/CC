@@ -1,5 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, useRef, useState } from 'react'
-import { createBlockInstance, createNestedBlockInstance, matchNewBlockToSiblings } from '../utils/blockTypes'
+import {
+  cloneBlockWithNewIds,
+  createBlockInstance,
+  createNestedBlockInstance,
+  matchNewBlockToSiblings,
+} from '../utils/blockTypes'
 import { findBlockById, removeBlockById, updateBlockById } from '../utils/blockTree'
 import { clamp, seedFreeLayout, SHEET_HEIGHT, SHEET_WIDTH } from '../utils/layout'
 import { alignToPage, alignToSelection, distribute } from '../utils/align'
@@ -221,6 +226,67 @@ export function BuilderProvider({
     [blocks, selectedIds],
   )
 
+  // Arrow-key nudging: moves every selected free (top-level) block by the
+  // same delta, clamped to the sheet like a drag would be. Repeated nudges
+  // in quick succession (holding an arrow key down) coalesce into a single
+  // history entry, the same way a drag or a typing burst does — otherwise
+  // one held key press could blow through the whole undo stack.
+  const nudgeSelection = useCallback(
+    (dx, dy) => {
+      const now = Date.now()
+      const last = lastEditRef.current
+      const shouldCheckpoint = last.id !== 'nudge' || now - last.time > COALESCE_MS
+      setBlocks((prev) => {
+        if (shouldCheckpoint) pushHistory(prev)
+        let next = prev
+        prev.forEach((b) => {
+          if (!selectedIds.includes(b.id) || typeof b.x !== 'number') return
+          next = updateBlockById(next, b.id, {
+            x: clamp(b.x + dx, 0, Math.max(0, SHEET_WIDTH - b.width)),
+            y: clamp(b.y + dy, 0, Math.max(0, SHEET_HEIGHT - b.height)),
+          })
+        })
+        return next
+      })
+      lastEditRef.current = { id: 'nudge', time: now }
+    },
+    [selectedIds],
+  )
+
+  // Copy/paste for free (top-level) blocks: copying stores a deep clone of
+  // the currently selected blocks (kept in a ref, not state — the
+  // clipboard isn't part of the document and shouldn't be undoable or
+  // trigger a re-render on its own); pasting drops fresh-id copies of them
+  // slightly offset from the originals, on the same page, and selects the
+  // new copies so a repeated paste keeps stepping down/right instead of
+  // stacking exactly on top of the last paste.
+  const clipboardRef = useRef([])
+  const copySelection = useCallback(() => {
+    const targets = blocks.filter((b) => selectedIds.includes(b.id) && typeof b.x === 'number')
+    if (targets.length > 0) clipboardRef.current = structuredClone(targets)
+  }, [blocks, selectedIds])
+
+  const pasteSelection = useCallback(() => {
+    if (clipboardRef.current.length === 0) return
+    const offset = 24
+    const copies = clipboardRef.current.map((b) => {
+      const clone = cloneBlockWithNewIds(b)
+      clone.x = clamp(b.x + offset, 0, Math.max(0, SHEET_WIDTH - clone.width))
+      clone.y = clamp(b.y + offset, 0, Math.max(0, SHEET_HEIGHT - clone.height))
+      clone.zIndex = zCounter.current++
+      return clone
+    })
+    // Each paste is nudged further than the last, so pasting the same
+    // clipboard repeatedly fans the copies out instead of dropping every
+    // one in an identical spot.
+    clipboardRef.current = clipboardRef.current.map((b) => ({ ...b, x: b.x + offset, y: b.y + offset }))
+    setBlocks((prev) => {
+      pushHistory(prev)
+      return [...prev, ...copies]
+    })
+    setSelectedIds(copies.map((c) => c.id))
+  }, [])
+
   const undo = useCallback(() => {
     if (pastRef.current.length === 0) return
     const previous = pastRef.current[pastRef.current.length - 1]
@@ -254,6 +320,9 @@ export function BuilderProvider({
     removeBlock,
     bringToFront,
     alignSelection,
+    nudgeSelection,
+    copySelection,
+    pasteSelection,
     undo,
     redo,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reads refs kept in sync by historyVersion bumps

@@ -41,31 +41,75 @@ const TEXTUAL_TYPES = [
   BLOCK_TYPES.FOOTER,
 ]
 
-export default function Toolbar() {
-  const { selectedBlock, updateBlock, undo, redo, canUndo, canRedo } = useBuilder()
+const ARROW_DELTAS = {
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+}
 
-  // Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z (or Ctrl+Y) to redo — ignored while
-  // typing in an input/textarea so it doesn't fight the browser's own
-  // native undo inside that field.
+export default function Toolbar() {
+  const {
+    selectedBlock,
+    selectedIds,
+    updateBlock,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    nudgeSelection,
+    copySelection,
+    pasteSelection,
+  } = useBuilder()
+
+  // Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z (or Ctrl+Y) to redo, Cmd/Ctrl+C /
+  // Cmd/Ctrl+V to copy/paste the selected block(s), and the arrow keys to
+  // nudge them by 1px (10px with Shift held) — all ignored while typing in
+  // an input/textarea so they don't fight the browser's own native
+  // shortcuts inside that field.
   useEffect(() => {
     function handleKeyDown(event) {
-      const isMod = event.metaKey || event.ctrlKey
-      if (!isMod) return
       const target = event.target
-      if (target?.closest?.('input, textarea, [contenteditable="true"]')) return
+      if (target?.closest?.('input, textarea, select, [contenteditable="true"]')) return
 
-      if (event.key.toLowerCase() === 'z') {
+      const isMod = event.metaKey || event.ctrlKey
+      if (isMod) {
+        const key = event.key.toLowerCase()
+        if (key === 'z') {
+          event.preventDefault()
+          if (event.shiftKey) redo()
+          else undo()
+          return
+        }
+        if (key === 'y') {
+          event.preventDefault()
+          redo()
+          return
+        }
+        if (key === 'c') {
+          if (selectedIds.length === 0) return
+          event.preventDefault()
+          copySelection()
+          return
+        }
+        if (key === 'v') {
+          event.preventDefault()
+          pasteSelection()
+          return
+        }
+        return
+      }
+
+      const delta = ARROW_DELTAS[event.key]
+      if (delta && selectedIds.length > 0) {
         event.preventDefault()
-        if (event.shiftKey) redo()
-        else undo()
-      } else if (event.key.toLowerCase() === 'y') {
-        event.preventDefault()
-        redo()
+        const step = event.shiftKey ? 10 : 1
+        nudgeSelection(delta[0] * step, delta[1] * step)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo])
+  }, [undo, redo, selectedIds, nudgeSelection, copySelection, pasteSelection])
 
   const isTextual = !!selectedBlock && TEXTUAL_TYPES.includes(selectedBlock.type)
   const disabled = !isTextual
