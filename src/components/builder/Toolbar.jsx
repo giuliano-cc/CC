@@ -173,6 +173,21 @@ export default function Toolbar() {
         <Underline size={16} />
       </ToolbarButton>
 
+      <select
+        value={selectedBlock?.textTransform || ''}
+        onChange={(e) =>
+          selectedBlock && updateBlock(selectedBlock.id, { textTransform: e.target.value || null })
+        }
+        disabled={disabled}
+        title="Text case"
+        className="h-8 shrink-0 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-600 outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <option value="">Aa (default)</option>
+        <option value="uppercase">ALL CAPS</option>
+        <option value="capitalize">Capitalize Each Word</option>
+        <option value="lowercase">lowercase</option>
+      </select>
+
       <div className="mx-2 h-5 w-px shrink-0 bg-slate-200" />
 
       <ToolbarButton

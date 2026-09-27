@@ -15,11 +15,18 @@ function alignClass(align) {
   return align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
 }
 
+const TEXT_TRANSFORM_CLASSES = {
+  uppercase: 'uppercase',
+  lowercase: 'lowercase',
+  capitalize: 'capitalize',
+}
+
 function textStyleClasses(block) {
   return [
     block.bold ? 'font-bold' : '',
     block.italic ? 'italic' : '',
     block.underline ? 'underline' : '',
+    TEXT_TRANSFORM_CLASSES[block.textTransform] || '',
     alignClass(block.align),
   ].join(' ')
 }
