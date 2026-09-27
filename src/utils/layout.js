@@ -59,3 +59,18 @@ export function seedFreeLayout(blocks) {
 export function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
 }
+
+// The page margin used to be a single value applied to all four sides
+// (`globalStyle.margin`); per-side overrides (`marginTop`/Right/Bottom/
+// Left) are optional on top of that, so an existing template with only
+// the old single value keeps working unchanged, and only the sides
+// someone actually customizes need their own field.
+export function resolveMargins(globalStyle) {
+  const base = globalStyle.margin ?? 0
+  return {
+    top: globalStyle.marginTop ?? base,
+    right: globalStyle.marginRight ?? base,
+    bottom: globalStyle.marginBottom ?? base,
+    left: globalStyle.marginLeft ?? base,
+  }
+}

@@ -1,8 +1,15 @@
 import { useDroppable } from '@dnd-kit/core'
 import { useState } from 'react'
-import { Grid3x3, Plus, X } from 'lucide-react'
+import { Grid3x3, Minus, Plus, X } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
-import { GRID_OFFSET_X, GRID_OFFSET_Y, GRID_SIZE, SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
+import {
+  GRID_OFFSET_X,
+  GRID_OFFSET_Y,
+  GRID_SIZE,
+  resolveMargins,
+  SHEET_HEIGHT,
+  SHEET_WIDTH,
+} from '../../utils/layout'
 import FreeBlock from './FreeBlock'
 
 export function pageDroppableId(pageIndex) {
@@ -16,7 +23,7 @@ export function parsePageDroppableId(id) {
   return match ? Number(match[1]) : null
 }
 
-function Page({ pageIndex, blocks, margin, globalStyle, showGrid }) {
+function Page({ pageIndex, blocks, margins, globalStyle, showGrid, zoom }) {
   const {
     selectedBlockId,
     selectedIds,
@@ -76,12 +83,15 @@ function Page({ pageIndex, blocks, margin, globalStyle, showGrid }) {
         />
       )}
 
-      {margin > 0 && (
+      {(margins.top > 0 || margins.right > 0 || margins.bottom > 0 || margins.left > 0) && (
         <div
-          style={{ inset: margin }}
+          style={{ top: margins.top, right: margins.right, bottom: margins.bottom, left: margins.left }}
           // `pdf-ignore`: a purely editor-side guide, excluded when
-          // rendering the PDF preview (see utils/pdfExport.js).
-          className="pdf-ignore pointer-events-none absolute rounded-sm border border-dashed border-slate-200"
+          // rendering the PDF preview (see utils/pdfExport.js). Magenta
+          // (rather than the grid's neutral gray) so the margin — the one
+          // guide that actually constrains where content is meant to sit —
+          // reads as distinct from the grid/alignment guides at a glance.
+          className="pdf-ignore pointer-events-none absolute rounded-sm border border-dashed border-fuchsia-500"
         />
       )}
 
@@ -98,10 +108,11 @@ function Page({ pageIndex, blocks, margin, globalStyle, showGrid }) {
           isSelected={selectedIds.includes(block.id)}
           isOnlySelected={selectedIds.length === 1 && selectedIds[0] === block.id}
           selectedBlockId={selectedBlockId}
-          margin={margin}
+          margins={margins}
           siblings={blocks.filter((b) => b.id !== block.id && typeof b.x === 'number')}
           globalStyle={globalStyle}
           snapToGrid={showGrid}
+          zoom={zoom}
           onGuides={setGuides}
           onSelect={selectBlock}
           onRemove={removeBlock}
@@ -128,10 +139,15 @@ function Page({ pageIndex, blocks, margin, globalStyle, showGrid }) {
   )
 }
 
+const ZOOM_MIN = 0.4
+const ZOOM_MAX = 1.5
+const ZOOM_STEP = 0.1
+
 export default function Canvas() {
   const { blocks, globalStyle, pageCount, addPage, removeLastPage } = useBuilder()
-  const margin = globalStyle.margin ?? 0
+  const margins = resolveMargins(globalStyle)
   const [showGrid, setShowGrid] = useState(false)
+  const [zoom, setZoom] = useState(1)
 
   return (
     // `justify-start` (not `justify-center`): once enough pages overflow the
@@ -141,27 +157,62 @@ export default function Canvas() {
     // become unreachable. Left-aligning keeps every page reachable by
     // scrolling right, however many there are.
     <div className="relative flex flex-1 items-start justify-start gap-6 overflow-auto bg-slate-100 p-8">
-      <button
-        type="button"
-        onClick={() => setShowGrid((v) => !v)}
-        title={showGrid ? 'Hide alignment grid' : 'Show alignment grid'}
-        className={`sticky left-8 top-8 z-20 -mr-9 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border shadow-sm transition ${
-          showGrid
-            ? 'border-primary bg-primary/10 text-primary'
-            : 'border-slate-200 bg-white text-slate-500 hover:border-primary hover:text-primary'
-        }`}
-      >
-        <Grid3x3 size={16} />
-      </button>
+      <div className="sticky left-8 top-8 z-20 -mr-9 -mb-9 flex flex-col gap-1.5">
+        <button
+          type="button"
+          onClick={() => setShowGrid((v) => !v)}
+          title={showGrid ? 'Hide alignment grid' : 'Show alignment grid'}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border shadow-sm transition ${
+            showGrid
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-slate-200 bg-white text-slate-500 hover:border-primary hover:text-primary'
+          }`}
+        >
+          <Grid3x3 size={16} />
+        </button>
+        <div className="flex flex-col items-center gap-1 rounded-md border border-slate-200 bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(ZOOM_MAX, Math.round((z + ZOOM_STEP) * 100) / 100))}
+            disabled={zoom >= ZOOM_MAX}
+            title="Zoom in"
+            className="flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <Plus size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom(1)}
+            title="Reset zoom to 100%"
+            className="w-full rounded px-1 py-0.5 text-center text-[10px] font-medium text-slate-500 hover:bg-slate-100 hover:text-primary"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 100) / 100))}
+            disabled={zoom <= ZOOM_MIN}
+            title="Zoom out"
+            className="flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <Minus size={14} />
+          </button>
+        </div>
+      </div>
       {Array.from({ length: pageCount }).map((_, pageIndex) => (
         <div key={pageIndex} className="flex flex-col items-center gap-2">
-          <Page
-            pageIndex={pageIndex}
-            blocks={blocks.filter((b) => (b.page ?? 0) === pageIndex)}
-            margin={margin}
-            globalStyle={globalStyle}
-            showGrid={showGrid}
-          />
+          <div style={{ width: SHEET_WIDTH * zoom, height: SHEET_HEIGHT * zoom }}>
+            <div style={{ width: SHEET_WIDTH, height: SHEET_HEIGHT, transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+              <Page
+                pageIndex={pageIndex}
+                blocks={blocks.filter((b) => (b.page ?? 0) === pageIndex)}
+                margins={margins}
+                globalStyle={globalStyle}
+                showGrid={showGrid}
+                zoom={zoom}
+              />
+            </div>
+          </div>
           <span className="text-xs text-slate-400">Page {pageIndex + 1}</span>
         </div>
       ))}

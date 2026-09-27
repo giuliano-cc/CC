@@ -712,14 +712,23 @@ export default function BlockRenderer({
     }
 
     case BLOCK_TYPES.COLUMNS: {
+      // `minmax(0, …)` per track (not a bare `Nfr`) — a grid track's
+      // default minimum is `auto`, i.e. its content's own min-content
+      // size, and a column's "+ Add block" <select> has a wide option
+      // ("Additional Information (other notes worth mentioning)") whose
+      // intrinsic width becomes that minimum. With two otherwise-equal
+      // columns that minimum was actually winning over the fr ratio
+      // entirely, rendering as a plain 50/50 split no matter what custom
+      // ratio was set. Pinning the minimum to 0 lets the fr ratio (and the
+      // column's own `min-w-0` below, for its content) actually control it.
       const gridTemplateColumns = block.widths?.length
-        ? block.widths.join(' ')
+        ? block.widths.map((w) => `minmax(0, ${w})`).join(' ')
         : `repeat(${block.columns.length}, minmax(0, 1fr))`
 
       return (
         <div className="grid gap-x-8 gap-y-3" style={{ gridTemplateColumns }}>
           {block.columns.map((column, colIndex) => (
-            <div key={colIndex} className="flex flex-col gap-3">
+            <div key={colIndex} className="flex min-w-0 flex-col gap-3">
               {column.items.map((item) => (
                 <div
                   key={item.id}

@@ -62,7 +62,7 @@ const GUIDE_EPS = 0.5
 // coordinates (rather than pre-offset by this block's own size) so the
 // line is drawn where the alignment actually is, whichever edge (or the
 // center) it was that matched.
-function computeGuides({ x, y, width, height }, siblings, margin) {
+function computeGuides({ x, y, width, height }, siblings, margins) {
   const left = x
   const right = x + width
   const centerX = x + width / 2
@@ -70,8 +70,8 @@ function computeGuides({ x, y, width, height }, siblings, margin) {
   const bottom = y + height
   const centerY = y + height / 2
 
-  const vCandidates = [margin, SHEET_WIDTH - margin, SHEET_WIDTH / 2]
-  const hCandidates = [margin, SHEET_HEIGHT - margin, SHEET_HEIGHT / 2]
+  const vCandidates = [margins.left, SHEET_WIDTH - margins.right, SHEET_WIDTH / 2]
+  const hCandidates = [margins.top, SHEET_HEIGHT - margins.bottom, SHEET_HEIGHT / 2]
   siblings.forEach((s) => {
     vCandidates.push(s.x, s.x + s.width, s.x + s.width / 2)
     hCandidates.push(s.y, s.y + s.height, s.y + s.height / 2)
@@ -108,10 +108,11 @@ export default function FreeBlock({
   isSelected,
   isOnlySelected,
   selectedBlockId,
-  margin = 0,
+  margins = { top: 0, right: 0, bottom: 0, left: 0 },
   siblings = [],
   globalStyle,
   snapToGrid = false,
+  zoom = 1,
   onGuides,
   onSelect,
   onRemove,
@@ -120,7 +121,7 @@ export default function FreeBlock({
 }) {
   const dragState = useRef(null)
 
-  // Plain functions, not useCallback: they close over `siblings`/`margin`,
+  // Plain functions, not useCallback: they close over `siblings`/`margins`,
   // which change on essentially every render (any block moving anywhere on
   // the page recomputes this block's sibling list) but weren't in the
   // memoization deps below — so a drag that started after some other
@@ -178,8 +179,13 @@ export default function FreeBlock({
   function handlePointerMove(event) {
     const state = dragState.current
     if (!state) return
-    const dx = event.clientX - state.startX
-    const dy = event.clientY - state.startY
+    // The page is rendered at `zoom` scale (see Canvas.jsx), but this
+    // block's own x/y/width/height are always in the page's own,
+    // unscaled coordinate space — so a screen-pixel pointer delta has to
+    // be converted back into that space, or the block would drift
+    // faster/slower than the cursor at any zoom level other than 100%.
+    const dx = (event.clientX - state.startX) / zoom
+    const dy = (event.clientY - state.startY) / zoom
 
     if (state.mode === 'move') {
       // Clamped by the block's own width/height (not MIN_WIDTH/HEIGHT), so
@@ -194,9 +200,11 @@ export default function FreeBlock({
       // own snap target.
       xTargets.push(SHEET_WIDTH / 2 - block.width / 2)
       yTargets.push(SHEET_HEIGHT / 2 - block.height / 2)
-      if (margin > 0) {
-        xTargets.push(margin, SHEET_WIDTH - margin - block.width)
-        yTargets.push(margin, SHEET_HEIGHT - margin - block.height)
+      if (margins.left > 0 || margins.right > 0) {
+        xTargets.push(margins.left, SHEET_WIDTH - margins.right - block.width)
+      }
+      if (margins.top > 0 || margins.bottom > 0) {
+        yTargets.push(margins.top, SHEET_HEIGHT - margins.bottom - block.height)
       }
       if (snapToGrid) {
         xTargets.push(nearestGridLine(x, GRID_OFFSET_X))
@@ -204,7 +212,7 @@ export default function FreeBlock({
       }
       x = snapTo(x, xTargets)
       y = snapTo(y, yTargets)
-      onGuides?.(computeGuides({ x, y, width: block.width, height: block.height }, siblings, margin))
+      onGuides?.(computeGuides({ x, y, width: block.width, height: block.height }, siblings, margins))
       onChangeGeometry({ x, y })
       return
     }
@@ -224,7 +232,7 @@ export default function FreeBlock({
     if (handle.x === 1) {
       width = clamp(state.origWidth + dx, MIN_WIDTH, SHEET_WIDTH - state.origX)
       const targets = [...rightEdgeTargets]
-      if (margin > 0) targets.push(SHEET_WIDTH - margin)
+      if (margins.right > 0) targets.push(SHEET_WIDTH - margins.right)
       if (snapToGrid) targets.push(nearestGridLine(x + width, GRID_OFFSET_X))
       width = snapTo(x + width, targets) - x
     } else if (handle.x === -1) {
@@ -233,7 +241,7 @@ export default function FreeBlock({
       width = state.origWidth - clampedDx
       x = state.origX + clampedDx
       const targets = [...leftEdgeTargets]
-      if (margin > 0) targets.push(margin)
+      if (margins.left > 0) targets.push(margins.left)
       if (snapToGrid) targets.push(nearestGridLine(x, GRID_OFFSET_X))
       const snappedX = snapTo(x, targets)
       width += x - snappedX
@@ -243,7 +251,7 @@ export default function FreeBlock({
     if (handle.y === 1) {
       height = clamp(state.origHeight + dy, MIN_HEIGHT, SHEET_HEIGHT - state.origY)
       const targets = [...bottomEdgeTargets]
-      if (margin > 0) targets.push(SHEET_HEIGHT - margin)
+      if (margins.bottom > 0) targets.push(SHEET_HEIGHT - margins.bottom)
       if (snapToGrid) targets.push(nearestGridLine(y + height, GRID_OFFSET_Y))
       height = snapTo(y + height, targets) - y
     } else if (handle.y === -1) {
@@ -252,14 +260,14 @@ export default function FreeBlock({
       height = state.origHeight - clampedDy
       y = state.origY + clampedDy
       const targets = [...topEdgeTargets]
-      if (margin > 0) targets.push(margin)
+      if (margins.top > 0) targets.push(margins.top)
       if (snapToGrid) targets.push(nearestGridLine(y, GRID_OFFSET_Y))
       const snappedY = snapTo(y, targets)
       height += y - snappedY
       y = snappedY
     }
 
-    onGuides?.(computeGuides({ x, y, width, height }, siblings, margin))
+    onGuides?.(computeGuides({ x, y, width, height }, siblings, margins))
     onChangeGeometry({ x, y, width, height })
   }
 
