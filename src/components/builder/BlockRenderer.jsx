@@ -404,56 +404,90 @@ export default function BlockRenderer({
       const bodyFont = resolveBodyFont(globalStyle)
 
       // A Text block bound to an "entries" library slot (e.g. Selected
-      // Works: Title / City, Country / Description) renders each entry
-      // structurally instead of as flat text — the same shape as the
-      // dedicated Experience/Education blocks, just without their own
-      // date fields. The block's own Font/Size/Text color fields (the
-      // same ones a plain paragraph already reads via typographyStyle)
-      // apply here too, to the title and description — overriding the
-      // title/body font and the default P1 body size when set, exactly
-      // like every other Text block.
+      // Works: Title / City, Country / dates / Description) renders each
+      // entry structurally instead of as flat text — the same shape as
+      // the dedicated Experience/Education blocks. The block's own Font/
+      // Size/Text color fields (the same ones a plain paragraph already
+      // reads via typographyStyle) apply here too, to the title and
+      // description — overriding the title/body font and the default P1
+      // body size when set, exactly like every other Text block.
       const p1SizePx = globalStyle.typographyScale?.p1?.sizePx
       const entryTitleFont = block.fontFamily || resolveTitleFont(globalStyle)
       const entryBodyFont = block.fontFamily || bodyFont
       const entrySizePx = block.fontSize || p1SizePx
+      // Letter spacing/line height/background color are block-level
+      // typography controls (same as `typographyStyle` below applies to a
+      // plain paragraph) — entries render structurally instead of as flat
+      // text, but should still honor them the same way.
+      const entryExtraStyle = {
+        letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : undefined,
+        lineHeight: block.lineHeight || undefined,
+        backgroundColor: block.bgColor || undefined,
+      }
+      const entryMetaStyle = {
+        fontFamily: entryBodyFont,
+        fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
+        ...entryExtraStyle,
+      }
       const body = boundSlot?.type === 'entries' ? (
         <div className={`flex flex-col gap-3 ${alignClass(block.align)}`}>
-          {parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]).map((item, i) => (
-            <div key={item.id || i} className="flex flex-col gap-0.5">
-              {item.title && (
-                <p
-                  className="text-base font-bold"
-                  style={{
-                    fontFamily: entryTitleFont,
-                    fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
-                    color: block.color || undefined,
-                  }}
-                >
-                  {item.title}
-                </p>
-              )}
-              {(item.subtitle || item.location) && (
-                <p
-                  className="text-sm text-slate-500"
-                  style={{ fontFamily: entryBodyFont, fontSize: entrySizePx ? `${entrySizePx}px` : undefined }}
-                >
-                  {[item.subtitle, item.location].filter((v) => v?.trim()).join(', ')}
-                </p>
-              )}
-              {item.description && (
-                <p
-                  className="whitespace-pre-line text-sm leading-relaxed text-slate-600"
-                  style={{
-                    fontFamily: entryBodyFont,
-                    fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
-                    color: block.color || undefined,
-                  }}
-                >
-                  {item.description}
-                </p>
-              )}
-            </div>
-          ))}
+          {parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]).map((item, i) => {
+            const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
+            const dateRange = [item.startDate, item.current ? 'Present' : item.endDate]
+              .filter((v) => v?.trim())
+              .join(' – ')
+            const titleStyle = {
+              fontFamily: entryTitleFont,
+              fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
+              color: block.color || undefined,
+              ...entryExtraStyle,
+            }
+            return (
+              <div key={item.id || i} className="flex flex-col gap-0.5">
+                {item.title && block.titleLocationInline && subLine ? (
+                  <p className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-bold" style={titleStyle}>
+                      {item.title}
+                    </span>
+                    <span className="text-sm text-slate-500" style={entryMetaStyle}>
+                      {subLine}
+                    </span>
+                  </p>
+                ) : (
+                  <>
+                    {item.title && (
+                      <p className="text-base font-bold" style={titleStyle}>
+                        {item.title}
+                      </p>
+                    )}
+                    {subLine && !block.titleLocationInline && (
+                      <p className="text-sm text-slate-500" style={entryMetaStyle}>
+                        {subLine}
+                      </p>
+                    )}
+                  </>
+                )}
+                {dateRange && (
+                  <p className="text-sm text-slate-500" style={entryMetaStyle}>
+                    {dateRange}
+                  </p>
+                )}
+                {item.description && (
+                  <p
+                    className="whitespace-pre-line text-sm leading-relaxed text-slate-600"
+                    style={{
+                      fontFamily: entryBodyFont,
+                      fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
+                      color: block.color || undefined,
+                      ...entryExtraStyle,
+                    }}
+                  >
+                    {item.description}
+                  </p>
+                )}
+              </div>
+            )
+          })}
         </div>
       ) : block.list ? (
         (() => {
@@ -815,14 +849,25 @@ export default function BlockRenderer({
             }
             return (
               <div key={item.id || i} className="flex flex-col gap-0.5">
-                {item.title && (
-                  <p className="text-base font-bold" style={entryTitleStyle}>
-                    {item.title}
+                {item.title && block.titleLocationInline && subLine ? (
+                  <p className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-bold" style={entryTitleStyle}>
+                      {item.title}
+                    </span>
+                    <span className="text-sm text-slate-500" style={bodyStyle}>
+                      {subLine}
+                    </span>
                   </p>
+                ) : (
+                  item.title && (
+                    <p className="text-base font-bold" style={entryTitleStyle}>
+                      {item.title}
+                    </p>
+                  )
                 )}
-                {(subLine || dateRange) && (
+                {(block.titleLocationInline ? dateRange : subLine || dateRange) && (
                   <p className="text-sm text-slate-500" style={bodyStyle}>
-                    {[subLine, dateRange].filter(Boolean).join(' / ')}
+                    {block.titleLocationInline ? dateRange : [subLine, dateRange].filter(Boolean).join(' / ')}
                   </p>
                 )}
                 {descriptionLines.length > 0 && (

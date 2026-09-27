@@ -177,6 +177,37 @@ function drawParagraph(pdf, rawText, { x, y, width, align = 'left', lineHeightMu
   return lines.length * lineHeight
 }
 
+// Title + location on one line (mirrors BlockRenderer's flex row of two
+// <span>s): jsPDF draws sequentially with a single active font/color per
+// call, so the title is measured and drawn bold first, then the sub text
+// drawn right after it on the same baseline, in its own (non-bold, gray)
+// style. Falls back to the paragraph's own alignment for the pair's start.
+function drawInlineTitleSub(
+  pdf,
+  titleText,
+  subText,
+  { x, y, width, align = 'left', titleFont, subFont, titleSizePx, subSizePx, titleColor, subColor, gap = 6 },
+) {
+  const fontSize = titleSizePx || subSizePx || pdf.getFontSize()
+  setFont(pdf, titleFont, { bold: true, sizePx: titleSizePx })
+  const titleWidth = pdf.getTextWidth(titleText)
+  setFont(pdf, subFont, { sizePx: subSizePx })
+  const subWidth = pdf.getTextWidth(subText)
+  const totalWidth = titleWidth + gap + subWidth
+  const startX = align === 'center' ? x + (width - totalWidth) / 2 : align === 'right' ? x + width - totalWidth : x
+  const baselineY = y + fontSize * 0.85
+
+  setFont(pdf, titleFont, { bold: true, sizePx: titleSizePx })
+  setTextColor(pdf, titleColor, hexToRgb(null))
+  pdf.text(titleText, startX, baselineY)
+
+  setFont(pdf, subFont, { sizePx: subSizePx })
+  setTextColor(pdf, null, subColor)
+  pdf.text(subText, startX + titleWidth + gap, baselineY)
+
+  return fontSize * 1.3
+}
+
 // A bulleted/numbered list: the marker sits on the first wrapped line of
 // each item, continuation lines indent to match (mirrors the browser's
 // `pl-5` list padding).
@@ -357,16 +388,37 @@ async function drawBlock(pdf, block, ctx) {
         const entrySizePx = block.fontSize || p1SizePx(globalStyle)
         const items = parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key])
         items.forEach((item) => {
-          if (item.title) {
-            setFont(pdf, entryTitleFont, { bold: true, sizePx: entrySizePx })
-            setTextColor(pdf, block.color, hexToRgb(globalStyle.textColor))
-            cursorY += drawParagraph(pdf, item.title, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
-          }
           const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
-          if (subLine) {
+          const dateRange = [item.startDate, item.current ? 'Present' : item.endDate].filter((v) => v?.trim()).join(' – ')
+          if (item.title && block.titleLocationInline && subLine) {
+            cursorY += drawInlineTitleSub(pdf, item.title, subLine, {
+              x,
+              y: cursorY,
+              width,
+              align: block.align,
+              titleFont: entryTitleFont,
+              subFont: entryBodyFont,
+              titleSizePx: entrySizePx,
+              subSizePx: entrySizePx,
+              titleColor: block.color || globalStyle.textColor,
+              subColor: SLATE[500],
+            })
+          } else {
+            if (item.title) {
+              setFont(pdf, entryTitleFont, { bold: true, sizePx: entrySizePx })
+              setTextColor(pdf, block.color, hexToRgb(globalStyle.textColor))
+              cursorY += drawParagraph(pdf, item.title, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
+            }
+            if (subLine) {
+              setFont(pdf, entryBodyFont, { sizePx: entrySizePx })
+              setTextColor(pdf, null, SLATE[500])
+              cursorY += drawParagraph(pdf, subLine, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
+            }
+          }
+          if (dateRange) {
             setFont(pdf, entryBodyFont, { sizePx: entrySizePx })
             setTextColor(pdf, null, SLATE[500])
-            cursorY += drawParagraph(pdf, subLine, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
+            cursorY += drawParagraph(pdf, dateRange, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
           }
           if (item.description) {
             setFont(pdf, entryBodyFont, { sizePx: entrySizePx })
@@ -760,19 +812,33 @@ async function drawBlock(pdf, block, ctx) {
         const dateRange = [item.startDate, item.current ? 'Present' : item.endDate].filter((v) => v?.trim()).join(' – ')
         const subAndDate = [subLine, dateRange].filter(Boolean).join(' / ')
         const descriptionLines = (item.description || '').split('\n').filter(Boolean)
+        const entryTitleFont = block.entryTitleFontFamily || resolveTitleFont(globalStyle)
+        const entryTitleSizePx = block.entryTitleFontSize || 16
+        const bodySizePx = block.bodyFontSize || p1SizePx(globalStyle)
 
-        if (item.title) {
-          setFont(pdf, block.entryTitleFontFamily || resolveTitleFont(globalStyle), {
-            bold: true,
-            sizePx: block.entryTitleFontSize || 16,
+        if (item.title && block.titleLocationInline && subLine) {
+          cursorY += drawInlineTitleSub(pdf, item.title, subLine, {
+            x,
+            y: cursorY,
+            width,
+            align: block.align,
+            titleFont: entryTitleFont,
+            subFont: bodyFont,
+            titleSizePx: entryTitleSizePx,
+            subSizePx: bodySizePx,
+            titleColor: block.entryTitleColor || globalStyle.textColor,
+            subColor: SLATE[500],
           })
+        } else if (item.title) {
+          setFont(pdf, entryTitleFont, { bold: true, sizePx: entryTitleSizePx })
           setTextColor(pdf, block.entryTitleColor, hexToRgb(globalStyle.textColor))
           cursorY += drawParagraph(pdf, item.title, { x, y: cursorY, width, align: block.align, lineHeightMult: 1.3 })
         }
-        if (subAndDate) {
-          setFont(pdf, bodyFont, { sizePx: block.bodyFontSize || p1SizePx(globalStyle) })
+        const secondLine = block.titleLocationInline ? dateRange : subAndDate
+        if (secondLine) {
+          setFont(pdf, bodyFont, { sizePx: bodySizePx })
           setTextColor(pdf, null, SLATE[500])
-          cursorY += drawParagraph(pdf, subAndDate, { x, y: cursorY, width, align: block.align, lineHeightMult: block.lineSpacing || 1.3 })
+          cursorY += drawParagraph(pdf, secondLine, { x, y: cursorY, width, align: block.align, lineHeightMult: block.lineSpacing || 1.3 })
         }
         if (descriptionLines.length > 0) {
           setFont(pdf, bodyFont, { sizePx: block.bodyFontSize || p1SizePx(globalStyle) })

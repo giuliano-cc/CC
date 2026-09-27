@@ -1427,6 +1427,14 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
         />
         Sort entries most recent first
       </label>
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={block.titleLocationInline === true}
+          onChange={(e) => onChange({ titleLocationInline: e.target.checked })}
+        />
+        Show title and location on the same line
+      </label>
       <Field label="Content from library">
         <select
           value={usesLibrary ? 'library' : ''}
@@ -2097,6 +2105,18 @@ function BlockPropertiesPanel({ block, onChange }) {
           )}
         </>
       )}
+
+      {block.type === BLOCK_TYPES.TEXT &&
+        CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.type === 'entries' && (
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={block.titleLocationInline === true}
+              onChange={(e) => onChange({ titleLocationInline: e.target.checked })}
+            />
+            Show title and location on the same line
+          </label>
+        )}
 
       {showContent && !block.contentSlot && (
         <Field label="Text">

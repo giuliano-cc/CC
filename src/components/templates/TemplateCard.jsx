@@ -16,11 +16,11 @@ export default function TemplateCard({ template, onDuplicate, onDelete }) {
   const fontLabels = getTemplateFontLabels(template)
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+    <div className="group relative flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
       <button
         type="button"
         onClick={() => navigate(`/templates/${template.id}`)}
-        className="block w-full"
+        className="block w-full overflow-hidden rounded-t-xl"
       >
         <TemplateThumbnail template={template} />
       </button>

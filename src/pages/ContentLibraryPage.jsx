@@ -490,7 +490,6 @@ function SlotCard({ slot, library, onChange, onBlur }) {
           titleLabel={slot.key === 'education' ? 'Degree' : slot.key === 'selectedWorks' ? 'Project Title' : 'Job Role'}
           subtitleLabel={slot.key === 'education' ? 'Institution Name' : 'Company Name'}
           showSubtitle={slot.key !== 'selectedWorks'}
-          showDates={slot.key !== 'selectedWorks'}
           onUpdate={(items) => {
             onChange(`${slot.key}Items`, JSON.stringify(items))
             onChange(slot.key, composeEntriesText(items))

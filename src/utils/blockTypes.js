@@ -210,6 +210,11 @@ export const BLOCK_DEFINITIONS = [
       // "Work Experience" for the `experience` slot) — null keeps
       // showing that label, same as before this existed.
       titleText: null,
+      // Only takes effect when bound to an 'entries' slot (e.g. Selected
+      // Works): puts each entry's title and its City/Country (or
+      // Company) on the same line instead of stacked — see the matching
+      // field on Experience/Education below.
+      titleLocationInline: false,
     },
   },
   {
@@ -397,6 +402,10 @@ export const BLOCK_DEFINITIONS = [
       entryTitleColor: null,
       entryTitleFontFamily: null,
       sortByDate: true,
+      // Puts each entry's title and its Company/Location on the same
+      // line instead of stacked — the date range still gets its own line
+      // either way.
+      titleLocationInline: false,
       items: [
         {
           id: 'exp-default-1',
@@ -441,6 +450,7 @@ export const BLOCK_DEFINITIONS = [
       entryTitleColor: null,
       entryTitleFontFamily: null,
       sortByDate: true,
+      titleLocationInline: false,
       items: [
         {
           id: 'edu-default-1',
