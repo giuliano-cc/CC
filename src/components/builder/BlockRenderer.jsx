@@ -8,6 +8,7 @@ import {
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
 import { formatEntryDate, parseChecklist, parseEntries, parseLanguages, sortEntriesByDate } from '../../utils/contentLists'
+import { translateSectionTitle } from '../../utils/sectionTitles'
 import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
 
@@ -247,14 +248,16 @@ function SkillDots({ label, level, color, dotSize = 10, dotCount = 5 }) {
 // Shared by the Technical Skills and Languages chart blocks: same three
 // styles (bars/dots/tags), same "cycle style" hover button, same dot-size
 // control — only the underlying items differ.
-function Chart({ block, items, onUpdateBlock, accentColor, titleFont }) {
+function Chart({ block, items, onUpdateBlock, accentColor, titleFont, lang }) {
   const chartStyle = block.chartStyle || 'bars'
   const showTitle = block.title && block.showTitle !== false
   return (
     <div className="group/chart flex flex-col gap-3">
       <div className={`flex items-end justify-between ${showTitle && block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}`}>
         {showTitle && (
-          <p style={sectionTitleStyle(block, block.titleColor || accentColor, titleFont)}>{block.title}</p>
+          <p style={sectionTitleStyle(block, block.titleColor || accentColor, titleFont)}>
+            {translateSectionTitle(block.title, lang)}
+          </p>
         )}
         {onUpdateBlock && (
           <button
@@ -426,7 +429,7 @@ export default function BlockRenderer({
           }`}
           style={style}
         >
-          {displayText(resolvedContent, block)}
+          {displayText(translateSectionTitle(resolvedContent, globalStyle.contentLanguage), block)}
         </Tag>
       )
     }
@@ -441,7 +444,7 @@ export default function BlockRenderer({
       // the built-in templates already pair these bindings with their own
       // separate Heading block.
       const boundSlot = block.contentSlot ? CONTENT_SLOTS.find((s) => s.key === block.contentSlot) : null
-      const autoTitle = block.titleText || boundSlot?.label
+      const autoTitle = block.titleText || translateSectionTitle(boundSlot?.label, globalStyle.contentLanguage)
       const title = block.showTitle === true && autoTitle ? autoTitle : null
       const bodyFont = resolveBodyFont(globalStyle)
 
@@ -727,6 +730,7 @@ export default function BlockRenderer({
           onUpdateBlock={onUpdateBlock}
           accentColor={globalStyle.primaryColor}
           titleFont={resolveTitleFont(globalStyle)}
+          lang={globalStyle.contentLanguage}
         />
       )
     }
@@ -744,6 +748,7 @@ export default function BlockRenderer({
           onUpdateBlock={onUpdateBlock}
           accentColor={globalStyle.primaryColor}
           titleFont={resolveTitleFont(globalStyle)}
+          lang={globalStyle.contentLanguage}
         />
       )
     }
@@ -824,7 +829,7 @@ export default function BlockRenderer({
               className={`w-full ${alignClass(block.align)} ${block.titleRule !== false ? 'mb-0.5 border-b border-slate-200 pb-1.5' : ''}`}
               style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
-              {block.title}
+              {translateSectionTitle(block.title, globalStyle.contentLanguage)}
             </p>
           )}
           <div
@@ -866,7 +871,7 @@ export default function BlockRenderer({
               className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
               style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
-              {block.title}
+              {translateSectionTitle(block.title, globalStyle.contentLanguage)}
             </p>
           )}
           <ul
@@ -908,7 +913,7 @@ export default function BlockRenderer({
               className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
               style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
-              {block.title}
+              {translateSectionTitle(block.title, globalStyle.contentLanguage)}
             </p>
           )}
           {items.map((item, i) => {
