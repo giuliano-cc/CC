@@ -115,7 +115,7 @@ const HEADING_SIZE_CLASSES = {
   xl: 'text-5xl',
 }
 
-// See the HEADING case below and pdfVectorExport.js's identical mapping.
+// See the HEADING case below.
 const HEADING_SCALE_LEVEL_BY_SIZE = { xl: 'h1', lg: 'h2', md: 'h3' }
 
 // Matches the template's own "section heading" convention (a HEADING

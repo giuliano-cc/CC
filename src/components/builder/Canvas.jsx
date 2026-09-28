@@ -76,10 +76,10 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, zoom }) {
             backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
             backgroundPosition: `${GRID_OFFSET_X}px ${GRID_OFFSET_Y}px`,
           }}
-          // A purely editor-side alignment aid, like the margin guide
-          // below — `pdf-ignore` is now vestigial (the PDF export draws
-          // straight from block data, see utils/pdfVectorExport.js, never
-          // from this DOM), kept only in case anything else still reads it.
+          // A purely editor-side alignment aid — printing/exporting builds
+          // its own separate tree (see components/builder/PrintDocument.jsx)
+          // that never includes this at all, so `pdf-ignore` is vestigial,
+          // kept only in case anything else still reads it.
           className="pdf-ignore pointer-events-none absolute inset-0"
         />
       )}

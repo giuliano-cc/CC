@@ -103,8 +103,8 @@ function extractShared(...maps) {
 // have the same shape as the old, single-language flat library did, and
 // `getLibrary(lang)` (the per-language map merged with the shared image
 // slots) is exactly what every existing consumer (BlockRenderer.jsx,
-// PropertiesPanel.jsx, pdfVectorExport.js, ...) already expects — none of
-// them need to know this exists.
+// PropertiesPanel.jsx, ...) already expects — none of them need to know
+// this exists.
 function blankState() {
   return { shared: DEFAULT_SHARED, content: { en: DEFAULT_LANGUAGE_LIBRARY, de: DEFAULT_LANGUAGE_LIBRARY } }
 }

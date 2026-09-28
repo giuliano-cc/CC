@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { ArrowLeft, FileText, Loader2, RotateCcw, Save, Wand2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Printer, RotateCcw, Save, Wand2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { BuilderProvider, useBuilder } from '../context/BuilderContext'
 import { useContentLibrary } from '../context/ContentLibraryContext'
 import BlockPalette from '../components/builder/BlockPalette'
 import Canvas, { parsePageDroppableId } from '../components/builder/Canvas'
-import PdfPreviewModal from '../components/builder/PdfPreviewModal'
+import PrintDocument from '../components/builder/PrintDocument'
 import PropertiesPanel from '../components/builder/PropertiesPanel'
 import Toolbar from '../components/builder/Toolbar'
 import LoadingSpinner from '../components/common/LoadingSpinner'
@@ -36,7 +36,6 @@ function BuilderContent({ initialTitle }) {
   const [title, setTitle] = useState(initialTitle)
   const [isSaving, setIsSaving] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
-  const [pdfState, setPdfState] = useState(null) // null | { blobUrl, isGenerating }
 
   const debouncedBlocks = useDebouncedValue(blocks, 800)
   const hasRenderedOnce = useRef(false)
@@ -146,26 +145,19 @@ function BuilderContent({ initialTitle }) {
     toast.success('Content applied from your library')
   }
 
-  // Draws every page as real vector PDF content straight from the block
-  // data (see utils/pdfVectorExport.js) — entirely client-side, and
-  // without ever touching the editor's own DOM, so there's no selection
-  // outline/resize handle to worry about hiding first.
-  async function handlePreviewPdf() {
+  // Prints the template — or, from the browser's own print dialog, saves
+  // it as a PDF — via #print-root (see components/builder/PrintDocument.jsx
+  // and index.css's `@media print` rules), which renders every block with
+  // the exact same BlockRenderer + CSS already on screen. That's what
+  // guarantees the output matches the canvas: it's the browser laying out
+  // the real DOM, not a second, hand-written renderer trying to reproduce
+  // its text-wrapping/spacing/fonts independently. Deselecting first means
+  // there's no selection outline/resize handle in the DOM to worry about
+  // (PrintDocument's own copy never has one, but this leaves the editor's
+  // own canvas in a clean state once printing is done, too).
+  function handlePrint() {
     selectBlock(null)
-    setPdfState({ blobUrl: null, isGenerating: true })
-    try {
-      // Dynamically imported: jsPDF, the embedded-font decompressor and
-      // ~30 font files are only ever needed once someone actually asks
-      // for a PDF, so they're kept out of the app's main bundle entirely
-      // until then.
-      const { generatePdfBlob } = await import('../utils/pdfVectorExport')
-      const blob = await generatePdfBlob({ pageCount, blocks, globalStyle, library })
-      const blobUrl = URL.createObjectURL(blob)
-      setPdfState({ blobUrl, isGenerating: false })
-    } catch {
-      toast.error('Unable to generate the PDF preview.')
-      setPdfState(null)
-    }
+    window.print()
   }
 
   // Restores one of the 5 built-in templates to its shipped defaults,
@@ -180,11 +172,6 @@ function BuilderContent({ initialTitle }) {
     }
     resetTo(builtInTemplate.blocks, builtInTemplate.globalStyle, builtInTemplate.pageCount)
     toast.success('Template reset to default')
-  }
-
-  function closePdfPreview() {
-    if (pdfState?.blobUrl) URL.revokeObjectURL(pdfState.blobUrl)
-    setPdfState(null)
   }
 
   async function handleSave() {
@@ -259,11 +246,11 @@ function BuilderContent({ initialTitle }) {
             </button>
             <button
               type="button"
-              onClick={handlePreviewPdf}
+              onClick={handlePrint}
               className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:border-primary hover:text-primary"
             >
-              <FileText size={15} />
-              Preview PDF
+              <Printer size={15} />
+              Print / Save as PDF
             </button>
             <button
               type="button"
@@ -286,13 +273,7 @@ function BuilderContent({ initialTitle }) {
         </div>
       </div>
 
-      {pdfState && (
-        <PdfPreviewModal
-          blobUrl={pdfState.blobUrl}
-          isGenerating={pdfState.isGenerating}
-          onClose={closePdfPreview}
-        />
-      )}
+      <PrintDocument blocks={blocks} globalStyle={globalStyle} pageCount={pageCount} />
     </DndContext>
   )
 }

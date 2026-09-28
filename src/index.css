@@ -13,3 +13,43 @@
     @apply bg-background text-slate-800 font-sans antialiased;
   }
 }
+
+/* Printing a template (or saving it as PDF via the browser's own print
+   dialog — see components/builder/PrintDocument.jsx) renders it into
+   #print-root, a sibling of #root left empty/hidden the rest of the time.
+   `@page` sets each printed sheet to exactly A4 with no browser-added
+   margin; SHEET_WIDTH/SHEET_HEIGHT (utils/layout.js) are already sized to
+   match A4 at 96 CSS px/inch, so a `.print-page` renders at true A4 size
+   with no scaling. Hiding #root entirely (rather than the "hide
+   everything, then un-hide just this part" trick) means the builder's own
+   UI never contributes blank pages to the print job. */
+#print-root {
+  display: none;
+}
+
+@media print {
+  #root {
+    display: none !important;
+  }
+
+  #print-root {
+    display: block !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  .print-page {
+    width: 794px;
+    height: 1123px;
+    position: relative;
+    overflow: hidden;
+    break-after: page;
+  }
+
+  .print-page:last-child {
+    break-after: auto;
+  }
+}

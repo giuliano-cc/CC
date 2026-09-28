@@ -18,9 +18,9 @@ import { alignToPage, alignToSelection, distribute } from '../utils/align'
 // never touched the new fields keeps looking exactly the same.
 // A ready-to-edit typographic scale every new template starts with —
 // H1/H2/H3 map onto Heading's existing size presets (xl/lg/md — see
-// HEADING_SIZE_PX and the fontSize fallback chain in BlockRenderer.jsx/
-// pdfVectorExport.js), so setting these here reshapes every Heading
-// using that size across the template immediately, the same way editing
+// HEADING_SIZE_PX and the fontSize fallback chain in BlockRenderer.jsx),
+// so setting these here reshapes every Heading using that size across
+// the template immediately, the same way editing
 // a row in "Text styles used in this template" already does. P1 is body
 // text's own default size (everywhere a block's own bodyFontSize/fontSize
 // is left unset); P2/P3 are available to reference or apply to a

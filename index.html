@@ -7,19 +7,26 @@
     <title>PrintFlow</title>
     <!-- Fonts selectable in the builder (Style -> Font family) are
          self-hosted (see src/styles/builderFonts.css, imported from
-         main.jsx) rather than loaded from the Google Fonts CDN: the exact
-         same local files utils/pdfFontEmbed.js embeds into the exported
-         PDF, so screen and print are guaranteed to use the same glyphs
-         instead of two independent fetches of "the same name" that can
-         drift apart, and the builder works fully offline. Inter/Arimo/
-         Tinos/Cousine/Gelasio stand in for the "system font" options
-         (Inter itself, Arial, Times New Roman, Courier New, Georgia) —
-         Arimo/Tinos/Cousine/Gelasio are Google's own metric-compatible
-         clones of Arial/Times New Roman/Courier New/Georgia, so choosing
-         one of those options still looks like that typeface. -->
+         main.jsx) rather than loaded from the Google Fonts CDN, so the
+         builder works fully offline and every font is available the
+         instant it's picked. Inter/Arimo/Tinos/Cousine/Gelasio stand in
+         for the "system font" options (Inter itself, Arial, Times New
+         Roman, Courier New, Georgia) — Arimo/Tinos/Cousine/Gelasio are
+         Google's own metric-compatible clones of Arial/Times New Roman/
+         Courier New/Georgia, so choosing one of those options still
+         looks like that typeface. -->
   </head>
   <body>
     <div id="root"></div>
+    <!-- Printing/exporting a template renders it here instead (see
+         components/builder/PrintDocument.jsx), as a sibling of #root
+         rather than inside it: `@media print` hides #root entirely and
+         shows only this, so the browser's own print pagination sees just
+         the document's pages — nothing of the builder's own UI chrome —
+         and paginates using the exact same DOM/CSS every block already
+         renders with on screen, guaranteeing the printed/saved PDF looks
+         identical to the canvas (see index.css for the print rules). -->
+    <div id="print-root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

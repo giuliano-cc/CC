@@ -73,11 +73,9 @@ export const FONT_FAMILY_OPTIONS = [
   // of Arial/Times New Roman/Courier New/Georgia — leading the stack with
   // one of them (loaded as a real webfont, see index.html) makes an
   // "Arial"/"Georgia"/... pick actually render as that shape on screen
-  // instead of silently falling back to whatever the browser's own
-  // system default happens to be, and gives the PDF export (see
-  // utils/pdfFontEmbed.js) a real file it can embed for it, so screen and
-  // print no longer drift apart from each other. The named system font
-  // stays right after as the fallback if the webfont somehow fails to load.
+  // instead of silently falling back to whatever the browser's own system
+  // default happens to be. The named system font stays right after as the
+  // fallback if the webfont somehow fails to load.
   { value: "Arimo, 'Segoe UI', Arial, sans-serif", label: 'Segoe UI', category: 'sans-serif' },
   { value: 'Arimo, Arial, Helvetica, sans-serif', label: 'Arial', category: 'sans-serif' },
   { value: 'Gelasio, Georgia, serif', label: 'Georgia', category: 'serif' },
