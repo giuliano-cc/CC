@@ -1,17 +1,19 @@
 // Lucide dropped brand/logo icons a while ago, so social platforms are
 // rendered as small outlined letter badges instead of official logos —
 // simple, dependency-free, avoids using trademarked marks, and (an
-// outline with no fill, like the Contact Info block's Mail/Phone/Globe
-// icons) matches the rest of the app's icon style.
+// outline with no fill, all in the same neutral gray) matches the
+// Contact Info block's Mail/Phone/Globe icons exactly, rather than each
+// platform showing its own brand color.
 export const SOCIAL_PLATFORMS = [
-  { key: 'linkedin', label: 'LinkedIn', badge: 'in', color: '#0a66c2' },
-  { key: 'github', label: 'GitHub', badge: 'gh', color: '#24292f' },
-  { key: 'twitter', label: 'X / Twitter', badge: 'X', color: '#000000' },
-  { key: 'instagram', label: 'Instagram', badge: 'ig', color: '#e4405f' },
-  { key: 'facebook', label: 'Facebook', badge: 'f', color: '#1877f2' },
-  { key: 'dribbble', label: 'Dribbble', badge: 'dr', color: '#ea4c89' },
-  { key: 'behance', label: 'Behance', badge: 'be', color: '#1769ff' },
-  { key: 'website', label: 'Website', badge: '🌐', color: '#334155' },
+  { key: 'linkedin', label: 'LinkedIn', badge: 'in' },
+  { key: 'github', label: 'GitHub', badge: 'gh' },
+  { key: 'twitter', label: 'X / Twitter', badge: 'X' },
+  { key: 'instagram', label: 'Instagram', badge: 'ig' },
+  { key: 'facebook', label: 'Facebook', badge: 'f' },
+  { key: 'tiktok', label: 'TikTok', badge: 'tt' },
+  { key: 'dribbble', label: 'Dribbble', badge: 'dr' },
+  { key: 'behance', label: 'Behance', badge: 'be' },
+  { key: 'website', label: 'Website', badge: '🌐' },
 ]
 
 export function getPlatformMeta(key) {

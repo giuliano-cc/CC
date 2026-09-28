@@ -323,10 +323,7 @@ function SocialBadge({ platform, url }) {
       onClick={(e) => e.stopPropagation()}
       className="flex items-center gap-1.5 no-underline hover:opacity-80"
     >
-      <span
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[1.5px] bg-transparent text-[10px] font-bold"
-        style={{ borderColor: meta.color, color: meta.color }}
-      >
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[1.5px] border-slate-400 bg-transparent text-[10px] font-bold text-slate-400">
         {meta.badge}
       </span>
       <span className="max-w-[9rem] truncate text-xs text-slate-600 underline">{url}</span>
