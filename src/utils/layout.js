@@ -36,27 +36,28 @@ export function goldenRatioLinesY(height) {
   return { top: height - a, bottom: a }
 }
 
-// A second line duplicated from each exact golden ratio line above, at a
-// user-chosen distance from it — not a replacement for the exact line, an
-// additional one to snap a block's margin against (e.g. "leave 24px
-// between the photo and the golden ratio line" instead of butting it
-// flush). The exact line stays put as the fixed reference either way.
-// A line whose offset is 0 has no duplicate at all (it would sit exactly
-// on top of the reference line, which isn't a second line), so it comes
-// back `null` — callers skip drawing/snapping to it.
+// A symmetric pair of lines duplicated from each exact golden ratio line
+// above, one on each side of it at the user-chosen distance — not a
+// replacement for the exact line, two additional ones to snap a block's
+// margin against (typing 20 for "sx" means "20px on either side of that
+// line", so a block can leave that gap approaching from the left or the
+// right). The exact line stays put as the fixed reference either way. A
+// line whose offset is 0 has no pair at all (both would sit exactly on
+// top of the reference line), so it comes back `null` — callers skip
+// drawing/snapping to it.
 export function goldenRatioOffsetLinesX(width, offsets) {
   const { sx, dx } = goldenRatioLinesX(width)
   return {
-    sx: offsets.sx ? sx + offsets.sx : null,
-    dx: offsets.dx ? dx + offsets.dx : null,
+    sx: offsets.sx ? [sx - offsets.sx, sx + offsets.sx] : null,
+    dx: offsets.dx ? [dx - offsets.dx, dx + offsets.dx] : null,
   }
 }
 
 export function goldenRatioOffsetLinesY(height, offsets) {
   const { top, bottom } = goldenRatioLinesY(height)
   return {
-    top: offsets.top ? top + offsets.top : null,
-    bottom: offsets.bottom ? bottom + offsets.bottom : null,
+    top: offsets.top ? [top - offsets.top, top + offsets.top] : null,
+    bottom: offsets.bottom ? [bottom - offsets.bottom, bottom + offsets.bottom] : null,
   }
 }
 

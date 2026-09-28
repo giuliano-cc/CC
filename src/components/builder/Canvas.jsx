@@ -135,17 +135,20 @@ function Page({
           />
         ))}
 
-      {/* The user's own duplicate line, offset a chosen distance from
-          the exact golden ratio line above — solid (not dashed) so it
-          reads as "your margin", not the mathematical reference — drawn
-          only for an axis side that actually has a non-zero offset. */}
+      {/* The user's own duplicate pair, offset a chosen distance to
+          either side of the exact golden ratio line above — solid (not
+          dashed) so it reads as "your margin", not the mathematical
+          reference — drawn only for an axis side that actually has a
+          non-zero offset (each side then draws 2 lines, one on each side
+          of the reference). */}
       {!preview &&
         showGoldenRatio &&
         Object.entries(goldenRatioOffsetLinesX(SHEET_WIDTH, goldenOffsets))
-          .filter(([, x]) => x !== null)
-          .map(([side, x]) => (
+          .filter(([, pair]) => pair !== null)
+          .flatMap(([side, pair]) => pair.map((x, i) => ({ key: `${side}-${i}`, x })))
+          .map(({ key, x }) => (
             <div
-              key={`phi-offset-v-${side}`}
+              key={`phi-offset-v-${key}`}
               style={{ left: x }}
               className="pdf-ignore pointer-events-none absolute inset-y-0 z-10 w-px border-l-2 border-amber-500"
             />
@@ -153,10 +156,11 @@ function Page({
       {!preview &&
         showGoldenRatio &&
         Object.entries(goldenRatioOffsetLinesY(SHEET_HEIGHT, goldenOffsets))
-          .filter(([, y]) => y !== null)
-          .map(([side, y]) => (
+          .filter(([, pair]) => pair !== null)
+          .flatMap(([side, pair]) => pair.map((y, i) => ({ key: `${side}-${i}`, y })))
+          .map(({ key, y }) => (
             <div
-              key={`phi-offset-h-${side}`}
+              key={`phi-offset-h-${key}`}
               style={{ top: y }}
               className="pdf-ignore pointer-events-none absolute inset-x-0 z-10 h-px border-t-2 border-amber-500"
             />

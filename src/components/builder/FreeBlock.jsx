@@ -23,7 +23,12 @@ import BlockRenderer from './BlockRenderer'
 // snaps to a line exactly where the guide actually shows it, offset
 // duplicates included.
 function goldenSnapTargets(exactLines, offsetLines) {
-  return [...Object.values(exactLines), ...Object.values(offsetLines).filter((v) => v !== null)]
+  return [
+    ...Object.values(exactLines),
+    ...Object.values(offsetLines)
+      .filter((pair) => pair !== null)
+      .flat(),
+  ]
 }
 
 const MIN_WIDTH = 60

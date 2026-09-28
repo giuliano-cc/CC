@@ -295,11 +295,11 @@ function GlobalStylePanel() {
           ))}
         </div>
         <p className="text-xs text-slate-400">
-          0 = no extra line. A non-zero value adds a second, solid line
-          that many px from that exact golden ratio line — the dashed
-          line stays put as the fixed reference, and the new solid line
-          is a snappable margin from it, both toggled together from the
-          Canvas toolbar.
+          0 = no extra lines. A non-zero value adds a symmetric pair of
+          solid lines that many px to each side of that exact golden
+          ratio line — the dashed line stays put as the fixed reference,
+          and the two new solid lines are a snappable margin approaching
+          from either direction. Each of the 4 can have its own value.
         </p>
       </div>
 
