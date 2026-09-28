@@ -5,6 +5,8 @@ import { useBuilder } from '../../context/BuilderContext'
 import {
   goldenRatioLinesX,
   goldenRatioLinesY,
+  goldenRatioOffsetLinesX,
+  goldenRatioOffsetLinesY,
   GRID_OFFSET_X,
   GRID_OFFSET_Y,
   GRID_SIZE,
@@ -101,7 +103,7 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRat
 
       {!preview &&
         showGoldenRatio &&
-        goldenRatioLinesX(SHEET_WIDTH, goldenOffsets.sx, goldenOffsets.dx).map((x, i) => (
+        Object.values(goldenRatioLinesX(SHEET_WIDTH)).map((x, i) => (
           <div
             key={`phi-v-${i}`}
             style={{ left: x }}
@@ -110,13 +112,40 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRat
         ))}
       {!preview &&
         showGoldenRatio &&
-        goldenRatioLinesY(SHEET_HEIGHT, goldenOffsets.top, goldenOffsets.bottom).map((y, i) => (
+        Object.values(goldenRatioLinesY(SHEET_HEIGHT)).map((y, i) => (
           <div
             key={`phi-h-${i}`}
             style={{ top: y }}
             className="pdf-ignore pointer-events-none absolute inset-x-0 z-10 h-px border-t border-dashed border-amber-500"
           />
         ))}
+
+      {/* The user's own duplicate line, offset a chosen distance from
+          the exact golden ratio line above — solid (not dashed) so it
+          reads as "your margin", not the mathematical reference — drawn
+          only for an axis side that actually has a non-zero offset. */}
+      {!preview &&
+        showGoldenRatio &&
+        Object.entries(goldenRatioOffsetLinesX(SHEET_WIDTH, goldenOffsets))
+          .filter(([, x]) => x !== null)
+          .map(([side, x]) => (
+            <div
+              key={`phi-offset-v-${side}`}
+              style={{ left: x }}
+              className="pdf-ignore pointer-events-none absolute inset-y-0 z-10 w-px border-l-2 border-amber-500"
+            />
+          ))}
+      {!preview &&
+        showGoldenRatio &&
+        Object.entries(goldenRatioOffsetLinesY(SHEET_HEIGHT, goldenOffsets))
+          .filter(([, y]) => y !== null)
+          .map(([side, y]) => (
+            <div
+              key={`phi-offset-h-${side}`}
+              style={{ top: y }}
+              className="pdf-ignore pointer-events-none absolute inset-x-0 z-10 h-px border-t-2 border-amber-500"
+            />
+          ))}
 
       {!preview && blocks.length === 0 && (
         <div className="pdf-ignore absolute inset-8 flex items-center justify-center rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400">

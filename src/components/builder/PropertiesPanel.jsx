@@ -272,7 +272,7 @@ function GlobalStylePanel() {
       </p>
 
       <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-4">
-        <span className="text-xs font-medium text-slate-500">Golden ratio guide offset (px)</span>
+        <span className="text-xs font-medium text-slate-500">Golden ratio margin lines (px)</span>
         <div className="grid grid-cols-2 gap-3">
           {[
             ['goldenOffsetSx', 'Left (sx)'],
@@ -295,9 +295,11 @@ function GlobalStylePanel() {
           ))}
         </div>
         <p className="text-xs text-slate-400">
-          Nudges each of the guide's 4 lines away from its exact
-          mathematical position (0 = untouched) — shown as the amber
-          dashed lines on the sheet, toggled from the Canvas toolbar.
+          0 = no extra line. A non-zero value adds a second, solid line
+          that many px from that exact golden ratio line — the dashed
+          line stays put as the fixed reference, and the new solid line
+          is a snappable margin from it, both toggled together from the
+          Canvas toolbar.
         </p>
       </div>
 

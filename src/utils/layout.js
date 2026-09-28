@@ -20,25 +20,49 @@ export const GRID_OFFSET_Y = ((SHEET_HEIGHT % GRID_SIZE) / 2 + GRID_SIZE) % GRID
 // lines the guide draws — the classic "golden ratio" composition guide
 // (the same overlay Photoshop/Lightroom offer as "Golden Ratio" cropping):
 // two lines per axis, at ~38.2%/~61.8% of the page instead of plain
-// thirds. Each line also takes its own pixel offset (see
-// resolveGoldenRatioOffsets below) so a template can nudge one line
-// independently of its mirror instead of being stuck with the exact
-// mathematical split.
+// thirds. These are always the exact mathematical split — never moved by
+// an offset — so they stay a fixed reference (see
+// goldenRatioOffsetLinesX/Y below for the adjustable duplicate lines
+// measured from them).
 const PHI = (1 + Math.sqrt(5)) / 2
 
-export function goldenRatioLinesX(width, offsetSx = 0, offsetDx = 0) {
+export function goldenRatioLinesX(width) {
   const a = width / PHI
-  return [width - a + offsetSx, a + offsetDx]
+  return { sx: width - a, dx: a }
 }
 
-export function goldenRatioLinesY(height, offsetTop = 0, offsetBottom = 0) {
+export function goldenRatioLinesY(height) {
   const a = height / PHI
-  return [height - a + offsetTop, a + offsetBottom]
+  return { top: height - a, bottom: a }
 }
 
-// A template's own per-line nudge on the golden ratio guide — 0 (the
-// mathematically exact line) unless the user has dragged/typed a value in
-// Global Style. Same fallback pattern as resolveMargins below.
+// A second line duplicated from each exact golden ratio line above, at a
+// user-chosen distance from it — not a replacement for the exact line, an
+// additional one to snap a block's margin against (e.g. "leave 24px
+// between the photo and the golden ratio line" instead of butting it
+// flush). The exact line stays put as the fixed reference either way.
+// A line whose offset is 0 has no duplicate at all (it would sit exactly
+// on top of the reference line, which isn't a second line), so it comes
+// back `null` — callers skip drawing/snapping to it.
+export function goldenRatioOffsetLinesX(width, offsets) {
+  const { sx, dx } = goldenRatioLinesX(width)
+  return {
+    sx: offsets.sx ? sx + offsets.sx : null,
+    dx: offsets.dx ? dx + offsets.dx : null,
+  }
+}
+
+export function goldenRatioOffsetLinesY(height, offsets) {
+  const { top, bottom } = goldenRatioLinesY(height)
+  return {
+    top: offsets.top ? top + offsets.top : null,
+    bottom: offsets.bottom ? bottom + offsets.bottom : null,
+  }
+}
+
+// A template's own per-line margin from the golden ratio guide — 0 (no
+// duplicate line at all) unless the user has typed a value in Global
+// Style. Same fallback pattern as resolveMargins below.
 export function resolveGoldenRatioOffsets(globalStyle) {
   return {
     sx: globalStyle.goldenOffsetSx ?? 0,

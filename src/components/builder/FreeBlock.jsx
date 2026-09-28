@@ -5,12 +5,23 @@ import {
   clamp,
   goldenRatioLinesX,
   goldenRatioLinesY,
+  goldenRatioOffsetLinesX,
+  goldenRatioOffsetLinesY,
   GRID_OFFSET_X,
   GRID_OFFSET_Y,
   nearestGridLine,
   SHEET_HEIGHT,
   SHEET_WIDTH,
 } from '../../utils/layout'
+
+// The golden ratio guide's snap targets for one axis: the two exact
+// reference lines plus, for any side that has one, its user-offset
+// duplicate — the same set Canvas.jsx draws for that axis, so a block
+// snaps to a line exactly where the guide actually shows it, offset
+// duplicates included.
+function goldenSnapTargets(exactLines, offsetLines) {
+  return [...Object.values(exactLines), ...Object.values(offsetLines).filter((v) => v !== null)]
+}
 import BlockRenderer from './BlockRenderer'
 
 const MIN_WIDTH = 60
@@ -220,15 +231,17 @@ export default function FreeBlock({
         yTargets.push(nearestGridLine(y, GRID_OFFSET_Y))
       }
       if (snapToGoldenRatio) {
-        // Each golden ratio line is a true reference line, not just an
-        // edge to butt up against — so, like a sibling's edge, a block can
-        // align its left edge, right edge, or center to it.
-        goldenRatioLinesX(SHEET_WIDTH, goldenOffsets.sx, goldenOffsets.dx).forEach((v) => {
-          xTargets.push(v, v - block.width, v - block.width / 2)
-        })
-        goldenRatioLinesY(SHEET_HEIGHT, goldenOffsets.top, goldenOffsets.bottom).forEach((v) => {
-          yTargets.push(v, v - block.height, v - block.height / 2)
-        })
+        // Each golden ratio line (and its own offset duplicate, if any)
+        // is a true reference line, not just an edge to butt up against —
+        // so, like a sibling's edge, a block can align its left edge,
+        // right edge, or center to it.
+        goldenSnapTargets(goldenRatioLinesX(SHEET_WIDTH), goldenRatioOffsetLinesX(SHEET_WIDTH, goldenOffsets)).forEach(
+          (v) => xTargets.push(v, v - block.width, v - block.width / 2),
+        )
+        goldenSnapTargets(
+          goldenRatioLinesY(SHEET_HEIGHT),
+          goldenRatioOffsetLinesY(SHEET_HEIGHT, goldenOffsets),
+        ).forEach((v) => yTargets.push(v, v - block.height, v - block.height / 2))
       }
       x = snapTo(x, xTargets)
       y = snapTo(y, yTargets)
@@ -249,8 +262,12 @@ export default function FreeBlock({
     const bottomEdgeTargets = siblings.flatMap((s) => [s.y, s.y + s.height, s.y + s.height / 2])
     const topEdgeTargets = bottomEdgeTargets
 
-    const goldenX = snapToGoldenRatio ? goldenRatioLinesX(SHEET_WIDTH, goldenOffsets.sx, goldenOffsets.dx) : []
-    const goldenY = snapToGoldenRatio ? goldenRatioLinesY(SHEET_HEIGHT, goldenOffsets.top, goldenOffsets.bottom) : []
+    const goldenX = snapToGoldenRatio
+      ? goldenSnapTargets(goldenRatioLinesX(SHEET_WIDTH), goldenRatioOffsetLinesX(SHEET_WIDTH, goldenOffsets))
+      : []
+    const goldenY = snapToGoldenRatio
+      ? goldenSnapTargets(goldenRatioLinesY(SHEET_HEIGHT), goldenRatioOffsetLinesY(SHEET_HEIGHT, goldenOffsets))
+      : []
 
     if (handle.x === 1) {
       width = clamp(state.origWidth + dx, MIN_WIDTH, SHEET_WIDTH - state.origX)
