@@ -18,11 +18,10 @@
    dialog — see components/builder/PrintDocument.jsx) renders it into
    #print-root, a sibling of #root left empty/hidden the rest of the time.
    `@page` sets each printed sheet to exactly A4 with no browser-added
-   margin; SHEET_WIDTH/SHEET_HEIGHT (utils/layout.js) are already sized to
-   match A4 at 96 CSS px/inch, so a `.print-page` renders at true A4 size
-   with no scaling. Hiding #root entirely (rather than the "hide
-   everything, then un-hide just this part" trick) means the builder's own
-   UI never contributes blank pages to the print job. */
+   margin; `.print-page` below matches that in the same unit (mm), so it
+   renders at true A4 size with no scaling. Hiding #root entirely (rather
+   than the "hide everything, then un-hide just this part" trick) means
+   the builder's own UI never contributes blank pages to the print job. */
 #print-root {
   display: none;
 }
@@ -41,16 +40,30 @@
     margin: 0;
   }
 
+  /* Sized in mm — the exact same unit `@page`'s own `size: A4` is
+     expressed in — rather than the pixel approximation SHEET_WIDTH/
+     SHEET_HEIGHT round to (96 CSS px/inch makes true A4 793.70 x
+     1122.52px, not the 794 x 1123 those round to). That sub-pixel gap
+     doesn't matter for anything positioned inside in px, but as this
+     element's own box it left `.print-page` a hair taller than the
+     physical page Safari's print engine computes from `@page` — enough
+     for Safari (not Chromium, which silently absorbs it) to start a new,
+     almost-empty page for that overflowing sliver after every single
+     page. Also sets both the modern (`break-after`) and legacy
+     (`page-break-after`) fragmentation properties — Safari's print engine
+     supports the older one more reliably. */
   .print-page {
-    width: 794px;
-    height: 1123px;
+    width: 210mm;
+    height: 297mm;
     position: relative;
     overflow: hidden;
     break-after: page;
+    page-break-after: always;
   }
 
   .print-page:last-child {
     break-after: auto;
+    page-break-after: auto;
   }
 
   /* Browsers don't print background colors/images by default (a decades-
