@@ -272,6 +272,36 @@ function GlobalStylePanel() {
       </p>
 
       <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-4">
+        <span className="text-xs font-medium text-slate-500">Golden ratio guide offset (px)</span>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            ['goldenOffsetSx', 'Left (sx)'],
+            ['goldenOffsetDx', 'Right (dx)'],
+            ['goldenOffsetTop', 'Top'],
+            ['goldenOffsetBottom', 'Bottom'],
+          ].map(([key, label]) => (
+            <Field key={key} label={label}>
+              <input
+                type="number"
+                min={-400}
+                max={400}
+                value={globalStyle[key] ?? 0}
+                onChange={(e) =>
+                  setGlobalStyle((prev) => ({ ...prev, [key]: Number(e.target.value) }))
+                }
+                className={inputClasses}
+              />
+            </Field>
+          ))}
+        </div>
+        <p className="text-xs text-slate-400">
+          Nudges each of the guide's 4 lines away from its exact
+          mathematical position (0 = untouched) — shown as the amber
+          dashed lines on the sheet, toggled from the Canvas toolbar.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-4">
         <h4 className="text-xs font-semibold text-slate-600">Typography scale</h4>
         <p className="-mt-1 text-xs text-slate-400">
           The sizes new Heading/Text blocks start from. H1/H2/H3 apply to

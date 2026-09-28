@@ -3,10 +3,12 @@ import { useState } from 'react'
 import { Eye, EyeOff, Grid3x3, Minus, Plus, Ratio, X } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import {
-  goldenRatioLines,
+  goldenRatioLinesX,
+  goldenRatioLinesY,
   GRID_OFFSET_X,
   GRID_OFFSET_Y,
   GRID_SIZE,
+  resolveGoldenRatioOffsets,
   resolveMargins,
   SHEET_HEIGHT,
   SHEET_WIDTH,
@@ -24,7 +26,7 @@ export function parsePageDroppableId(id) {
   return match ? Number(match[1]) : null
 }
 
-function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRatio, preview, zoom }) {
+function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRatio, goldenOffsets, preview, zoom }) {
   const {
     selectedBlockId,
     selectedIds,
@@ -99,18 +101,18 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRat
 
       {!preview &&
         showGoldenRatio &&
-        goldenRatioLines(SHEET_WIDTH).map((x) => (
+        goldenRatioLinesX(SHEET_WIDTH, goldenOffsets.sx, goldenOffsets.dx).map((x, i) => (
           <div
-            key={`phi-v-${x}`}
+            key={`phi-v-${i}`}
             style={{ left: x }}
             className="pdf-ignore pointer-events-none absolute inset-y-0 z-10 w-px border-l border-dashed border-amber-500"
           />
         ))}
       {!preview &&
         showGoldenRatio &&
-        goldenRatioLines(SHEET_HEIGHT).map((y) => (
+        goldenRatioLinesY(SHEET_HEIGHT, goldenOffsets.top, goldenOffsets.bottom).map((y, i) => (
           <div
-            key={`phi-h-${y}`}
+            key={`phi-h-${i}`}
             style={{ top: y }}
             className="pdf-ignore pointer-events-none absolute inset-x-0 z-10 h-px border-t border-dashed border-amber-500"
           />
@@ -134,6 +136,7 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRat
           globalStyle={globalStyle}
           snapToGrid={showGrid}
           snapToGoldenRatio={showGoldenRatio}
+          goldenOffsets={goldenOffsets}
           zoom={zoom}
           preview={preview}
           onGuides={setGuides}
@@ -169,6 +172,7 @@ const ZOOM_STEP = 0.1
 export default function Canvas() {
   const { blocks, globalStyle, selectBlock, pageCount, addPage, removeLastPage } = useBuilder()
   const margins = resolveMargins(globalStyle)
+  const goldenOffsets = resolveGoldenRatioOffsets(globalStyle)
   const [showGrid, setShowGrid] = useState(false)
   const [showGoldenRatio, setShowGoldenRatio] = useState(false)
   const [preview, setPreview] = useState(false)
@@ -269,6 +273,7 @@ export default function Canvas() {
                 globalStyle={globalStyle}
                 showGrid={showGrid}
                 showGoldenRatio={showGoldenRatio}
+                goldenOffsets={goldenOffsets}
                 preview={preview}
                 zoom={zoom}
               />

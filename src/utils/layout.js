@@ -19,12 +19,33 @@ export const GRID_OFFSET_Y = ((SHEET_HEIGHT % GRID_SIZE) / 2 + GRID_SIZE) % GRID
 // resize snapping (FreeBlock.jsx), so a block actually snaps to the same
 // lines the guide draws — the classic "golden ratio" composition guide
 // (the same overlay Photoshop/Lightroom offer as "Golden Ratio" cropping):
-// two lines per axis, at ~61.8%/~38.2% of the page instead of plain
-// thirds.
+// two lines per axis, at ~38.2%/~61.8% of the page instead of plain
+// thirds. Each line also takes its own pixel offset (see
+// resolveGoldenRatioOffsets below) so a template can nudge one line
+// independently of its mirror instead of being stuck with the exact
+// mathematical split.
 const PHI = (1 + Math.sqrt(5)) / 2
-export function goldenRatioLines(size) {
-  const a = size / PHI
-  return [a, size - a]
+
+export function goldenRatioLinesX(width, offsetSx = 0, offsetDx = 0) {
+  const a = width / PHI
+  return [width - a + offsetSx, a + offsetDx]
+}
+
+export function goldenRatioLinesY(height, offsetTop = 0, offsetBottom = 0) {
+  const a = height / PHI
+  return [height - a + offsetTop, a + offsetBottom]
+}
+
+// A template's own per-line nudge on the golden ratio guide — 0 (the
+// mathematically exact line) unless the user has dragged/typed a value in
+// Global Style. Same fallback pattern as resolveMargins below.
+export function resolveGoldenRatioOffsets(globalStyle) {
+  return {
+    sx: globalStyle.goldenOffsetSx ?? 0,
+    dx: globalStyle.goldenOffsetDx ?? 0,
+    top: globalStyle.goldenOffsetTop ?? 0,
+    bottom: globalStyle.goldenOffsetBottom ?? 0,
+  }
 }
 
 // The grid line nearest to `value` along one axis (pass GRID_OFFSET_X or

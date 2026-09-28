@@ -3,7 +3,8 @@ import { Trash2 } from 'lucide-react'
 import { BLOCK_TYPES } from '../../utils/blockTypes'
 import {
   clamp,
-  goldenRatioLines,
+  goldenRatioLinesX,
+  goldenRatioLinesY,
   GRID_OFFSET_X,
   GRID_OFFSET_Y,
   nearestGridLine,
@@ -114,6 +115,7 @@ export default function FreeBlock({
   globalStyle,
   snapToGrid = false,
   snapToGoldenRatio = false,
+  goldenOffsets = { sx: 0, dx: 0, top: 0, bottom: 0 },
   zoom = 1,
   preview = false,
   onGuides,
@@ -221,10 +223,10 @@ export default function FreeBlock({
         // Each golden ratio line is a true reference line, not just an
         // edge to butt up against — so, like a sibling's edge, a block can
         // align its left edge, right edge, or center to it.
-        goldenRatioLines(SHEET_WIDTH).forEach((v) => {
+        goldenRatioLinesX(SHEET_WIDTH, goldenOffsets.sx, goldenOffsets.dx).forEach((v) => {
           xTargets.push(v, v - block.width, v - block.width / 2)
         })
-        goldenRatioLines(SHEET_HEIGHT).forEach((v) => {
+        goldenRatioLinesY(SHEET_HEIGHT, goldenOffsets.top, goldenOffsets.bottom).forEach((v) => {
           yTargets.push(v, v - block.height, v - block.height / 2)
         })
       }
@@ -247,8 +249,8 @@ export default function FreeBlock({
     const bottomEdgeTargets = siblings.flatMap((s) => [s.y, s.y + s.height, s.y + s.height / 2])
     const topEdgeTargets = bottomEdgeTargets
 
-    const goldenX = snapToGoldenRatio ? goldenRatioLines(SHEET_WIDTH) : []
-    const goldenY = snapToGoldenRatio ? goldenRatioLines(SHEET_HEIGHT) : []
+    const goldenX = snapToGoldenRatio ? goldenRatioLinesX(SHEET_WIDTH, goldenOffsets.sx, goldenOffsets.dx) : []
+    const goldenY = snapToGoldenRatio ? goldenRatioLinesY(SHEET_HEIGHT, goldenOffsets.top, goldenOffsets.bottom) : []
 
     if (handle.x === 1) {
       width = clamp(state.origWidth + dx, MIN_WIDTH, SHEET_WIDTH - state.origX)
