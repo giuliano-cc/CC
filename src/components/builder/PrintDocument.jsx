@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom'
 import { EDGE_TO_EDGE_TYPES } from '../../utils/blockTypes'
-import { seedFreeLayout } from '../../utils/layout'
+import { pageBackgroundStyle, seedFreeLayout } from '../../utils/layout'
 import BlockRenderer from './BlockRenderer'
 
 // Renders the template for printing/"Save as PDF" — portaled into
@@ -25,7 +25,7 @@ export default function PrintDocument({ blocks, globalStyle, pageCount }) {
         key={pageIndex}
         className="print-page"
         style={{
-          background: globalStyle.pageBackground || '#ffffff',
+          ...pageBackgroundStyle(globalStyle),
           fontFamily: globalStyle.bodyFontFamily || globalStyle.fontFamily,
           color: globalStyle.textColor,
         }}

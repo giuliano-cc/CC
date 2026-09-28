@@ -39,6 +39,11 @@ const DEFAULT_GLOBAL_STYLE = {
   primaryColor: '#2563eb',
   textColor: '#1e293b',
   pageBackground: '#ffffff',
+  // A page background image sits on top of pageBackground (visible
+  // through any transparent part of the image, e.g. a PNG watermark) —
+  // 'cover'/'contain'/'repeat' picks how it fills the page.
+  pageBackgroundImage: '',
+  pageBackgroundSize: 'cover',
   fontFamily: 'Inter, system-ui, sans-serif',
   titleFontFamily: null,
   bodyFontFamily: null,

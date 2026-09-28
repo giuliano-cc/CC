@@ -211,6 +211,7 @@ function GlobalStylePanel() {
           )}
         </div>
       </Field>
+      <PageBackgroundImageField globalStyle={globalStyle} setGlobalStyle={setGlobalStyle} />
       <Field label="Title font">
         <FontPicker
           value={globalStyle.titleFontFamily || globalStyle.fontFamily}
@@ -524,6 +525,71 @@ function GlobalStylePanel() {
         Select a block on the sheet to edit its specific properties.
       </p>
     </div>
+  )
+}
+
+// An image behind every block on the page, on top of the plain page
+// background color above (visible through any transparent part of the
+// image, e.g. a PNG watermark or logo) — see utils/layout.js's
+// pageBackgroundStyle, applied identically in the editor (Canvas.jsx) and
+// the print/export tree (PrintDocument.jsx).
+function PageBackgroundImageField({ globalStyle, setGlobalStyle }) {
+  const fileInputRef = useRef(null)
+
+  function handleFile(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    // Downscaled like every other upload (see utils/imageResize.js) — a
+    // full-bleed page background doesn't need to be sharper than print
+    // resolution at this page size, and a raw phone photo would otherwise
+    // dominate the whole template's storage footprint.
+    resizeImageFile(file, { maxDimension: 1600 }).then((dataUrl) =>
+      setGlobalStyle((prev) => ({ ...prev, pageBackgroundImage: dataUrl })),
+    )
+    event.target.value = ''
+  }
+
+  return (
+    <Field label="Page background image">
+      <div className="flex items-center gap-1.5">
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+        >
+          {globalStyle.pageBackgroundImage ? 'Replace image' : 'Upload image'}
+        </button>
+        {globalStyle.pageBackgroundImage && (
+          <button
+            type="button"
+            onClick={() => setGlobalStyle((prev) => ({ ...prev, pageBackgroundImage: '' }))}
+            className="shrink-0 rounded-md px-1.5 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            title="Remove image"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      {globalStyle.pageBackgroundImage && (
+        <div className="mt-2 flex items-center gap-2">
+          <img
+            src={globalStyle.pageBackgroundImage}
+            alt="Page background preview"
+            className="h-12 w-9 shrink-0 rounded border border-slate-200 object-cover"
+          />
+          <select
+            value={globalStyle.pageBackgroundSize || 'cover'}
+            onChange={(e) => setGlobalStyle((prev) => ({ ...prev, pageBackgroundSize: e.target.value }))}
+            className={`${inputClasses} !w-auto flex-1`}
+          >
+            <option value="cover">Cover (fill the page, cropped)</option>
+            <option value="contain">Contain (fit inside, no cropping)</option>
+            <option value="repeat">Repeat (tiled at original size)</option>
+          </select>
+        </div>
+      )}
+    </Field>
   )
 }
 

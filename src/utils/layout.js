@@ -5,6 +5,25 @@ export const SHEET_HEIGHT = 1123
 export const SHEET_PADDING = 48
 export const CONTENT_WIDTH = SHEET_WIDTH - SHEET_PADDING * 2
 
+// Shared by the editor sheet (Canvas.jsx) and the print/export tree
+// (PrintDocument.jsx) so a page's background — a flat color, or an image
+// on top of it (visible through any transparent part, e.g. a PNG
+// watermark) — looks identical on screen and on paper. `pageBackgroundSize`
+// picks how the image fills the page: 'cover'/'contain' (CSS
+// background-size) or 'repeat' (tiled at its own size instead of scaled).
+export function pageBackgroundStyle(globalStyle) {
+  const style = { backgroundColor: globalStyle.pageBackground || '#ffffff' }
+  if (!globalStyle.pageBackgroundImage) return style
+  const fit = globalStyle.pageBackgroundSize || 'cover'
+  return {
+    ...style,
+    backgroundImage: `url(${globalStyle.pageBackgroundImage})`,
+    backgroundSize: fit === 'repeat' ? 'auto' : fit,
+    backgroundRepeat: fit === 'repeat' ? 'repeat' : 'no-repeat',
+    backgroundPosition: 'center',
+  }
+}
+
 // Shared between the visual grid overlay (Canvas.jsx) and drag/resize
 // snapping (FreeBlock.jsx), so a block actually snaps to the same lines
 // the grid draws. The grid lives entirely inside the margins (like the

@@ -8,6 +8,7 @@ import {
   goldenRatioOffsetLinesX,
   goldenRatioOffsetLinesY,
   GRID_SIZE,
+  pageBackgroundStyle,
   resolveGoldenRatioOffsets,
   resolveGridOffsets,
   resolveMargins,
@@ -75,7 +76,7 @@ function Page({
         height: SHEET_HEIGHT,
         fontFamily: globalStyle.bodyFontFamily || globalStyle.fontFamily,
         color: globalStyle.textColor,
-        backgroundColor: globalStyle.pageBackground || '#ffffff',
+        ...pageBackgroundStyle(globalStyle),
       }}
       // `z-0`: without an explicit z-index, `relative` alone doesn't
       // establish a new stacking context, so a block with a negative
