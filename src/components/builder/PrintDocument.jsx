@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { EDGE_TO_EDGE_TYPES } from '../../utils/blockTypes'
 import { seedFreeLayout } from '../../utils/layout'
 import BlockRenderer from './BlockRenderer'
 
@@ -48,8 +49,13 @@ export default function PrintDocument({ blocks, globalStyle, pageCount }) {
                   interactive-only bits (cursor, hover/selection ring) —
                   a block too small for its content is cropped at its own
                   edge here exactly like it is on screen, instead of
-                  spilling into whatever sits after it on the page. */}
-              <div className="h-full w-full overflow-hidden rounded-md border border-transparent p-2">
+                  spilling into whatever sits after it on the page. No
+                  padding for EDGE_TO_EDGE_TYPES, same as on screen. */}
+              <div
+                className={`h-full w-full overflow-hidden rounded-md border border-transparent ${
+                  EDGE_TO_EDGE_TYPES.includes(block.type) ? '' : 'p-2'
+                }`}
+              >
                 <BlockRenderer block={block} globalStyle={globalStyle} />
               </div>
             </div>

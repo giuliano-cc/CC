@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { Trash2 } from 'lucide-react'
-import { BLOCK_TYPES } from '../../utils/blockTypes'
+import { BLOCK_TYPES, EDGE_TO_EDGE_TYPES } from '../../utils/blockTypes'
 import {
   clamp,
   goldenRatioLinesX,
@@ -361,8 +361,13 @@ export default function FreeBlock({
         // sits after it on the page — sizing a block correctly is the
         // user's own call to make (use "Fit to content" if it's too
         // small), not something the block should paper over by leaking
-        // into its neighbor.
-        className={`h-full w-full overflow-hidden rounded-md border p-2 transition ${
+        // into its neighbor. No padding for EDGE_TO_EDGE_TYPES (Shape/
+        // Image/Divider) — they're meant to fill their box exactly, and
+        // the usual padding would otherwise show as an unwanted white gap
+        // around a color fill or photo.
+        className={`h-full w-full overflow-hidden rounded-md border transition ${
+          EDGE_TO_EDGE_TYPES.includes(block.type) ? '' : 'p-2'
+        } ${
           preview
             ? 'border-transparent'
             : isSelected

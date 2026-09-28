@@ -42,6 +42,17 @@ export const BLOCK_TYPES = {
   SHAPE: 'shape',
 }
 
+// Block types meant to fill their own box completely (a color fill, a
+// photo, a rule) rather than hold text against a border — for these, the
+// usual 8px padding every other block gets (so text never touches its own
+// selection border) instead shows up as an unwanted white gap between the
+// block's edges and its actual content. FreeBlock.jsx/PrintDocument.jsx
+// both read this to skip that padding only for these types, in both the
+// editor and the print output, so a Shape/Image/Divider can be sized to
+// butt flush against a page edge or another block with no visible border
+// around it.
+export const EDGE_TO_EDGE_TYPES = [BLOCK_TYPES.SHAPE, BLOCK_TYPES.IMAGE, BLOCK_TYPES.DIVIDER]
+
 // Fonts available in the font-family selectors (toolbar and properties panel).
 // Pixel sizes behind each heading "size" preset (sm/md/lg/xl — see
 // HEADING_SIZE_CLASSES in BlockRenderer.jsx for the matching Tailwind
