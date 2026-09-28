@@ -22,8 +22,8 @@ export default function TemplatesPage() {
     [],
   )
 
-  function handleExport() {
-    const blob = new Blob([exportTemplates()], { type: 'application/json' })
+  async function handleExport() {
+    const blob = new Blob([await exportTemplates()], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -41,9 +41,9 @@ export default function TemplatesPage() {
       return
     }
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        importTemplates(reader.result)
+        await importTemplates(reader.result)
         refetch()
         toast.success('Backup imported')
       } catch {

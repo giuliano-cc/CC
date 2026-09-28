@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import { idbGet, idbSet } from '../utils/idbStorage'
 import { SECTION_TITLE_DEFS } from '../utils/sectionTitles'
 
 const STORAGE_KEY = 'printflow_content_library'
@@ -143,62 +144,85 @@ function buildState(enMap, deMap, sharedMap, titlesMap) {
   }
 }
 
-function loadInitialState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return blankState()
-    const parsed = JSON.parse(raw)
-    // Every shape this key has ever been saved in nests the two languages
-    // under `content` (the current `{ shared, content: { en, de } }`, and
-    // the old bilingual `{ language, content: { en, de } }` saved before
-    // photo/signature had a shared store of their own) — `parsed.shared`
-    // simply won't exist yet for the older one.
-    if (parsed.content && (parsed.content.en || parsed.content.de)) {
-      return buildState(parsed.content.en, parsed.content.de, parsed.shared, parsed.titles)
-    }
-    // Pre-dates the bilingual content model entirely: a flat single-
-    // language map (no `content` wrapper at all). Becomes the English
-    // copy so nothing already written is lost; German starts blank rather
-    // than duplicating it, since it was never actually written in German.
-    return buildState(parsed, null, null, null)
-  } catch {
-    return blankState()
+// Every shape this key has ever been saved in nests the two languages
+// under `content` (the current `{ shared, content: { en, de }, titles }`,
+// and the old bilingual `{ language, content: { en, de } }` saved before
+// photo/signature had a shared store of their own) — `parsed.shared`/
+// `parsed.titles` simply won't exist yet for an older one.
+function stateFromRaw(parsed) {
+  if (!parsed) return blankState()
+  if (parsed.content && (parsed.content.en || parsed.content.de)) {
+    return buildState(parsed.content.en, parsed.content.de, parsed.shared, parsed.titles)
   }
+  // Pre-dates the bilingual content model entirely: a flat single-
+  // language map (no `content` wrapper at all). Becomes the English
+  // copy so nothing already written is lost; German starts blank rather
+  // than duplicating it, since it was never actually written in German.
+  return buildState(parsed, null, null, null)
 }
 
 const ContentLibraryContext = createContext(null)
 
 export function ContentLibraryProvider({ children }) {
-  const [state, setState] = useState(loadInitialState)
+  const [state, setState] = useState(blankState)
+  // Only true once the async load below has actually run — guards the
+  // persist effect so it can't fire with the blank placeholder state and
+  // overwrite whatever's already saved before that load gets a chance to
+  // apply it.
+  const [isLoaded, setIsLoaded] = useState(false)
   const { shared, content, titles } = state
   // Was the last save attempt successful? Starts true so a save that
   // fails on the very first render still shows the error toast, and only
   // fires it once per continuous failure streak — not on every keystroke.
   const lastSaveOk = useRef(true)
 
+  // One-time load, from IndexedDB (see utils/idbStorage.js — its quota is
+  // a share of free disk space, versus localStorage's flat ~5-10MB), with
+  // a fallback to any pre-existing localStorage data left over from
+  // before this moved off it, so upgrading never wipes an existing
+  // library.
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-      if (!lastSaveOk.current) {
-        toast.success('Content Library is saving again.')
-        lastSaveOk.current = true
+    let cancelled = false
+    ;(async () => {
+      const stored = await idbGet(STORAGE_KEY)
+      if (stored) {
+        if (!cancelled) setState(stateFromRaw(stored))
+      } else {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY)
+          if (raw && !cancelled) setState(stateFromRaw(JSON.parse(raw)))
+        } catch {
+          // Corrupted or unavailable: stays at the blank default.
+        }
       }
-    } catch {
-      // Almost always quota exceeded (a large photo/signature pushed the
-      // whole library past the browser's ~5-10MB per-origin storage
-      // limit) rather than localStorage being unavailable — content still
-      // works for the current session, it just silently stopped
-      // persisting, which otherwise looks exactly like "my changes keep
-      // getting lost" with no explanation. Surfacing it here instead.
-      if (lastSaveOk.current) {
-        toast.error(
-          "Content Library isn't saving — your browser's storage is full. Try removing or replacing a large photo/signature.",
-          { duration: 8000 },
-        )
+      if (!cancelled) setIsLoaded(true)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isLoaded) return
+    ;(async () => {
+      const ok = await idbSet(STORAGE_KEY, state)
+      if (ok) {
+        if (!lastSaveOk.current) {
+          toast.success('Content Library is saving again.')
+          lastSaveOk.current = true
+        }
+      } else if (lastSaveOk.current) {
+        // Both IndexedDB and its localStorage fallback failed — rare
+        // (IndexedDB's quota is far larger than localStorage's ever was),
+        // but still surfaced rather than silently dropping the save the
+        // way it used to.
+        toast.error("Content Library isn't saving — your browser's storage is unavailable or full.", {
+          duration: 8000,
+        })
         lastSaveOk.current = false
       }
-    }
-  }, [state])
+    })()
+  }, [state, isLoaded])
 
   // The merged map every existing consumer expects: a language's own
   // wording plus the shared image slots. Falls back to English for an

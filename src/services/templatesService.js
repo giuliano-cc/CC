@@ -1,53 +1,64 @@
 import toast from 'react-hot-toast'
 import apiClient from './apiClient'
 import { CV_TEMPLATES } from '../utils/cvTemplates'
+import { idbGet, idbSet } from '../utils/idbStorage'
 
 // Sample data used until the real backend is available.
 // The backend, via the token sent by apiClient's interceptor, will
 // automatically filter results based on the authenticated user.
 //
-// Persisted to localStorage (like the Content Library) so edits survive
-// a page reload/reopen instead of resetting to the built-in defaults on
-// every fresh load of this module.
+// Persisted to IndexedDB (like the Content Library — see
+// utils/idbStorage.js) so edits survive a page reload/reopen instead of
+// resetting to the built-in defaults on every fresh load of this module.
 const STORAGE_KEY = 'printflow.templates'
 
-function loadTemplates() {
+// Starts as the built-in defaults so every export below has something to
+// work with synchronously; `ready` (below) replaces its contents in place
+// once the real saved data has loaded, and every exported function awaits
+// `ready` first so nothing reads/writes the placeholder defaults instead.
+const MOCK_TEMPLATES = structuredClone(CV_TEMPLATES)
+
+// One-time load, with a fallback to any pre-existing localStorage data
+// left over from before this moved off it, so upgrading never wipes an
+// existing set of templates.
+const ready = (async () => {
+  const stored = await idbGet(STORAGE_KEY)
+  if (Array.isArray(stored)) {
+    MOCK_TEMPLATES.splice(0, MOCK_TEMPLATES.length, ...stored)
+    return
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
+    const parsed = raw ? JSON.parse(raw) : null
+    if (Array.isArray(parsed)) {
+      MOCK_TEMPLATES.splice(0, MOCK_TEMPLATES.length, ...parsed)
+    }
   } catch {
-    // localStorage unavailable or corrupted entry: fall back to defaults.
+    // Corrupted or unavailable: stays at the built-in defaults.
   }
-  return structuredClone(CV_TEMPLATES)
-}
-
-const MOCK_TEMPLATES = loadTemplates()
+})()
 
 // Tracked across calls (not just try/catch) so the error toast fires once
 // per continuous failure streak instead of on every single edit.
 let lastPersistOk = true
 
-function persistTemplates() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_TEMPLATES))
+async function persistTemplates() {
+  const ok = await idbSet(STORAGE_KEY, MOCK_TEMPLATES)
+  if (ok) {
     if (!lastPersistOk) {
       toast.success('Templates are saving again.')
       lastPersistOk = true
     }
-  } catch {
-    // Almost always quota exceeded (embedded images across your templates
-    // pushed the total past the browser's ~5-10MB per-origin storage
-    // limit) rather than localStorage being unavailable. The edit still
-    // works in this tab for this session, it just silently stops
-    // persisting — on the next reload (or in a new tab) you're back to
-    // whatever last actually made it to disk, which looks exactly like
-    // "my changes keep getting lost" with nothing to explain why.
-    if (lastPersistOk) {
-      toast.error("This template isn't saving — your browser's storage is full. Try removing or replacing a large image.", {
-        duration: 8000,
-      })
-      lastPersistOk = false
-    }
+  } else if (lastPersistOk) {
+    // Both IndexedDB and its localStorage fallback failed — rare
+    // (IndexedDB's quota is a share of free disk space, far larger than
+    // localStorage's flat ~5-10MB), but still surfaced rather than
+    // silently dropping the save, which otherwise looks exactly like "my
+    // changes keep getting lost" with nothing to explain why.
+    toast.error("This template isn't saving — your browser's storage is unavailable or full.", {
+      duration: 8000,
+    })
+    lastPersistOk = false
   }
 }
 
@@ -55,6 +66,7 @@ const USE_MOCK = true
 
 export async function getTemplates() {
   if (USE_MOCK) {
+    await ready
     return new Promise((resolve) => setTimeout(() => resolve([...MOCK_TEMPLATES]), 400))
   }
 
@@ -64,6 +76,7 @@ export async function getTemplates() {
 
 export async function getTemplateById(id) {
   if (USE_MOCK) {
+    await ready
     const template = MOCK_TEMPLATES.find((t) => t.id === id)
     return new Promise((resolve) =>
       setTimeout(() => resolve(template ? structuredClone(template) : null), 300),
@@ -76,9 +89,10 @@ export async function getTemplateById(id) {
 
 export async function createTemplate(payload) {
   if (USE_MOCK) {
+    await ready
     const newTemplate = { id: String(Date.now()), updatedAt: new Date().toISOString(), ...payload }
     MOCK_TEMPLATES.unshift(newTemplate)
-    persistTemplates()
+    await persistTemplates()
     return new Promise((resolve) => setTimeout(() => resolve(newTemplate), 300))
   }
 
@@ -89,6 +103,7 @@ export async function createTemplate(payload) {
 
 export async function updateTemplate(id, payload) {
   if (USE_MOCK) {
+    await ready
     const index = MOCK_TEMPLATES.findIndex((t) => t.id === id)
     const updated = {
       ...(index !== -1 ? MOCK_TEMPLATES[index] : {}),
@@ -97,7 +112,7 @@ export async function updateTemplate(id, payload) {
       updatedAt: new Date().toISOString(),
     }
     if (index !== -1) MOCK_TEMPLATES[index] = updated
-    persistTemplates()
+    await persistTemplates()
     return new Promise((resolve) => setTimeout(() => resolve(structuredClone(updated)), 300))
   }
 
@@ -107,6 +122,7 @@ export async function updateTemplate(id, payload) {
 
 export async function duplicateTemplate(id) {
   if (USE_MOCK) {
+    await ready
     const original = MOCK_TEMPLATES.find((t) => t.id === id)
     // A deep clone, not a shallow spread — `blocks`/`globalStyle` are
     // nested objects/arrays, and a shallow copy would leave the
@@ -119,7 +135,7 @@ export async function duplicateTemplate(id) {
       updatedAt: new Date().toISOString(),
     }
     MOCK_TEMPLATES.unshift(copy)
-    persistTemplates()
+    await persistTemplates()
     return new Promise((resolve) => setTimeout(() => resolve(copy), 300))
   }
 
@@ -129,29 +145,32 @@ export async function duplicateTemplate(id) {
 
 export async function deleteTemplate(id) {
   if (USE_MOCK) {
+    await ready
     const index = MOCK_TEMPLATES.findIndex((t) => t.id === id)
     if (index !== -1) MOCK_TEMPLATES.splice(index, 1)
-    persistTemplates()
+    await persistTemplates()
     return new Promise((resolve) => setTimeout(resolve, 300))
   }
 
   await apiClient.delete(`/templates/${id}`)
 }
 
-// Every template a user builds lives only in this browser's localStorage
-// (see STORAGE_KEY above) — there's no backend yet, so clearing site
-// data, switching browsers, or moving to a new machine loses it all with
-// no way back. This is the safety net: a full downloadable copy, and the
-// reverse to restore it (here, or in a different browser entirely).
-export function exportTemplates() {
+// Every template a user builds lives only in this browser (see
+// STORAGE_KEY above) — there's no backend yet, so clearing site data,
+// switching browsers, or moving to a new machine loses it all with no way
+// back. This is the safety net: a full downloadable copy, and the reverse
+// to restore it (here, or in a different browser entirely).
+export async function exportTemplates() {
+  await ready
   return JSON.stringify(MOCK_TEMPLATES, null, 2)
 }
 
-export function importTemplates(json) {
+export async function importTemplates(json) {
+  await ready
   const parsed = JSON.parse(json)
   if (!Array.isArray(parsed)) throw new Error('Not a valid templates backup')
   MOCK_TEMPLATES.splice(0, MOCK_TEMPLATES.length, ...parsed)
-  persistTemplates()
+  await persistTemplates()
 }
 
 export async function renderTemplate(id, blocks) {

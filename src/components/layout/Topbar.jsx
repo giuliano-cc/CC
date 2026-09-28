@@ -25,10 +25,10 @@ export default function Topbar() {
   // page) — one combined file, reachable from anywhere in the app, so
   // saving "all of today's work" is a single click instead of remembering
   // to export both pages separately.
-  function handleExportAll() {
+  async function handleExportAll() {
     const backup = {
       exportedAt: new Date().toISOString(),
-      templates: JSON.parse(exportTemplates()),
+      templates: JSON.parse(await exportTemplates()),
       contentLibrary: JSON.parse(exportLibrary()),
     }
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
@@ -54,11 +54,11 @@ export default function Topbar() {
       return
     }
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const backup = JSON.parse(reader.result)
         if (!backup.templates || !backup.contentLibrary) throw new Error('Not a valid full backup')
-        importTemplates(JSON.stringify(backup.templates))
+        await importTemplates(JSON.stringify(backup.templates))
         importLibrary(JSON.stringify(backup.contentLibrary))
         toast.success('Full backup imported — reloading...')
         // Templates are cached in a module-level array read once by
