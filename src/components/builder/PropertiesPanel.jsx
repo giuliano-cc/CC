@@ -2183,6 +2183,7 @@ function BlockPropertiesPanel({ block, onChange }) {
               />
               Show location before the title
             </label>
+            <EntryTitleStyleFields block={block} onChange={onChange} />
           </>
         )}
 

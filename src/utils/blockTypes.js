@@ -227,6 +227,17 @@ export const BLOCK_DEFINITIONS = [
       // around — the two lines just swap, whichever is now first keeps
       // the title's own bold styling.
       locationFirst: false,
+      // Also 'entries'-only: the per-entry title's own font/size/color,
+      // separate from `fontFamily`/`fontSize`/`color` above (which style
+      // the body/description text) — shares the same fields, and the same
+      // "Entry title" row in Global Style's typography list, as the
+      // dedicated Experience/Education blocks (see getTemplateTypographyStyles),
+      // so a Selected Works block styled this way looks like a sibling of
+      // Experience instead of drifting to whatever the generic "Body
+      // text" row says.
+      entryTitleFontFamily: null,
+      entryTitleFontSize: null,
+      entryTitleColor: null,
     },
   },
   {
@@ -550,6 +561,15 @@ function hasSectionTitle(block) {
   return false
 }
 
+// A Text block bound to an "entries" Content Library slot (Selected Works,
+// or any future one) renders per-item titles just like the dedicated
+// Experience/Education blocks do (see BlockRenderer.jsx) — so it should
+// share their "Entry title" styling identity rather than being lumped in
+// with plain paragraph Text blocks.
+export function isEntriesBoundText(block) {
+  return block.type === BLOCK_TYPES.TEXT && CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.type === 'entries'
+}
+
 // Which field holds a section-title block's own raw px size override: a
 // SECTION_TITLE_TYPES block has no other use for `fontSize`, but a Text
 // block's `fontSize` is already its body paragraph's size, so its title
@@ -786,10 +806,10 @@ export function getTemplateTypographyStyles(template) {
       // own block. Both block types share one merged row (like Body text
       // does for every Text block) so styling entry titles stays a single
       // global control instead of two near-identical ones.
-      if (block.type === BLOCK_TYPES.EXPERIENCE || block.type === BLOCK_TYPES.EDUCATION) {
+      if (block.type === BLOCK_TYPES.EXPERIENCE || block.type === BLOCK_TYPES.EDUCATION || isEntriesBoundText(block)) {
         addRow(
           'entryTitle',
-          'Entry title (Experience / Education)',
+          'Entry title (Experience / Education / Selected Works)',
           block.entryTitleFontSize || 16,
           true,
           block.entryTitleColor,
@@ -821,7 +841,7 @@ export function matchesTypographyRow(block, row) {
     return false
   }
   if (row.matchType === 'entryTitle') {
-    return block.type === BLOCK_TYPES.EXPERIENCE || block.type === BLOCK_TYPES.EDUCATION
+    return block.type === BLOCK_TYPES.EXPERIENCE || block.type === BLOCK_TYPES.EDUCATION || isEntriesBoundText(block)
   }
   return block.type === row.matchType
 }

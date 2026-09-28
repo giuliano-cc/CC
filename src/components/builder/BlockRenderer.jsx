@@ -414,9 +414,16 @@ export default function BlockRenderer({
       // description — overriding the title/body font and the default P1
       // body size when set, exactly like every other Text block.
       const p1SizePx = globalStyle.typographyScale?.p1?.sizePx
-      const entryTitleFont = block.fontFamily || resolveTitleFont(globalStyle)
+      // Entry title styling is its own identity (see EntryTitleStyleFields/
+      // getTemplateTypographyStyles' 'entryTitle' row), shared with the
+      // dedicated Experience/Education blocks — kept separate from
+      // `fontFamily`/`fontSize`/`color` above, which style the body/
+      // description text instead, so the two don't drift onto whatever the
+      // generic "Body text" row says.
+      const entryTitleFont = block.entryTitleFontFamily || resolveTitleFont(globalStyle)
       const entryBodyFont = block.fontFamily || bodyFont
       const entrySizePx = block.fontSize || p1SizePx
+      const entryTitleSizePx = block.entryTitleFontSize || 16
       // Letter spacing/line height/background color are block-level
       // typography controls (same as `typographyStyle` below applies to a
       // plain paragraph) — entries render structurally instead of as flat
@@ -440,8 +447,8 @@ export default function BlockRenderer({
               .join(' – ')
             const titleStyle = {
               fontFamily: entryTitleFont,
-              fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
-              color: block.color || undefined,
+              fontSize: `${entryTitleSizePx}px`,
+              color: block.entryTitleColor || globalStyle.textColor,
               ...entryExtraStyle,
             }
             // Location/place first, title second — the same two lines,
