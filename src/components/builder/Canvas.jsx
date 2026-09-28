@@ -122,13 +122,17 @@ function Page({
         />
       )}
 
+      {/* Golden ratio guide, entirely inside the margins on both axes
+          (position AND extent — a line only runs from the top margin to
+          the bottom margin/left margin to the right margin, not edge to
+          edge of the page). */}
       {!preview &&
         showGoldenRatio &&
         Object.values(goldenRatioLinesX(margins)).map((x, i) => (
           <div
             key={`phi-v-${i}`}
-            style={{ left: x }}
-            className="pdf-ignore pointer-events-none absolute inset-y-0 z-10 w-px border-l border-dashed border-amber-500"
+            style={{ left: x, top: margins.top, bottom: margins.bottom }}
+            className="pdf-ignore pointer-events-none absolute z-10 w-px border-l border-dashed border-amber-500"
           />
         ))}
       {!preview &&
@@ -136,8 +140,8 @@ function Page({
         Object.values(goldenRatioLinesY(margins)).map((y, i) => (
           <div
             key={`phi-h-${i}`}
-            style={{ top: y }}
-            className="pdf-ignore pointer-events-none absolute inset-x-0 z-10 h-px border-t border-dashed border-amber-500"
+            style={{ top: y, left: margins.left, right: margins.right }}
+            className="pdf-ignore pointer-events-none absolute z-10 h-px border-t border-dashed border-amber-500"
           />
         ))}
 
@@ -155,8 +159,8 @@ function Page({
           .map(({ key, x }) => (
             <div
               key={`phi-offset-v-${key}`}
-              style={{ left: x }}
-              className="pdf-ignore pointer-events-none absolute inset-y-0 z-10 w-px border-l-2 border-amber-500"
+              style={{ left: x, top: margins.top, bottom: margins.bottom }}
+              className="pdf-ignore pointer-events-none absolute z-10 w-px border-l-2 border-amber-500"
             />
           ))}
       {!preview &&
@@ -167,22 +171,24 @@ function Page({
           .map(({ key, y }) => (
             <div
               key={`phi-offset-h-${key}`}
-              style={{ top: y }}
-              className="pdf-ignore pointer-events-none absolute inset-x-0 z-10 h-px border-t-2 border-amber-500"
+              style={{ top: y, left: margins.left, right: margins.right }}
+              className="pdf-ignore pointer-events-none absolute z-10 h-px border-t-2 border-amber-500"
             />
           ))}
 
       {/* Column × row "structure grid" (see utils/layout.js) — a
           separate teal color from the grid/margin/golden-ratio guides so
           all four stay visually distinct when several are on at once.
-          Entirely inside the margins, on both axes. */}
+          Entirely inside the margins, on both axes (position AND
+          extent — a column line only runs top-margin to bottom-margin,
+          not edge to edge of the page). */}
       {!preview &&
         showStructureGrid &&
         structureColumnLines(margins, structureGrid.columns, structureGrid.gutter).map((x, i) => (
           <div
             key={`structure-v-${i}`}
-            style={{ left: x }}
-            className="pdf-ignore pointer-events-none absolute inset-y-0 z-10 w-px border-l border-dashed border-teal-500/70"
+            style={{ left: x, top: margins.top, bottom: margins.bottom }}
+            className="pdf-ignore pointer-events-none absolute z-10 w-px border-l border-dashed border-teal-500/70"
           />
         ))}
       {!preview &&
@@ -190,8 +196,8 @@ function Page({
         structureRowLines(margins, structureGrid.rows, structureGrid.gutter).map((y, i) => (
           <div
             key={`structure-h-${i}`}
-            style={{ top: y }}
-            className="pdf-ignore pointer-events-none absolute inset-x-0 z-10 h-px border-t border-dashed border-teal-500/70"
+            style={{ top: y, left: margins.left, right: margins.right }}
+            className="pdf-ignore pointer-events-none absolute z-10 h-px border-t border-dashed border-teal-500/70"
           />
         ))}
 

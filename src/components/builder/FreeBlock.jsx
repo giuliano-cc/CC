@@ -272,6 +272,47 @@ export default function FreeBlock({
     const { handle } = state
     let { origX: x, origY: y, origWidth: width, origHeight: height } = state
 
+    // Proportional resize: holding Shift while dragging a corner handle
+    // keeps the block's original aspect ratio, growing/shrinking around
+    // whichever opposite corner stays put — same convention as most
+    // design tools. Bypasses the independent x/y snapping below entirely
+    // (locking the ratio is a deliberate override of free positioning),
+    // and only for a true corner handle (both handle.x/handle.y set) —
+    // an edge handle has nothing to lock the ratio against.
+    const isCorner = handle.x !== 0 && handle.y !== 0
+    if (isCorner && event.shiftKey) {
+      const aspect = state.origWidth / state.origHeight
+      // Whichever axis the pointer moved further along (relative to the
+      // block's own proportions) drives the resize; the other axis
+      // follows it to keep the ratio, rather than fighting between two
+      // independently-dragged dimensions.
+      const widthDrivenByX = Math.abs(dx) * state.origHeight >= Math.abs(dy) * state.origWidth
+      let newWidth = widthDrivenByX
+        ? clamp(state.origWidth + handle.x * dx, MIN_WIDTH, SHEET_WIDTH)
+        : clamp(state.origHeight + handle.y * dy, MIN_HEIGHT, SHEET_HEIGHT) * aspect
+      let newHeight = newWidth / aspect
+      if (newHeight < MIN_HEIGHT) {
+        newHeight = MIN_HEIGHT
+        newWidth = newHeight * aspect
+      }
+      if (newWidth < MIN_WIDTH) {
+        newWidth = MIN_WIDTH
+        newHeight = newWidth / aspect
+      }
+      // The corner opposite the one being dragged stays fixed; the
+      // dragged corner (and the block's x/y, when growing left/up) moves.
+      const newX = handle.x === 1 ? state.origX : state.origX + state.origWidth - newWidth
+      const newY = handle.y === 1 ? state.origY : state.origY + state.origHeight - newHeight
+      onGuides?.(null)
+      onChangeGeometry({
+        x: clamp(newX, 0, SHEET_WIDTH - newWidth),
+        y: clamp(newY, 0, SHEET_HEIGHT - newHeight),
+        width: newWidth,
+        height: newHeight,
+      })
+      return
+    }
+
     // Edges/centers of sibling blocks that the *moving* edge of this one
     // (its right edge when growing right, its left edge when growing
     // left, ...) can snap against — same idea as the margin snap, just
@@ -410,6 +451,7 @@ export default function FreeBlock({
             key={handle.key}
             data-no-drag
             onPointerDown={(event) => handleResizeStart(event, handle)}
+            title={handle.x !== 0 && handle.y !== 0 ? 'Hold Shift to keep proportions' : undefined}
             className={`pdf-ignore absolute h-3 w-3 rounded-full border-2 border-white bg-primary shadow ${handle.className}`}
           />
         ))}
