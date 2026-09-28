@@ -304,6 +304,56 @@ function GlobalStylePanel() {
       </div>
 
       <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-4">
+        <span className="text-xs font-medium text-slate-500">Baseline &amp; column grid</span>
+        <p className="-mt-1 text-xs text-slate-400">
+          The print-design "structure grid": evenly spaced horizontal
+          rhythm lines to keep every block's top edge in sync, plus
+          optional vertical column dividers — toggled from the Canvas
+          toolbar (the Baseline icon).
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Row height (px)">
+            <input
+              type="number"
+              min={4}
+              max={200}
+              value={globalStyle.baselineUnit ?? 24}
+              onChange={(e) => setGlobalStyle((prev) => ({ ...prev, baselineUnit: Number(e.target.value) }))}
+              className={inputClasses}
+            />
+          </Field>
+          <Field label="Columns">
+            <input
+              type="number"
+              min={1}
+              max={6}
+              value={globalStyle.baselineColumns ?? 1}
+              onChange={(e) => setGlobalStyle((prev) => ({ ...prev, baselineColumns: Number(e.target.value) }))}
+              className={inputClasses}
+            />
+          </Field>
+        </div>
+        {(globalStyle.baselineColumns ?? 1) > 1 && (
+          <Field label="Column gutter (px)">
+            <input
+              type="number"
+              min={0}
+              max={200}
+              value={globalStyle.baselineGutter ?? 24}
+              onChange={(e) => setGlobalStyle((prev) => ({ ...prev, baselineGutter: Number(e.target.value) }))}
+              className={inputClasses}
+            />
+          </Field>
+        )}
+        <p className="text-xs text-slate-400">
+          A block's top edge (and, with more than one column, its left/
+          right edge) snaps to these lines — the app doesn't measure a
+          block's actual text baseline, so this keeps blocks in rhythm
+          rather than individual lines of type.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-4">
         <h4 className="text-xs font-semibold text-slate-600">Typography scale</h4>
         <p className="-mt-1 text-xs text-slate-400">
           The sizes new Heading/Text blocks start from. H1/H2/H3 apply to

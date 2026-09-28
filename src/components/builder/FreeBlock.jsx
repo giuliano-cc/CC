@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { Trash2 } from 'lucide-react'
 import { BLOCK_TYPES } from '../../utils/blockTypes'
 import {
+  baselineColumnLines,
   clamp,
   goldenRatioLinesX,
   goldenRatioLinesY,
@@ -9,10 +10,12 @@ import {
   goldenRatioOffsetLinesY,
   GRID_OFFSET_X,
   GRID_OFFSET_Y,
+  nearestBaselineLine,
   nearestGridLine,
   SHEET_HEIGHT,
   SHEET_WIDTH,
 } from '../../utils/layout'
+import BlockRenderer from './BlockRenderer'
 
 // The golden ratio guide's snap targets for one axis: the two exact
 // reference lines plus, for any side that has one, its user-offset
@@ -22,7 +25,6 @@ import {
 function goldenSnapTargets(exactLines, offsetLines) {
   return [...Object.values(exactLines), ...Object.values(offsetLines).filter((v) => v !== null)]
 }
-import BlockRenderer from './BlockRenderer'
 
 const MIN_WIDTH = 60
 const MIN_HEIGHT = 24
@@ -127,6 +129,8 @@ export default function FreeBlock({
   snapToGrid = false,
   snapToGoldenRatio = false,
   goldenOffsets = { sx: 0, dx: 0, top: 0, bottom: 0 },
+  snapToBaseline = false,
+  baselineGrid = { unit: 24, columns: 1, gutter: 24 },
   zoom = 1,
   preview = false,
   onGuides,
@@ -243,6 +247,18 @@ export default function FreeBlock({
           goldenRatioOffsetLinesY(SHEET_HEIGHT, goldenOffsets),
         ).forEach((v) => yTargets.push(v, v - block.height, v - block.height / 2))
       }
+      if (snapToBaseline) {
+        // The rhythm line nearest wherever this block is being dragged to
+        // — like the plain grid, it's the single nearest row (a block's
+        // top edge lands on the beat), not every row on the page.
+        yTargets.push(nearestBaselineLine(y, margins, baselineGrid.unit))
+        // Column edges are true reference lines like the golden ratio's,
+        // so a block can align its left edge, right edge, or center to
+        // one.
+        baselineColumnLines(margins, baselineGrid.columns, baselineGrid.gutter).forEach((v) =>
+          xTargets.push(v, v - block.width, v - block.width / 2),
+        )
+      }
       x = snapTo(x, xTargets)
       y = snapTo(y, yTargets)
       onGuides?.(computeGuides({ x, y, width: block.width, height: block.height }, siblings, margins))
@@ -268,10 +284,11 @@ export default function FreeBlock({
     const goldenY = snapToGoldenRatio
       ? goldenSnapTargets(goldenRatioLinesY(SHEET_HEIGHT), goldenRatioOffsetLinesY(SHEET_HEIGHT, goldenOffsets))
       : []
+    const columnX = snapToBaseline ? baselineColumnLines(margins, baselineGrid.columns, baselineGrid.gutter) : []
 
     if (handle.x === 1) {
       width = clamp(state.origWidth + dx, MIN_WIDTH, SHEET_WIDTH - state.origX)
-      const targets = [...rightEdgeTargets, ...goldenX]
+      const targets = [...rightEdgeTargets, ...goldenX, ...columnX]
       if (margins.right > 0) targets.push(SHEET_WIDTH - margins.right)
       if (snapToGrid) targets.push(nearestGridLine(x + width, GRID_OFFSET_X))
       width = snapTo(x + width, targets) - x
@@ -280,7 +297,7 @@ export default function FreeBlock({
       const clampedDx = clamp(dx, -state.origX, maxDx)
       width = state.origWidth - clampedDx
       x = state.origX + clampedDx
-      const targets = [...leftEdgeTargets, ...goldenX]
+      const targets = [...leftEdgeTargets, ...goldenX, ...columnX]
       if (margins.left > 0) targets.push(margins.left)
       if (snapToGrid) targets.push(nearestGridLine(x, GRID_OFFSET_X))
       const snappedX = snapTo(x, targets)
@@ -293,6 +310,7 @@ export default function FreeBlock({
       const targets = [...bottomEdgeTargets, ...goldenY]
       if (margins.bottom > 0) targets.push(SHEET_HEIGHT - margins.bottom)
       if (snapToGrid) targets.push(nearestGridLine(y + height, GRID_OFFSET_Y))
+      if (snapToBaseline) targets.push(nearestBaselineLine(y + height, margins, baselineGrid.unit))
       height = snapTo(y + height, targets) - y
     } else if (handle.y === -1) {
       const maxDy = state.origHeight - MIN_HEIGHT
@@ -302,6 +320,7 @@ export default function FreeBlock({
       const targets = [...topEdgeTargets, ...goldenY]
       if (margins.top > 0) targets.push(margins.top)
       if (snapToGrid) targets.push(nearestGridLine(y, GRID_OFFSET_Y))
+      if (snapToBaseline) targets.push(nearestBaselineLine(y, margins, baselineGrid.unit))
       const snappedY = snapTo(y, targets)
       height += y - snappedY
       y = snappedY

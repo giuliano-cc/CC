@@ -1,8 +1,10 @@
 import { useDroppable } from '@dnd-kit/core'
 import { useState } from 'react'
-import { Eye, EyeOff, Grid3x3, Minus, Plus, Ratio, X } from 'lucide-react'
+import { Baseline, Eye, EyeOff, Grid3x3, Minus, Plus, Ratio, X } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import {
+  baselineColumnLines,
+  baselineLines,
   goldenRatioLinesX,
   goldenRatioLinesY,
   goldenRatioOffsetLinesX,
@@ -10,6 +12,7 @@ import {
   GRID_OFFSET_X,
   GRID_OFFSET_Y,
   GRID_SIZE,
+  resolveBaselineGrid,
   resolveGoldenRatioOffsets,
   resolveMargins,
   SHEET_HEIGHT,
@@ -28,7 +31,19 @@ export function parsePageDroppableId(id) {
   return match ? Number(match[1]) : null
 }
 
-function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRatio, goldenOffsets, preview, zoom }) {
+function Page({
+  pageIndex,
+  blocks,
+  margins,
+  globalStyle,
+  showGrid,
+  showGoldenRatio,
+  goldenOffsets,
+  showBaseline,
+  baselineGrid,
+  preview,
+  zoom,
+}) {
   const {
     selectedBlockId,
     selectedIds,
@@ -147,6 +162,28 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRat
             />
           ))}
 
+      {/* Baseline & column "structure grid" (see utils/layout.js) — a
+          separate teal color from the grid/margin/golden-ratio guides so
+          all four stay visually distinct when several are on at once. */}
+      {!preview &&
+        showBaseline &&
+        baselineLines(margins, baselineGrid.unit).map((y, i) => (
+          <div
+            key={`baseline-h-${i}`}
+            style={{ top: y }}
+            className="pdf-ignore pointer-events-none absolute inset-x-0 z-10 h-px border-t border-dashed border-teal-500/70"
+          />
+        ))}
+      {!preview &&
+        showBaseline &&
+        baselineColumnLines(margins, baselineGrid.columns, baselineGrid.gutter).map((x, i) => (
+          <div
+            key={`baseline-v-${i}`}
+            style={{ left: x }}
+            className="pdf-ignore pointer-events-none absolute inset-y-0 z-10 w-px border-l border-teal-500/70"
+          />
+        ))}
+
       {!preview && blocks.length === 0 && (
         <div className="pdf-ignore absolute inset-8 flex items-center justify-center rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400">
           Drag a block here to get started
@@ -166,6 +203,8 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRat
           snapToGrid={showGrid}
           snapToGoldenRatio={showGoldenRatio}
           goldenOffsets={goldenOffsets}
+          snapToBaseline={showBaseline}
+          baselineGrid={baselineGrid}
           zoom={zoom}
           preview={preview}
           onGuides={setGuides}
@@ -202,8 +241,10 @@ export default function Canvas() {
   const { blocks, globalStyle, selectBlock, pageCount, addPage, removeLastPage } = useBuilder()
   const margins = resolveMargins(globalStyle)
   const goldenOffsets = resolveGoldenRatioOffsets(globalStyle)
+  const baselineGrid = resolveBaselineGrid(globalStyle)
   const [showGrid, setShowGrid] = useState(false)
   const [showGoldenRatio, setShowGoldenRatio] = useState(false)
+  const [showBaseline, setShowBaseline] = useState(false)
   const [preview, setPreview] = useState(false)
   const [zoom, setZoom] = useState(1)
 
@@ -262,6 +303,19 @@ export default function Canvas() {
         >
           <Ratio size={16} />
         </button>
+        <button
+          type="button"
+          onClick={() => setShowBaseline((v) => !v)}
+          disabled={preview}
+          title={showBaseline ? 'Hide baseline & column grid' : 'Show baseline & column grid'}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-30 ${
+            showBaseline
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-slate-200 bg-white text-slate-500 hover:border-primary hover:text-primary'
+          }`}
+        >
+          <Baseline size={16} />
+        </button>
         <div className="flex flex-col items-center gap-1 rounded-md border border-slate-200 bg-white p-1 shadow-sm">
           <button
             type="button"
@@ -303,6 +357,8 @@ export default function Canvas() {
                 showGrid={showGrid}
                 showGoldenRatio={showGoldenRatio}
                 goldenOffsets={goldenOffsets}
+                showBaseline={showBaseline}
+                baselineGrid={baselineGrid}
                 preview={preview}
                 zoom={zoom}
               />

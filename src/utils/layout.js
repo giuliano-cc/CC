@@ -78,6 +78,58 @@ export function nearestGridLine(value, offset) {
   return Math.round((value - offset) / GRID_SIZE) * GRID_SIZE + offset
 }
 
+// The classic print-design "structure grid" (baseline rhythm + column
+// grid — see https://visme.co/blog/layout-design/): evenly spaced
+// horizontal lines a body of text's baselines are meant to land on
+// ("create a common rhythm" across headline/subhead/body/caption, each
+// set at a multiple of the same unit), plus vertical column dividers
+// within the margins so several text columns stay aligned with each
+// other. Purely a visual/snap guide, same family as the grid/margin/
+// golden ratio guides — this app doesn't measure a block's actual text
+// baseline, so it's the block's own top edge (and column edges) that
+// align to it, not individual lines of text.
+export function resolveBaselineGrid(globalStyle) {
+  return {
+    unit: globalStyle.baselineUnit ?? 24,
+    columns: Math.max(1, globalStyle.baselineColumns ?? 1),
+    gutter: globalStyle.baselineGutter ?? 24,
+  }
+}
+
+// Horizontal rhythm lines spanning the content area, starting at the top
+// margin and repeating every `unit` px down to the bottom margin.
+export function baselineLines(margins, unit) {
+  const lines = []
+  const bottom = SHEET_HEIGHT - margins.bottom
+  for (let y = margins.top; y <= bottom; y += unit) {
+    lines.push(y)
+  }
+  return lines
+}
+
+// The vertical line at each column's left and right edge — `columns`
+// equal-width columns filling the space between the margins, separated
+// by `gutter` px of empty space. A single column (the default) has no
+// internal dividers to draw, so this returns nothing until the user
+// actually asks for more than one.
+export function baselineColumnLines(margins, columns, gutter) {
+  if (columns <= 1) return []
+  const contentWidth = SHEET_WIDTH - margins.left - margins.right
+  const columnWidth = (contentWidth - gutter * (columns - 1)) / columns
+  const lines = []
+  for (let i = 0; i < columns; i++) {
+    const left = margins.left + i * (columnWidth + gutter)
+    lines.push(left, left + columnWidth)
+  }
+  return lines
+}
+
+// The baseline rhythm line nearest to `value`, anchored at the top
+// margin (row 0 of the grid) rather than the page's own top edge.
+export function nearestBaselineLine(value, margins, unit) {
+  return Math.round((value - margins.top) / unit) * unit + margins.top
+}
+
 function estimateHeight(block) {
   if (block.type === BLOCK_TYPES.COLUMNS) {
     const maxItems = Math.max(1, ...block.columns.map((c) => c.items.length))
