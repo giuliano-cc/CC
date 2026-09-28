@@ -1,6 +1,6 @@
 import { useDroppable } from '@dnd-kit/core'
 import { useState } from 'react'
-import { Grid3x3, Minus, Plus, X } from 'lucide-react'
+import { Eye, EyeOff, Grid3x3, Minus, Plus, Ratio, X } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import {
   GRID_OFFSET_X,
@@ -23,7 +23,19 @@ export function parsePageDroppableId(id) {
   return match ? Number(match[1]) : null
 }
 
-function Page({ pageIndex, blocks, margins, globalStyle, showGrid, zoom }) {
+// The classic "golden ratio" composition guide (the same overlay
+// Photoshop/Lightroom's crop tool offers as "Golden Ratio"): two lines per
+// axis, splitting the page at the golden ratio (~61.8%/38.2%) instead of
+// plain thirds — a reference for placing a photo, a title, or a whole
+// section where the eye is naturally drawn, the same way the margin guide
+// marks where content should stay inside.
+const PHI = (1 + Math.sqrt(5)) / 2
+function goldenRatioLines(size) {
+  const a = size / PHI
+  return [a, size - a]
+}
+
+function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRatio, preview, zoom }) {
   const {
     selectedBlockId,
     selectedIds,
@@ -68,7 +80,7 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, zoom }) {
         isOver ? 'ring-2 ring-primary/40' : ''
       }`}
     >
-      {showGrid && (
+      {!preview && showGrid && (
         <div
           style={{
             backgroundImage:
@@ -84,7 +96,7 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, zoom }) {
         />
       )}
 
-      {(margins.top > 0 || margins.right > 0 || margins.bottom > 0 || margins.left > 0) && (
+      {!preview && (margins.top > 0 || margins.right > 0 || margins.bottom > 0 || margins.left > 0) && (
         <div
           style={{ top: margins.top, right: margins.right, bottom: margins.bottom, left: margins.left }}
           // A purely editor-side guide (see the note on `pdf-ignore` just
@@ -96,7 +108,26 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, zoom }) {
         />
       )}
 
-      {blocks.length === 0 && (
+      {!preview &&
+        showGoldenRatio &&
+        goldenRatioLines(SHEET_WIDTH).map((x) => (
+          <div
+            key={`phi-v-${x}`}
+            style={{ left: x }}
+            className="pdf-ignore pointer-events-none absolute inset-y-0 z-10 w-px border-l border-dashed border-amber-500"
+          />
+        ))}
+      {!preview &&
+        showGoldenRatio &&
+        goldenRatioLines(SHEET_HEIGHT).map((y) => (
+          <div
+            key={`phi-h-${y}`}
+            style={{ top: y }}
+            className="pdf-ignore pointer-events-none absolute inset-x-0 z-10 h-px border-t border-dashed border-amber-500"
+          />
+        ))}
+
+      {!preview && blocks.length === 0 && (
         <div className="pdf-ignore absolute inset-8 flex items-center justify-center rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400">
           Drag a block here to get started
         </div>
@@ -114,6 +145,7 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, zoom }) {
           globalStyle={globalStyle}
           snapToGrid={showGrid}
           zoom={zoom}
+          preview={preview}
           onGuides={setGuides}
           onSelect={selectBlock}
           onRemove={removeBlock}
@@ -145,10 +177,20 @@ const ZOOM_MAX = 1.5
 const ZOOM_STEP = 0.1
 
 export default function Canvas() {
-  const { blocks, globalStyle, pageCount, addPage, removeLastPage } = useBuilder()
+  const { blocks, globalStyle, selectBlock, pageCount, addPage, removeLastPage } = useBuilder()
   const margins = resolveMargins(globalStyle)
   const [showGrid, setShowGrid] = useState(false)
+  const [showGoldenRatio, setShowGoldenRatio] = useState(false)
+  const [preview, setPreview] = useState(false)
   const [zoom, setZoom] = useState(1)
+
+  function togglePreview() {
+    setPreview((v) => !v)
+    // Nothing is selectable in preview anyway — clearing the selection
+    // when entering it keeps the Properties panel from showing a stale
+    // block that no longer has a visible outline to go with it.
+    selectBlock(null)
+  }
 
   return (
     // `justify-start` (not `justify-center`): once enough pages overflow the
@@ -161,15 +203,41 @@ export default function Canvas() {
       <div className="sticky left-8 top-8 z-20 -mr-9 -mb-9 flex flex-col gap-1.5">
         <button
           type="button"
-          onClick={() => setShowGrid((v) => !v)}
-          title={showGrid ? 'Hide alignment grid' : 'Show alignment grid'}
+          onClick={togglePreview}
+          title={preview ? 'Exit preview' : 'Preview: hide every editor guide, exactly like the printed page'}
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border shadow-sm transition ${
+            preview
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-slate-200 bg-white text-slate-500 hover:border-primary hover:text-primary'
+          }`}
+        >
+          {preview ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowGrid((v) => !v)}
+          disabled={preview}
+          title={showGrid ? 'Hide alignment grid' : 'Show alignment grid'}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-30 ${
             showGrid
               ? 'border-primary bg-primary/10 text-primary'
               : 'border-slate-200 bg-white text-slate-500 hover:border-primary hover:text-primary'
           }`}
         >
           <Grid3x3 size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowGoldenRatio((v) => !v)}
+          disabled={preview}
+          title={showGoldenRatio ? 'Hide golden ratio guide' : 'Show golden ratio guide'}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-30 ${
+            showGoldenRatio
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-slate-200 bg-white text-slate-500 hover:border-primary hover:text-primary'
+          }`}
+        >
+          <Ratio size={16} />
         </button>
         <div className="flex flex-col items-center gap-1 rounded-md border border-slate-200 bg-white p-1 shadow-sm">
           <button
@@ -210,6 +278,8 @@ export default function Canvas() {
                 margins={margins}
                 globalStyle={globalStyle}
                 showGrid={showGrid}
+                showGoldenRatio={showGoldenRatio}
+                preview={preview}
                 zoom={zoom}
               />
             </div>

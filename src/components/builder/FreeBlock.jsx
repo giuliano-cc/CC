@@ -113,6 +113,7 @@ export default function FreeBlock({
   globalStyle,
   snapToGrid = false,
   zoom = 1,
+  preview = false,
   onGuides,
   onSelect,
   onRemove,
@@ -129,6 +130,10 @@ export default function FreeBlock({
   // a stale (empty or outdated) sibling list and silently stopped
   // snapping to it.
   function handlePointerDownMove(event) {
+    // Preview mode shows the page exactly as it will print — nothing on
+    // it is draggable, resizable, or selectable, same as looking at the
+    // final PDF.
+    if (preview) return
     // Only the left button/primary touch starts the move; doesn't
     // interfere with clicks on input/textarea/select inside the block.
     if (event.button !== undefined && event.button !== 0) return
@@ -294,21 +299,24 @@ export default function FreeBlock({
     >
       <div
         data-block-content={block.id}
-        // `overflow-visible`, not `-auto`/`-hidden`: printing (see
-        // components/builder/PrintDocument.jsx) never clips a block to its
-        // own box either, so content taller than the box it's in should
-        // spill over visibly here too — a scrollbar would quietly hide the
-        // exact same overflow that print then reveals, making a box that
-        // needs resizing look fine right up until it's exported.
-        className={`h-full w-full overflow-visible rounded-md border p-2 transition ${
-          isSelected
-            ? 'cursor-move border-primary ring-2 ring-primary/20'
-            : 'cursor-move border-transparent hover:border-slate-200'
+        // `overflow-hidden`, matching PrintDocument.jsx's own wrapper:
+        // content taller than the box it's in is cropped at the box's own
+        // edge, both here and in print, instead of spilling into whatever
+        // sits after it on the page — sizing a block correctly is the
+        // user's own call to make (use "Fit to content" if it's too
+        // small), not something the block should paper over by leaking
+        // into its neighbor.
+        className={`h-full w-full overflow-hidden rounded-md border p-2 transition ${
+          preview
+            ? 'border-transparent'
+            : isSelected
+              ? 'cursor-move border-primary ring-2 ring-primary/20'
+              : 'cursor-move border-transparent hover:border-slate-200'
         }`}
       >
         <BlockRenderer
           block={block}
-          interactive={block.type === BLOCK_TYPES.COLUMNS && isSelected}
+          interactive={!preview && block.type === BLOCK_TYPES.COLUMNS && isSelected}
           selectedId={selectedBlockId}
           onSelectItem={onSelect}
           onAddItem={(columnIndex, type, extraProps) =>
@@ -319,20 +327,23 @@ export default function FreeBlock({
         />
       </div>
 
-      <button
-        type="button"
-        data-no-drag
-        onClick={(event) => {
-          event.stopPropagation()
-          onRemove(block.id)
-        }}
-        className="pdf-ignore absolute -right-2 -top-2 z-10 hidden h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow group-hover:flex"
-        aria-label="Delete block"
-      >
-        <Trash2 size={12} />
-      </button>
+      {!preview && (
+        <button
+          type="button"
+          data-no-drag
+          onClick={(event) => {
+            event.stopPropagation()
+            onRemove(block.id)
+          }}
+          className="pdf-ignore absolute -right-2 -top-2 z-10 hidden h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow group-hover:flex"
+          aria-label="Delete block"
+        >
+          <Trash2 size={12} />
+        </button>
+      )}
 
-      {isOnlySelected &&
+      {!preview &&
+        isOnlySelected &&
         RESIZE_HANDLES.map((handle) => (
           <div
             key={handle.key}
