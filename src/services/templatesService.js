@@ -118,6 +118,22 @@ export async function deleteTemplate(id) {
   await apiClient.delete(`/templates/${id}`)
 }
 
+// Every template a user builds lives only in this browser's localStorage
+// (see STORAGE_KEY above) — there's no backend yet, so clearing site
+// data, switching browsers, or moving to a new machine loses it all with
+// no way back. This is the safety net: a full downloadable copy, and the
+// reverse to restore it (here, or in a different browser entirely).
+export function exportTemplates() {
+  return JSON.stringify(MOCK_TEMPLATES, null, 2)
+}
+
+export function importTemplates(json) {
+  const parsed = JSON.parse(json)
+  if (!Array.isArray(parsed)) throw new Error('Not a valid templates backup')
+  MOCK_TEMPLATES.splice(0, MOCK_TEMPLATES.length, ...parsed)
+  persistTemplates()
+}
+
 export async function renderTemplate(id, blocks) {
   if (USE_MOCK) {
     return new Promise((resolve) =>

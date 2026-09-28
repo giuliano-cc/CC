@@ -1,11 +1,14 @@
+import { useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Download, Plus, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useApi } from '../hooks/useApi'
 import {
   deleteTemplate,
   duplicateTemplate,
+  exportTemplates,
   getTemplates,
+  importTemplates,
 } from '../services/templatesService'
 import TemplateCard from '../components/templates/TemplateCard'
 import Skeleton from '../components/common/Skeleton'
@@ -13,10 +16,43 @@ import ErrorMessage from '../components/common/ErrorMessage'
 
 export default function TemplatesPage() {
   const navigate = useNavigate()
+  const importInputRef = useRef(null)
   const { data: templates, setData, isLoading, error, refetch } = useApi(
     getTemplates,
     [],
   )
+
+  function handleExport() {
+    const blob = new Blob([exportTemplates()], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'printflow-templates-backup.json'
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Backup downloaded')
+  }
+
+  function handleImportFile(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!window.confirm('Restore templates from this backup? This replaces every template currently saved in this browser.')) {
+      event.target.value = ''
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        importTemplates(reader.result)
+        refetch()
+        toast.success('Backup imported')
+      } catch {
+        toast.error('This file is not a valid backup.')
+      }
+    }
+    reader.readAsText(file)
+    event.target.value = ''
+  }
 
   async function handleDuplicate(id) {
     try {
@@ -50,14 +86,41 @@ export default function TemplatesPage() {
             Manage the layouts you've created for invoices, reports and more.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/templates/new')}
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
-        >
-          <Plus size={16} />
-          New Template
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            title="Restore templates from a backup file — replaces every template currently saved in this browser"
+            className="flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+          >
+            <Upload size={13} />
+            Import backup
+          </button>
+          <button
+            type="button"
+            onClick={handleExport}
+            title="Download every template in this browser as a JSON backup file"
+            className="flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+          >
+            <Download size={13} />
+            Export backup
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/templates/new')}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition hover:bg-primary-700"
+          >
+            <Plus size={16} />
+            New Template
+          </button>
+        </div>
       </div>
 
       {isLoading && (
