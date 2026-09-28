@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import { SECTION_TITLE_DEFS } from '../utils/sectionTitles'
 
 const STORAGE_KEY = 'printflow_content_library'
 
@@ -76,6 +77,11 @@ const DEFAULT_LANGUAGE_LIBRARY = {
   ...Object.fromEntries(STRUCTURED_LIST_KEYS.map((key) => [`${key}Items`, ''])),
 }
 
+// A custom per-language override for a section heading (see
+// utils/sectionTitles.js) — empty means "use the built-in default for
+// that language", exactly like every other slot above.
+const DEFAULT_TITLES_LANGUAGE = Object.fromEntries(SECTION_TITLE_DEFS.map((def) => [def.key, '']))
+
 export const CONTENT_LANGUAGES = [
   { key: 'en', label: 'English' },
   { key: 'de', label: 'Deutsch' },
@@ -107,22 +113,32 @@ function extractShared(...maps) {
 // PropertiesPanel.jsx, ...) already expects — none of them need to know
 // this exists.
 function blankState() {
-  return { shared: DEFAULT_SHARED, content: { en: DEFAULT_LANGUAGE_LIBRARY, de: DEFAULT_LANGUAGE_LIBRARY } }
+  return {
+    shared: DEFAULT_SHARED,
+    content: { en: DEFAULT_LANGUAGE_LIBRARY, de: DEFAULT_LANGUAGE_LIBRARY },
+    titles: { en: DEFAULT_TITLES_LANGUAGE, de: DEFAULT_TITLES_LANGUAGE },
+  }
 }
 
-// Builds a full state from whatever en/de/shared maps were found (each
-// optional) — shared usage between loadInitialState (localStorage) and
-// importLibrary (a backup file), which hit the same three legacy shapes
-// but nested differently (see the comments at each call site below).
+// Builds a full state from whatever en/de/shared/titles maps were found
+// (each optional) — shared usage between loadInitialState (localStorage)
+// and importLibrary (a backup file), which hit the same legacy shapes but
+// nested differently (see the comments at each call site below).
 // `sharedMap` missing (not just empty) means it pre-dates the shared
 // image store entirely, so it's derived from whichever language already
-// had that image.
-function buildState(enMap, deMap, sharedMap) {
+// had that image. `titlesMap` missing means it pre-dates section title
+// overrides entirely, so every heading just starts at its built-in
+// default (see utils/sectionTitles.js) until customized.
+function buildState(enMap, deMap, sharedMap, titlesMap) {
   return {
     shared: sharedMap ? { ...DEFAULT_SHARED, ...sharedMap } : { ...DEFAULT_SHARED, ...extractShared(enMap, deMap) },
     content: {
       en: { ...DEFAULT_LANGUAGE_LIBRARY, ...enMap },
       de: { ...DEFAULT_LANGUAGE_LIBRARY, ...deMap },
+    },
+    titles: {
+      en: { ...DEFAULT_TITLES_LANGUAGE, ...titlesMap?.en },
+      de: { ...DEFAULT_TITLES_LANGUAGE, ...titlesMap?.de },
     },
   }
 }
@@ -138,13 +154,13 @@ function loadInitialState() {
     // photo/signature had a shared store of their own) — `parsed.shared`
     // simply won't exist yet for the older one.
     if (parsed.content && (parsed.content.en || parsed.content.de)) {
-      return buildState(parsed.content.en, parsed.content.de, parsed.shared)
+      return buildState(parsed.content.en, parsed.content.de, parsed.shared, parsed.titles)
     }
     // Pre-dates the bilingual content model entirely: a flat single-
     // language map (no `content` wrapper at all). Becomes the English
     // copy so nothing already written is lost; German starts blank rather
     // than duplicating it, since it was never actually written in German.
-    return buildState(parsed, null, null)
+    return buildState(parsed, null, null, null)
   } catch {
     return blankState()
   }
@@ -154,7 +170,7 @@ const ContentLibraryContext = createContext(null)
 
 export function ContentLibraryProvider({ children }) {
   const [state, setState] = useState(loadInitialState)
-  const { shared, content } = state
+  const { shared, content, titles } = state
   // Was the last save attempt successful? Starts true so a save that
   // fails on the very first render still shows the error toast, and only
   // fires it once per continuous failure streak — not on every keystroke.
@@ -209,16 +225,33 @@ export function ContentLibraryProvider({ children }) {
     }))
   }
 
-  // Overwrites every wording field of `toLang` with `fromLang`'s own — a
-  // starting point for translating (copy English into German, then edit
-  // the copy in place) instead of retyping everything from a blank
-  // language. Shared image slots aren't touched (there's only one copy of
-  // those to begin with).
+  // A section heading's per-language override (see utils/sectionTitles.js'
+  // translateSectionTitle) — falls back to the built-in default for an
+  // unrecognized/missing language, same as getLibrary above.
+  function getTitleOverrides(lang) {
+    const safeLang = isValidLanguage(lang) ? lang : 'en'
+    return titles[safeLang]
+  }
+
+  function updateTitle(key, value, lang) {
+    const safeLang = isValidLanguage(lang) ? lang : 'en'
+    setState((prev) => ({
+      ...prev,
+      titles: { ...prev.titles, [safeLang]: { ...prev.titles[safeLang], [key]: value } },
+    }))
+  }
+
+  // Overwrites every wording field (and section title override) of
+  // `toLang` with `fromLang`'s own — a starting point for translating
+  // (copy English into German, then edit the copy in place) instead of
+  // retyping everything from a blank language. Shared image slots aren't
+  // touched (there's only one copy of those to begin with).
   function copyLanguageContent(fromLang, toLang) {
     if (!isValidLanguage(fromLang) || !isValidLanguage(toLang) || fromLang === toLang) return
     setState((prev) => ({
       ...prev,
       content: { ...prev.content, [toLang]: { ...prev.content[fromLang] } },
+      titles: { ...prev.titles, [toLang]: { ...prev.titles[fromLang] } },
     }))
   }
 
@@ -250,29 +283,31 @@ export function ContentLibraryProvider({ children }) {
     })
   }, [content])
 
-  // Backup: both languages' content plus the shared images, as a
-  // downloadable JSON file (not just one language — a backup that
-  // silently dropped the other language, or the photo, would be a bad
-  // surprise on restore), and the reverse. Independent of localStorage,
-  // so content survives a browser change, a different port, or a cleared
-  // cache.
+  // Backup: both languages' content plus the shared images and section
+  // title overrides, as a downloadable JSON file (not just one language —
+  // a backup that silently dropped the other language, or the photo,
+  // would be a bad surprise on restore), and the reverse. Independent of
+  // localStorage, so content survives a browser change, a different port,
+  // or a cleared cache.
   function exportLibrary() {
-    return JSON.stringify({ ...content, shared }, null, 2)
+    return JSON.stringify({ ...content, shared, titles }, null, 2)
   }
 
   function importLibrary(json) {
     const parsed = JSON.parse(json)
-    // A bilingual export is flat — `{ en, de, shared }` at the top level,
-    // exactly what exportLibrary above produces (no `content` wrapper,
-    // unlike the localStorage shape — see loadInitialState). A pre-
-    // bilingual export (a flat single-language map, no 'en'/'de' keys of
-    // its own) becomes the English copy, same as the localStorage
-    // migration; German (and any image already saved) is kept rather than
-    // wiped, since the import has nothing to say about them.
+    // A bilingual export is flat — `{ en, de, shared, titles }` at the top
+    // level, exactly what exportLibrary above produces (no `content`
+    // wrapper, unlike the localStorage shape — see loadInitialState). A
+    // pre-bilingual export (a flat single-language map, no 'en'/'de' keys
+    // of its own) becomes the English copy, same as the localStorage
+    // migration; German (and any image/title override already saved) is
+    // kept rather than wiped, since the import has nothing to say about
+    // them.
     if (parsed && (parsed.en || parsed.de)) {
-      setState(buildState(parsed.en, parsed.de, parsed.shared))
+      setState(buildState(parsed.en, parsed.de, parsed.shared, parsed.titles))
     } else {
       setState((prev) => ({
+        ...prev,
         shared: { ...prev.shared, ...extractShared(parsed) },
         content: { en: { ...DEFAULT_LANGUAGE_LIBRARY, ...parsed }, de: prev.content.de },
       }))
@@ -281,6 +316,8 @@ export function ContentLibraryProvider({ children }) {
 
   const value = {
     getLibrary,
+    getTitleOverrides,
+    updateTitle,
     languages: CONTENT_LANGUAGES,
     updateSlot,
     copyLanguageContent,

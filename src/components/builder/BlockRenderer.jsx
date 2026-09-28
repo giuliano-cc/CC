@@ -248,7 +248,7 @@ function SkillDots({ label, level, color, dotSize = 10, dotCount = 5 }) {
 // Shared by the Technical Skills and Languages chart blocks: same three
 // styles (bars/dots/tags), same "cycle style" hover button, same dot-size
 // control — only the underlying items differ.
-function Chart({ block, items, onUpdateBlock, accentColor, titleFont, lang }) {
+function Chart({ block, items, onUpdateBlock, accentColor, titleFont, lang, titleOverrides }) {
   const chartStyle = block.chartStyle || 'bars'
   const showTitle = block.title && block.showTitle !== false
   return (
@@ -256,7 +256,7 @@ function Chart({ block, items, onUpdateBlock, accentColor, titleFont, lang }) {
       <div className={`flex items-end justify-between ${showTitle && block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}`}>
         {showTitle && (
           <p style={sectionTitleStyle(block, block.titleColor || accentColor, titleFont)}>
-            {translateSectionTitle(block.title, lang)}
+            {translateSectionTitle(block.title, lang, titleOverrides)}
           </p>
         )}
         {onUpdateBlock && (
@@ -344,8 +344,9 @@ export default function BlockRenderer({
   globalStyle = {},
 }) {
   const resolvedContent = useResolvedContent(block, globalStyle)
-  const { getLibrary } = useContentLibrary()
+  const { getLibrary, getTitleOverrides } = useContentLibrary()
   const library = getLibrary(globalStyle.contentLanguage)
+  const titleOverrides = getTitleOverrides(globalStyle.contentLanguage)
 
   switch (block.type) {
     case BLOCK_TYPES.HEADER:
@@ -429,7 +430,7 @@ export default function BlockRenderer({
           }`}
           style={style}
         >
-          {displayText(translateSectionTitle(resolvedContent, globalStyle.contentLanguage), block)}
+          {displayText(translateSectionTitle(resolvedContent, globalStyle.contentLanguage, titleOverrides), block)}
         </Tag>
       )
     }
@@ -444,7 +445,7 @@ export default function BlockRenderer({
       // the built-in templates already pair these bindings with their own
       // separate Heading block.
       const boundSlot = block.contentSlot ? CONTENT_SLOTS.find((s) => s.key === block.contentSlot) : null
-      const autoTitle = block.titleText || translateSectionTitle(boundSlot?.label, globalStyle.contentLanguage)
+      const autoTitle = block.titleText || translateSectionTitle(boundSlot?.label, globalStyle.contentLanguage, titleOverrides)
       const title = block.showTitle === true && autoTitle ? autoTitle : null
       const bodyFont = resolveBodyFont(globalStyle)
 
@@ -731,6 +732,7 @@ export default function BlockRenderer({
           accentColor={globalStyle.primaryColor}
           titleFont={resolveTitleFont(globalStyle)}
           lang={globalStyle.contentLanguage}
+          titleOverrides={titleOverrides}
         />
       )
     }
@@ -749,6 +751,7 @@ export default function BlockRenderer({
           accentColor={globalStyle.primaryColor}
           titleFont={resolveTitleFont(globalStyle)}
           lang={globalStyle.contentLanguage}
+          titleOverrides={titleOverrides}
         />
       )
     }
@@ -829,7 +832,7 @@ export default function BlockRenderer({
               className={`w-full ${alignClass(block.align)} ${block.titleRule !== false ? 'mb-0.5 border-b border-slate-200 pb-1.5' : ''}`}
               style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
-              {translateSectionTitle(block.title, globalStyle.contentLanguage)}
+              {translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides)}
             </p>
           )}
           <div
@@ -871,7 +874,7 @@ export default function BlockRenderer({
               className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
               style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
-              {translateSectionTitle(block.title, globalStyle.contentLanguage)}
+              {translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides)}
             </p>
           )}
           <ul
@@ -913,7 +916,7 @@ export default function BlockRenderer({
               className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
               style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
-              {translateSectionTitle(block.title, globalStyle.contentLanguage)}
+              {translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides)}
             </p>
           )}
           {items.map((item, i) => {

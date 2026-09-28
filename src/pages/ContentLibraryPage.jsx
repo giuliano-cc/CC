@@ -4,6 +4,7 @@ import { ChevronDown, Copy, Crop, Download, Trash2, Upload, User } from 'lucide-
 import { CONTENT_SLOTS, useContentLibrary } from '../context/ContentLibraryContext'
 import ImageCropModal from '../components/builder/ImageCropModal'
 import { resizeImageFile } from '../utils/imageResize'
+import { SECTION_TITLE_DEFS } from '../utils/sectionTitles'
 import { formatSocialLinks, parseSocialLinks, SOCIAL_PLATFORMS } from '../utils/socialIcons'
 import {
   composeChecklistText,
@@ -553,6 +554,37 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
   )
 }
 
+// One editable section heading (Experience, Education, Professional
+// Profile, Quote, ...): a custom per-language wording overrides the
+// built-in default (see utils/sectionTitles.js) wherever that heading is
+// shown — English and German side by side, same as every other field
+// above. An empty box just means "use the default", shown as its
+// placeholder, so leaving both blank changes nothing.
+function SectionTitleRow({ def, titles, languages, onChange, onBlur }) {
+  return (
+    <div className={cardClasses}>
+      <label className="text-sm font-semibold text-slate-800">{def.en}</label>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {languages.map((lang) => (
+          <div key={lang.key} className="flex flex-col gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2.5">
+            <span className="w-fit rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              {lang.label}
+            </span>
+            <input
+              type="text"
+              value={titles[lang.key][def.key] ?? ''}
+              placeholder={def[lang.key] || def.en}
+              onChange={(e) => onChange(def.key, e.target.value, lang.key)}
+              onBlur={onBlur}
+              className={inputClasses}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // A collapsible group of SlotCards — open by default (nothing is hidden
 // on first load), collapsible from then on so a long library doesn't mean
 // endless scrolling once most sections are already filled in.
@@ -578,12 +610,26 @@ function CollapsibleSection({ title, children }) {
 }
 
 export default function ContentLibraryPage() {
-  const { getLibrary, languages, updateSlot, copyLanguageContent, exportLibrary, importLibrary } = useContentLibrary()
+  const {
+    getLibrary,
+    getTitleOverrides,
+    updateTitle,
+    languages,
+    updateSlot,
+    copyLanguageContent,
+    exportLibrary,
+    importLibrary,
+  } = useContentLibrary()
   const importInputRef = useRef(null)
   const libraries = Object.fromEntries(languages.map((l) => [l.key, getLibrary(l.key)]))
+  const titles = Object.fromEntries(languages.map((l) => [l.key, getTitleOverrides(l.key)]))
 
   function handleChange(key, value, lang) {
     updateSlot(key, value, lang)
+  }
+
+  function handleTitleChange(key, value, lang) {
+    updateTitle(key, value, lang)
   }
 
   function handleCopyEnToDe() {
@@ -700,6 +746,22 @@ export default function ContentLibraryPage() {
             })}
           </CollapsibleSection>
         ))}
+        <CollapsibleSection title="Section titles">
+          <p className="-mt-2 text-xs text-slate-400">
+            Customize the wording of any heading a CV shows (Experience, Education, Professional Profile, Quote,
+            ...) in either language. Leave a box empty to keep using the default shown as its placeholder.
+          </p>
+          {SECTION_TITLE_DEFS.map((def) => (
+            <SectionTitleRow
+              key={def.key}
+              def={def}
+              titles={titles}
+              languages={languages}
+              onChange={handleTitleChange}
+              onBlur={handleBlur}
+            />
+          ))}
+        </CollapsibleSection>
       </div>
     </div>
   )
