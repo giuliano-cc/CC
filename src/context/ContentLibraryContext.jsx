@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 
 const STORAGE_KEY = 'printflow_content_library'
 
@@ -154,13 +155,32 @@ const ContentLibraryContext = createContext(null)
 export function ContentLibraryProvider({ children }) {
   const [state, setState] = useState(loadInitialState)
   const { shared, content } = state
+  // Was the last save attempt successful? Starts true so a save that
+  // fails on the very first render still shows the error toast, and only
+  // fires it once per continuous failure streak — not on every keystroke.
+  const lastSaveOk = useRef(true)
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+      if (!lastSaveOk.current) {
+        toast.success('Content Library is saving again.')
+        lastSaveOk.current = true
+      }
     } catch {
-      // localStorage unavailable, or quota exceeded (e.g. a large photo):
-      // content still works for the current session, it just won't persist.
+      // Almost always quota exceeded (a large photo/signature pushed the
+      // whole library past the browser's ~5-10MB per-origin storage
+      // limit) rather than localStorage being unavailable — content still
+      // works for the current session, it just silently stopped
+      // persisting, which otherwise looks exactly like "my changes keep
+      // getting lost" with no explanation. Surfacing it here instead.
+      if (lastSaveOk.current) {
+        toast.error(
+          "Content Library isn't saving — your browser's storage is full. Try removing or replacing a large photo/signature.",
+          { duration: 8000 },
+        )
+        lastSaveOk.current = false
+      }
     }
   }, [state])
 

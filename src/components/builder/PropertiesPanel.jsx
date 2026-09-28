@@ -25,6 +25,7 @@ import {
   sectionTitleSizeField,
 } from '../../utils/blockTypes'
 import { emptyEntry } from '../../utils/contentLists'
+import { resizeImageFile } from '../../utils/imageResize'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import { SOCIAL_PLATFORMS } from '../../utils/socialIcons'
 import FontPicker from './FontPicker'
@@ -1733,9 +1734,10 @@ function ImageUploadField({ onChange }) {
   function handleFile(event) {
     const file = event.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => onChange({ src: reader.result, imageSlot: null })
-    reader.readAsDataURL(file)
+    // Downscaled before it ever reaches state/localStorage — a raw upload
+    // can be several MB, which alone can blow the ~5-10MB per-origin
+    // storage quota and make every save silently fail from then on.
+    resizeImageFile(file, { maxDimension: 1000 }).then((dataUrl) => onChange({ src: dataUrl, imageSlot: null }))
     event.target.value = ''
   }
 

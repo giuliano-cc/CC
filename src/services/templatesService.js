@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast'
 import apiClient from './apiClient'
 import { CV_TEMPLATES } from '../utils/cvTemplates'
 
@@ -22,12 +23,31 @@ function loadTemplates() {
 
 const MOCK_TEMPLATES = loadTemplates()
 
+// Tracked across calls (not just try/catch) so the error toast fires once
+// per continuous failure streak instead of on every single edit.
+let lastPersistOk = true
+
 function persistTemplates() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_TEMPLATES))
+    if (!lastPersistOk) {
+      toast.success('Templates are saving again.')
+      lastPersistOk = true
+    }
   } catch {
-    // Quota exceeded or unavailable: edits still work for this session,
-    // just won't survive a reload.
+    // Almost always quota exceeded (embedded images across your templates
+    // pushed the total past the browser's ~5-10MB per-origin storage
+    // limit) rather than localStorage being unavailable. The edit still
+    // works in this tab for this session, it just silently stops
+    // persisting — on the next reload (or in a new tab) you're back to
+    // whatever last actually made it to disk, which looks exactly like
+    // "my changes keep getting lost" with nothing to explain why.
+    if (lastPersistOk) {
+      toast.error("This template isn't saving — your browser's storage is full. Try removing or replacing a large image.", {
+        duration: 8000,
+      })
+      lastPersistOk = false
+    }
   }
 }
 

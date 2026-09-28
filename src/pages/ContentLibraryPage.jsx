@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { ChevronDown, Copy, Crop, Download, Trash2, Upload, User } from 'lucide-react'
 import { CONTENT_SLOTS, useContentLibrary } from '../context/ContentLibraryContext'
 import ImageCropModal from '../components/builder/ImageCropModal'
+import { resizeImageFile } from '../utils/imageResize'
 import { formatSocialLinks, parseSocialLinks, SOCIAL_PLATFORMS } from '../utils/socialIcons'
 import {
   composeChecklistText,
@@ -52,12 +53,13 @@ function PhotoField({ value, onChange, variant = 'photo' }) {
   function handleFile(event) {
     const file = event.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      onChange(reader.result)
+    // Downscaled before it ever reaches state/localStorage — a raw phone
+    // photo can be several MB, which alone can blow the ~5-10MB per-origin
+    // storage quota and make every save silently fail from then on.
+    resizeImageFile(file, { maxDimension: isSignature ? 700 : 900 }).then((dataUrl) => {
+      onChange(dataUrl)
       toast.success(`${isSignature ? 'Signature' : 'Photo'} saved`, { id: 'content-library-save' })
-    }
-    reader.readAsDataURL(file)
+    })
     event.target.value = ''
   }
 
