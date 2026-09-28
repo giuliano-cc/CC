@@ -52,4 +52,19 @@
   .print-page:last-child {
     break-after: auto;
   }
+
+  /* Browsers don't print background colors/images by default (a decades-
+     old ink-saving default) unless told otherwise — normally that's a
+     checkbox in the print dialog ("Background graphics"/"Print
+     backgrounds"), off more often than not. Every colored dot/bar/tag a
+     chart block draws (see BlockRenderer.jsx's SkillDots and friends) is a
+     plain `background-color` div, so left to that default they silently
+     vanish from the printed/saved PDF even though they're clearly visible
+     on screen. Forcing this for every element under #print-root makes
+     what prints match the canvas regardless of that checkbox. */
+  #print-root,
+  #print-root * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }

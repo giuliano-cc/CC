@@ -294,7 +294,13 @@ export default function FreeBlock({
     >
       <div
         data-block-content={block.id}
-        className={`h-full w-full overflow-auto rounded-md border p-2 transition ${
+        // `overflow-visible`, not `-auto`/`-hidden`: printing (see
+        // components/builder/PrintDocument.jsx) never clips a block to its
+        // own box either, so content taller than the box it's in should
+        // spill over visibly here too — a scrollbar would quietly hide the
+        // exact same overflow that print then reveals, making a box that
+        // needs resizing look fine right up until it's exported.
+        className={`h-full w-full overflow-visible rounded-md border p-2 transition ${
           isSelected
             ? 'cursor-move border-primary ring-2 ring-primary/20'
             : 'cursor-move border-transparent hover:border-slate-200'
