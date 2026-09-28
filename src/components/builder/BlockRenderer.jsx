@@ -12,22 +12,25 @@ import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucid
 import QRCodeImage from './QRCodeImage'
 
 // Shared by Experience/Education and a Text block bound to an 'entries'
-// slot (Selected Works): which of the title/location-date pair sits in
-// the bold "primary" spot, and whether they share a line or stack on
-// separate ones — the description always stays exactly where it is,
-// only this pair's position cycles. Same "cycle style" hover button
-// pattern as the chart blocks (see Chart below), so all three entry
-// blocks share one control for it.
+// slot (Selected Works): the title is always bold and always item.title —
+// it never swaps with the location/date line. What cycles is only (a)
+// whether the title's own line comes before or after the combined
+// location + date line, and (b) within that combined line, whether the
+// date comes before or after the location. The description always stays
+// exactly where it is. Same "cycle style" hover button pattern as the
+// chart blocks (see Chart below), so all three entry blocks share one
+// control for it. Doesn't touch titleLocationInline (the separate "title
+// and location on the same line" checkbox) — that's its own toggle.
 const ENTRY_LAYOUT_MODES = [
-  { titleLocationInline: false, locationFirst: false },
-  { titleLocationInline: true, locationFirst: false },
-  { titleLocationInline: false, locationFirst: true },
-  { titleLocationInline: true, locationFirst: true },
+  { locationFirst: false, dateFirst: false },
+  { locationFirst: false, dateFirst: true },
+  { locationFirst: true, dateFirst: false },
+  { locationFirst: true, dateFirst: true },
 ]
 
 function entryLayoutIndex(block) {
   const index = ENTRY_LAYOUT_MODES.findIndex(
-    (m) => !!m.titleLocationInline === !!block.titleLocationInline && !!m.locationFirst === !!block.locationFirst,
+    (m) => !!m.locationFirst === !!block.locationFirst && !!m.dateFirst === !!block.dateFirst,
   )
   return index === -1 ? 0 : index
 }
@@ -495,41 +498,55 @@ export default function BlockRenderer({
               color: block.entryTitleColor || globalStyle.textColor,
               ...entryExtraStyle,
             }
-            // Location/place first, title second — the same two lines,
-            // just swapped, so whichever now sits in the title's own
-            // (bold) position keeps that styling regardless of which
-            // field it is.
-            const primaryText = block.locationFirst ? subLine : item.title
-            const secondaryText = block.locationFirst ? item.title : subLine
+            // The title is always item.title, always bold — it never
+            // swaps with the location/date line. What cycles (via
+            // EntryLayoutCycleButton above) is only which line comes
+            // first (locationFirst) and, within the combined location +
+            // date line, which of those two comes first (dateFirst).
+            const subtitleSeparator = block.subtitleSeparator ?? ' / '
+            const secondaryLine = (block.dateFirst ? [dateRange, subLine] : [subLine, dateRange])
+              .filter(Boolean)
+              .join(subtitleSeparator)
+            const titleNode = item.title && (
+              <p className="text-base font-bold" style={titleStyle}>
+                {item.title}
+              </p>
+            )
+            const secondaryNode = secondaryLine && (
+              <p className="text-sm text-slate-500" style={entryMetaStyle}>
+                {secondaryLine}
+              </p>
+            )
             return (
               <div key={item.id || i} className="flex flex-col gap-0.5">
-                {primaryText && block.titleLocationInline && secondaryText ? (
-                  <p className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-bold" style={titleStyle}>
-                      {primaryText}
-                    </span>
-                    <span className="text-sm text-slate-500" style={entryMetaStyle}>
-                      {secondaryText}
-                    </span>
-                  </p>
-                ) : (
+                {block.titleLocationInline ? (
                   <>
-                    {primaryText && (
-                      <p className="text-base font-bold" style={titleStyle}>
-                        {primaryText}
+                    {(item.title || subLine) && (
+                      <p className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="font-bold" style={titleStyle}>
+                          {item.title}
+                        </span>
+                        <span className="text-sm text-slate-500" style={entryMetaStyle}>
+                          {subLine}
+                        </span>
                       </p>
                     )}
-                    {secondaryText && !block.titleLocationInline && (
+                    {dateRange && (
                       <p className="text-sm text-slate-500" style={entryMetaStyle}>
-                        {secondaryText}
+                        {dateRange}
                       </p>
                     )}
                   </>
-                )}
-                {dateRange && (
-                  <p className="text-sm text-slate-500" style={entryMetaStyle}>
-                    {dateRange}
-                  </p>
+                ) : block.locationFirst ? (
+                  <>
+                    {secondaryNode}
+                    {titleNode}
+                  </>
+                ) : (
+                  <>
+                    {titleNode}
+                    {secondaryNode}
+                  </>
                 )}
                 {item.description && (
                   <p
@@ -915,39 +932,55 @@ export default function BlockRenderer({
                   : undefined,
               lineHeight: block.lineSpacing || undefined,
             }
-            // Location/company first, job title second — the same two
-            // lines, just swapped, so whichever now sits in the title's
-            // own (bold) position keeps that styling regardless of which
-            // field it is. Cycled via EntryLayoutCycleButton above,
-            // together with titleLocationInline.
-            const swapOrder = block.locationFirst
-            const primaryText = swapOrder ? subLine : item.title
-            const secondaryText = swapOrder ? item.title : subLine
+            // The title is always item.title, always bold — it never
+            // swaps with the location/date line. What cycles (via
+            // EntryLayoutCycleButton above) is only which line comes
+            // first (locationFirst) and, within the combined location +
+            // date line, which of those two comes first (dateFirst).
             const subtitleSeparator = block.subtitleSeparator ?? ' / '
+            const secondaryLine = (block.dateFirst ? [dateRange, subLine] : [subLine, dateRange])
+              .filter(Boolean)
+              .join(subtitleSeparator)
+            const titleNode = item.title && (
+              <p className="text-base font-bold" style={entryTitleStyle}>
+                {item.title}
+              </p>
+            )
+            const secondaryNode = secondaryLine && (
+              <p className="text-sm text-slate-500" style={bodyStyle}>
+                {secondaryLine}
+              </p>
+            )
             return (
               <div key={item.id || i} className="flex flex-col gap-0.5">
-                {primaryText && block.titleLocationInline && secondaryText ? (
-                  <p className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-bold" style={entryTitleStyle}>
-                      {primaryText}
-                    </span>
-                    <span className="text-sm text-slate-500" style={bodyStyle}>
-                      {secondaryText}
-                    </span>
-                  </p>
+                {block.titleLocationInline ? (
+                  <>
+                    {(item.title || subLine) && (
+                      <p className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="font-bold" style={entryTitleStyle}>
+                          {item.title}
+                        </span>
+                        <span className="text-sm text-slate-500" style={bodyStyle}>
+                          {subLine}
+                        </span>
+                      </p>
+                    )}
+                    {dateRange && (
+                      <p className="text-sm text-slate-500" style={bodyStyle}>
+                        {dateRange}
+                      </p>
+                    )}
+                  </>
+                ) : block.locationFirst ? (
+                  <>
+                    {secondaryNode}
+                    {titleNode}
+                  </>
                 ) : (
-                  primaryText && (
-                    <p className="text-base font-bold" style={entryTitleStyle}>
-                      {primaryText}
-                    </p>
-                  )
-                )}
-                {(block.titleLocationInline ? dateRange : secondaryText || dateRange) && (
-                  <p className="text-sm text-slate-500" style={bodyStyle}>
-                    {block.titleLocationInline
-                      ? dateRange
-                      : [secondaryText, dateRange].filter(Boolean).join(subtitleSeparator)}
-                  </p>
+                  <>
+                    {titleNode}
+                    {secondaryNode}
+                  </>
                 )}
                 {descriptionLines.length > 0 && (
                   <ul

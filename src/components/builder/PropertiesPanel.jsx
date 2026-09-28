@@ -1568,7 +1568,15 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
           checked={block.locationFirst === true}
           onChange={(e) => onChange({ locationFirst: e.target.checked })}
         />
-        Show location before the title
+        Show location/date before the title (title stays bold either way)
+      </label>
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={block.dateFirst === true}
+          onChange={(e) => onChange({ dateFirst: e.target.checked })}
+        />
+        Show date before location
       </label>
       <Field label="Separator between location and dates">
         <input
@@ -2271,8 +2279,24 @@ function BlockPropertiesPanel({ block, onChange }) {
                 checked={block.locationFirst === true}
                 onChange={(e) => onChange({ locationFirst: e.target.checked })}
               />
-              Show location before the title
+              Show location/date before the title (title stays bold either way)
             </label>
+            <label className="flex items-center gap-1.5 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={block.dateFirst === true}
+                onChange={(e) => onChange({ dateFirst: e.target.checked })}
+              />
+              Show date before location
+            </label>
+            <Field label="Separator between location and dates">
+              <input
+                type="text"
+                value={block.subtitleSeparator ?? ' / '}
+                onChange={(e) => onChange({ subtitleSeparator: e.target.value })}
+                className={`${inputClasses} !w-20`}
+              />
+            </Field>
             <EntryTitleStyleFields block={block} onChange={onChange} />
           </>
         )}

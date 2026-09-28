@@ -233,11 +233,17 @@ export const BLOCK_DEFINITIONS = [
       // Company) on the same line instead of stacked — see the matching
       // field on Experience/Education below.
       titleLocationInline: false,
-      // Also 'entries'-only: shows the City/Country (or Company) first
-      // and the entry's own title second, instead of the other way
-      // around — the two lines just swap, whichever is now first keeps
-      // the title's own bold styling.
+      // Also 'entries'-only: shows the combined location/date line before
+      // the entry's own title, instead of after — the title's own line
+      // always stays bold either way, only which line comes first moves
+      // (see BlockRenderer.jsx's EXPERIENCE/EDUCATION/TEXT-entries case).
       locationFirst: false,
+      // Also 'entries'-only: within the combined location/date line,
+      // shows the date before the location instead of after.
+      dateFirst: false,
+      // Also 'entries'-only: joins the location and date when they share
+      // a line — a plain text field so it can be any separator.
+      subtitleSeparator: ' / ',
       // Also 'entries'-only: the per-entry title's own font/size/color,
       // separate from `fontFamily`/`fontSize`/`color` above (which style
       // the body/description text) — shares the same fields, and the same
@@ -440,10 +446,13 @@ export const BLOCK_DEFINITIONS = [
       // line instead of stacked — the date range still gets its own line
       // either way.
       titleLocationInline: false,
-      // Experience-only: shows the Company/Location first and the job
-      // title second — the two lines just swap, whichever is now first
-      // keeps the title's own bold styling.
+      // Shows the combined Company/Location + date line before the job
+      // title line instead of after — the title's own line always stays
+      // bold either way, only which line comes first moves.
       locationFirst: false,
+      // Within that combined line, shows the date before the Company/
+      // Location instead of after.
+      dateFirst: false,
       // Joins the Company/Location line with the date range when they
       // share a line (i.e. titleLocationInline is off) — a plain text
       // field so it can be any separator, not just " / ".
