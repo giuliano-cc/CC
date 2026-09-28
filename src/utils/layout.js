@@ -13,7 +13,7 @@ export const CONTENT_WIDTH = SHEET_WIDTH - SHEET_PADDING * 2
 // background-size) or 'repeat' (tiled at its own size instead of scaled).
 export function pageBackgroundStyle(globalStyle) {
   const style = { backgroundColor: globalStyle.pageBackground || '#ffffff' }
-  if (!globalStyle.pageBackgroundImage) return style
+  if (!globalStyle.pageBackgroundImage || globalStyle.pageBackgroundImageVisible === false) return style
   const fit = globalStyle.pageBackgroundSize || 'cover'
   return {
     ...style,

@@ -44,6 +44,9 @@ const DEFAULT_GLOBAL_STYLE = {
   // 'cover'/'contain'/'repeat' picks how it fills the page.
   pageBackgroundImage: '',
   pageBackgroundSize: 'cover',
+  // Lets an uploaded image be hidden without losing it (and its fit
+  // setting) — toggling it back on doesn't require re-uploading.
+  pageBackgroundImageVisible: true,
   fontFamily: 'Inter, system-ui, sans-serif',
   titleFontFamily: null,
   bodyFontFamily: null,

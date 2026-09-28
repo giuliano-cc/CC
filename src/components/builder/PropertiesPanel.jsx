@@ -589,6 +589,16 @@ function PageBackgroundImageField({ globalStyle, setGlobalStyle }) {
           </select>
         </div>
       )}
+      {globalStyle.pageBackgroundImage && (
+        <label className="mt-2 flex items-center gap-1.5 text-xs text-slate-600">
+          <input
+            type="checkbox"
+            checked={globalStyle.pageBackgroundImageVisible !== false}
+            onChange={(e) => setGlobalStyle((prev) => ({ ...prev, pageBackgroundImageVisible: e.target.checked }))}
+          />
+          Show background image
+        </label>
+      )}
     </Field>
   )
 }
