@@ -15,6 +15,18 @@ export const GRID_SIZE = 20
 export const GRID_OFFSET_X = ((SHEET_WIDTH % GRID_SIZE) / 2 + GRID_SIZE) % GRID_SIZE
 export const GRID_OFFSET_Y = ((SHEET_HEIGHT % GRID_SIZE) / 2 + GRID_SIZE) % GRID_SIZE
 
+// Shared between the golden ratio guide overlay (Canvas.jsx) and drag/
+// resize snapping (FreeBlock.jsx), so a block actually snaps to the same
+// lines the guide draws — the classic "golden ratio" composition guide
+// (the same overlay Photoshop/Lightroom offer as "Golden Ratio" cropping):
+// two lines per axis, at ~61.8%/~38.2% of the page instead of plain
+// thirds.
+const PHI = (1 + Math.sqrt(5)) / 2
+export function goldenRatioLines(size) {
+  const a = size / PHI
+  return [a, size - a]
+}
+
 // The grid line nearest to `value` along one axis (pass GRID_OFFSET_X or
 // GRID_OFFSET_Y as `offset`).
 export function nearestGridLine(value, offset) {

@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react'
 import { BLOCK_TYPES } from '../../utils/blockTypes'
 import {
   clamp,
+  goldenRatioLines,
   GRID_OFFSET_X,
   GRID_OFFSET_Y,
   nearestGridLine,
@@ -112,6 +113,7 @@ export default function FreeBlock({
   siblings = [],
   globalStyle,
   snapToGrid = false,
+  snapToGoldenRatio = false,
   zoom = 1,
   preview = false,
   onGuides,
@@ -215,6 +217,17 @@ export default function FreeBlock({
         xTargets.push(nearestGridLine(x, GRID_OFFSET_X))
         yTargets.push(nearestGridLine(y, GRID_OFFSET_Y))
       }
+      if (snapToGoldenRatio) {
+        // Each golden ratio line is a true reference line, not just an
+        // edge to butt up against — so, like a sibling's edge, a block can
+        // align its left edge, right edge, or center to it.
+        goldenRatioLines(SHEET_WIDTH).forEach((v) => {
+          xTargets.push(v, v - block.width, v - block.width / 2)
+        })
+        goldenRatioLines(SHEET_HEIGHT).forEach((v) => {
+          yTargets.push(v, v - block.height, v - block.height / 2)
+        })
+      }
       x = snapTo(x, xTargets)
       y = snapTo(y, yTargets)
       onGuides?.(computeGuides({ x, y, width: block.width, height: block.height }, siblings, margins))
@@ -234,9 +247,12 @@ export default function FreeBlock({
     const bottomEdgeTargets = siblings.flatMap((s) => [s.y, s.y + s.height, s.y + s.height / 2])
     const topEdgeTargets = bottomEdgeTargets
 
+    const goldenX = snapToGoldenRatio ? goldenRatioLines(SHEET_WIDTH) : []
+    const goldenY = snapToGoldenRatio ? goldenRatioLines(SHEET_HEIGHT) : []
+
     if (handle.x === 1) {
       width = clamp(state.origWidth + dx, MIN_WIDTH, SHEET_WIDTH - state.origX)
-      const targets = [...rightEdgeTargets]
+      const targets = [...rightEdgeTargets, ...goldenX]
       if (margins.right > 0) targets.push(SHEET_WIDTH - margins.right)
       if (snapToGrid) targets.push(nearestGridLine(x + width, GRID_OFFSET_X))
       width = snapTo(x + width, targets) - x
@@ -245,7 +261,7 @@ export default function FreeBlock({
       const clampedDx = clamp(dx, -state.origX, maxDx)
       width = state.origWidth - clampedDx
       x = state.origX + clampedDx
-      const targets = [...leftEdgeTargets]
+      const targets = [...leftEdgeTargets, ...goldenX]
       if (margins.left > 0) targets.push(margins.left)
       if (snapToGrid) targets.push(nearestGridLine(x, GRID_OFFSET_X))
       const snappedX = snapTo(x, targets)
@@ -255,7 +271,7 @@ export default function FreeBlock({
 
     if (handle.y === 1) {
       height = clamp(state.origHeight + dy, MIN_HEIGHT, SHEET_HEIGHT - state.origY)
-      const targets = [...bottomEdgeTargets]
+      const targets = [...bottomEdgeTargets, ...goldenY]
       if (margins.bottom > 0) targets.push(SHEET_HEIGHT - margins.bottom)
       if (snapToGrid) targets.push(nearestGridLine(y + height, GRID_OFFSET_Y))
       height = snapTo(y + height, targets) - y
@@ -264,7 +280,7 @@ export default function FreeBlock({
       const clampedDy = clamp(dy, -state.origY, maxDy)
       height = state.origHeight - clampedDy
       y = state.origY + clampedDy
-      const targets = [...topEdgeTargets]
+      const targets = [...topEdgeTargets, ...goldenY]
       if (margins.top > 0) targets.push(margins.top)
       if (snapToGrid) targets.push(nearestGridLine(y, GRID_OFFSET_Y))
       const snappedY = snapTo(y, targets)

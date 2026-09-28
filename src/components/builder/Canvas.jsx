@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Eye, EyeOff, Grid3x3, Minus, Plus, Ratio, X } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import {
+  goldenRatioLines,
   GRID_OFFSET_X,
   GRID_OFFSET_Y,
   GRID_SIZE,
@@ -21,18 +22,6 @@ export function pageDroppableId(pageIndex) {
 export function parsePageDroppableId(id) {
   const match = /^canvas-page-(\d+)$/.exec(id || '')
   return match ? Number(match[1]) : null
-}
-
-// The classic "golden ratio" composition guide (the same overlay
-// Photoshop/Lightroom's crop tool offers as "Golden Ratio"): two lines per
-// axis, splitting the page at the golden ratio (~61.8%/38.2%) instead of
-// plain thirds — a reference for placing a photo, a title, or a whole
-// section where the eye is naturally drawn, the same way the margin guide
-// marks where content should stay inside.
-const PHI = (1 + Math.sqrt(5)) / 2
-function goldenRatioLines(size) {
-  const a = size / PHI
-  return [a, size - a]
 }
 
 function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRatio, preview, zoom }) {
@@ -144,6 +133,7 @@ function Page({ pageIndex, blocks, margins, globalStyle, showGrid, showGoldenRat
           siblings={blocks.filter((b) => b.id !== block.id && typeof b.x === 'number')}
           globalStyle={globalStyle}
           snapToGrid={showGrid}
+          snapToGoldenRatio={showGoldenRatio}
           zoom={zoom}
           preview={preview}
           onGuides={setGuides}
