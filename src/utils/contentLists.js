@@ -105,16 +105,23 @@ const MONTH_ABBR = [
 // Start/end dates are picked from a native <input type="month"> (ISO
 // "YYYY-MM"), so every entry across the whole catalog — Experience,
 // Education, Selected Works, any future 'entries' slot — renders in the
-// exact same "Mon YYYY" shape, instead of whatever free text someone
-// happened to type ("Jan 2022", "01/2022", "January 2022", ...). A value
-// that isn't ISO (typed before this became a date picker) is shown as-is,
-// so nothing already written looks broken.
-export function formatEntryDate(value) {
+// exact same shape, instead of whatever free text someone happened to
+// type ("Jan 2022", "01/2022", "January 2022", ...). A value that isn't
+// ISO (typed before this became a date picker) is shown as-is, so nothing
+// already written looks broken.
+// `format`: 'text' (default) spells the month out ("Jan 2024") — always
+// in English, since the catalog has no per-language month-name table;
+// 'numeric' avoids that language mismatch entirely ("01/2024"), for a
+// document whose content language isn't English. Set per document in
+// Global Style, same as Content language.
+export function formatEntryDate(value, format = 'text') {
   if (!value) return ''
   const iso = /^(\d{4})-(\d{2})$/.exec(value)
   if (!iso) return value
-  const monthIndex = Number(iso[2]) - 1
-  return MONTH_ABBR[monthIndex] ? `${MONTH_ABBR[monthIndex]} ${iso[1]}` : value
+  const [, year, month] = iso
+  if (format === 'numeric') return `${month}/${year}`
+  const monthIndex = Number(month) - 1
+  return MONTH_ABBR[monthIndex] ? `${MONTH_ABBR[monthIndex]} ${year}` : value
 }
 
 function entryDateRange(entry) {

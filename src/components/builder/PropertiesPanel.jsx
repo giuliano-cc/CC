@@ -154,6 +154,20 @@ function GlobalStylePanel() {
         content") reads this document's own language — write both versions
         once in the library, then pick which one each document uses here.
       </p>
+      <Field label="Date format (Experience, Education, Selected Works)">
+        <select
+          value={globalStyle.dateFormat || 'text'}
+          onChange={(e) => setGlobalStyle((prev) => ({ ...prev, dateFormat: e.target.value }))}
+          className={inputClasses}
+        >
+          <option value="text">Text (Jan 2024)</option>
+          <option value="numeric">Numeric (01/2024)</option>
+        </select>
+      </Field>
+      <p className="-mt-2 text-xs text-slate-400">
+        Month names are always in English — pick Numeric for a document in
+        another language, so the date doesn't mix languages.
+      </p>
       <Field label="Primary color">
         <input
           type="color"

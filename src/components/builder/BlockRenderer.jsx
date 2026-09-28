@@ -442,7 +442,10 @@ export default function BlockRenderer({
         <div className={`flex flex-col gap-3 ${alignClass(block.align)}`}>
           {parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]).map((item, i) => {
             const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
-            const dateRange = [formatEntryDate(item.startDate), item.current ? 'Present' : formatEntryDate(item.endDate)]
+            const dateRange = [
+              formatEntryDate(item.startDate, globalStyle.dateFormat),
+              item.current ? 'Present' : formatEntryDate(item.endDate, globalStyle.dateFormat),
+            ]
               .filter((v) => v?.trim())
               .join(' – ')
             const titleStyle = {
@@ -854,7 +857,10 @@ export default function BlockRenderer({
           )}
           {items.map((item, i) => {
             const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
-            const dateRange = [formatEntryDate(item.startDate), item.current ? 'Present' : formatEntryDate(item.endDate)]
+            const dateRange = [
+              formatEntryDate(item.startDate, globalStyle.dateFormat),
+              item.current ? 'Present' : formatEntryDate(item.endDate, globalStyle.dateFormat),
+            ]
               .filter((v) => v?.trim())
               .join(' – ')
             const descriptionLines = (item.description || '').split('\n').filter(Boolean)
