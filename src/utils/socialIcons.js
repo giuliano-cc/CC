@@ -1,6 +1,8 @@
 // Lucide dropped brand/logo icons a while ago, so social platforms are
-// rendered as small colored letter badges instead of official logos —
-// simple, dependency-free, and avoids using trademarked marks.
+// rendered as small outlined letter badges instead of official logos —
+// simple, dependency-free, avoids using trademarked marks, and (an
+// outline with no fill, like the Contact Info block's Mail/Phone/Globe
+// icons) matches the rest of the app's icon style.
 export const SOCIAL_PLATFORMS = [
   { key: 'linkedin', label: 'LinkedIn', badge: 'in', color: '#0a66c2' },
   { key: 'github', label: 'GitHub', badge: 'gh', color: '#24292f' },

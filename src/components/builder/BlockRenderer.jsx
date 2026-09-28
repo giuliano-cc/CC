@@ -324,8 +324,8 @@ function SocialBadge({ platform, url }) {
       className="flex items-center gap-1.5 no-underline hover:opacity-80"
     >
       <span
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-        style={{ backgroundColor: meta.color }}
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[1.5px] bg-transparent text-[10px] font-bold"
+        style={{ borderColor: meta.color, color: meta.color }}
       >
         {meta.badge}
       </span>
