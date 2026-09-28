@@ -47,6 +47,12 @@ const TRANSLATIONS = {
     'hobbies & interests': 'Hobbys & Interessen',
     'leisure / hobbies': 'Hobbys & Interessen',
     'cover letter body': 'Anschreiben',
+    // Decorative headings baked into the built-in templates' own sample
+    // content (not tied to a Content Library slot), e.g. the "creative"
+    // template's stylized name/tagline pair.
+    'your name': 'Ihr Name',
+    'last name first name': 'Nachname Vorname',
+    "hi, i'm a": 'Ich bin',
   },
 }
 
