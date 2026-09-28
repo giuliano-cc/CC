@@ -612,12 +612,17 @@ export default function BlockRenderer({
       const resolvedAuthor = block.authorSlot ? library[block.authorSlot] || '' : block.author
       return (
         <blockquote
-          className={`border-l-4 border-primary/40 pl-3 text-sm text-slate-600 ${textStyleClasses(block)}`}
-          style={typographyStyle(block, resolveBodyFont(globalStyle), globalStyle.typographyScale?.p1?.sizePx)}
+          className={`border-l-4 pl-3 text-sm text-slate-600 ${textStyleClasses(block)}`}
+          style={{
+            borderColor: globalStyle.primaryColor,
+            ...typographyStyle(block, resolveBodyFont(globalStyle), globalStyle.typographyScale?.p1?.sizePx),
+          }}
         >
           <p>{displayText(resolvedContent, block)}</p>
           {resolvedAuthor && (
-            <footer className="mt-1.5 text-xs not-italic text-slate-400">— {resolvedAuthor}</footer>
+            <footer className="mt-1.5 text-xs not-italic" style={{ color: globalStyle.primaryColor }}>
+              — {resolvedAuthor}
+            </footer>
           )}
         </blockquote>
       )
