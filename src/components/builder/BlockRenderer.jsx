@@ -552,17 +552,26 @@ export default function BlockRenderer({
                   </>
                 )}
                 {(() => {
-                  const descriptionLines = (item.description || '').split('\n').filter(Boolean)
+                  if (!item.description) return null
+                  const descriptionStyle = {
+                    fontFamily: entryBodyFont,
+                    fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
+                    color: block.color || undefined,
+                    ...entryExtraStyle,
+                  }
+                  if (block.list === false) {
+                    return (
+                      <p className="mt-0.5 whitespace-pre-line text-sm leading-relaxed text-slate-600" style={descriptionStyle}>
+                        {item.description}
+                      </p>
+                    )
+                  }
+                  const descriptionLines = item.description.split('\n').filter(Boolean)
                   return (
                     descriptionLines.length > 0 && (
                       <ul
                         className="mt-0.5 list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400"
-                        style={{
-                          fontFamily: entryBodyFont,
-                          fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
-                          color: block.color || undefined,
-                          ...entryExtraStyle,
-                        }}
+                        style={descriptionStyle}
                       >
                         {descriptionLines.map((line, li) => (
                           <li key={li}>{line}</li>
@@ -996,16 +1005,23 @@ export default function BlockRenderer({
                     {secondaryNode}
                   </>
                 )}
-                {descriptionLines.length > 0 && (
-                  <ul
-                    className="mt-0.5 list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400"
-                    style={bodyStyle}
-                  >
-                    {descriptionLines.map((line, li) => (
-                      <li key={li}>{line}</li>
-                    ))}
-                  </ul>
-                )}
+                {item.description &&
+                  (block.list === false ? (
+                    <p className="mt-0.5 whitespace-pre-line text-sm leading-relaxed text-slate-600" style={bodyStyle}>
+                      {item.description}
+                    </p>
+                  ) : (
+                    descriptionLines.length > 0 && (
+                      <ul
+                        className="mt-0.5 list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400"
+                        style={bodyStyle}
+                      >
+                        {descriptionLines.map((line, li) => (
+                          <li key={li}>{line}</li>
+                        ))}
+                      </ul>
+                    )
+                  ))}
               </div>
             )
           })}

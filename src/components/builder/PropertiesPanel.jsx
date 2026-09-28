@@ -1558,6 +1558,14 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
       <label className="flex items-center gap-1.5 text-xs text-slate-600">
         <input
           type="checkbox"
+          checked={block.list !== false}
+          onChange={(e) => onChange({ list: e.target.checked })}
+        />
+        Show description as a bulleted list
+      </label>
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
           checked={block.titleLocationInline === true}
           onChange={(e) => onChange({ titleLocationInline: e.target.checked })}
         />
@@ -2285,6 +2293,14 @@ function BlockPropertiesPanel({ block, onChange }) {
                 onChange={(e) => onChange({ sortByDate: e.target.checked })}
               />
               Sort entries most recent first
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={block.list !== false}
+                onChange={(e) => onChange({ list: e.target.checked })}
+              />
+              Show description as a bulleted list
             </label>
             <label className="flex items-center gap-1.5 text-xs text-slate-600">
               <input
