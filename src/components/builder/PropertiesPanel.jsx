@@ -304,52 +304,50 @@ function GlobalStylePanel() {
       </div>
 
       <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-4">
-        <span className="text-xs font-medium text-slate-500">Baseline &amp; column grid</span>
+        <span className="text-xs font-medium text-slate-500">Column &amp; row grid</span>
         <p className="-mt-1 text-xs text-slate-400">
-          The print-design "structure grid": evenly spaced horizontal
-          rhythm lines to keep every block's top edge in sync, plus
-          optional vertical column dividers — toggled from the Canvas
-          toolbar (the Baseline icon).
+          The print-design "structure grid": columns × rows of equal-size
+          cells filling the space between the margins, separated by a
+          gutter — toggled from the Canvas toolbar (the layout icon).
         </p>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Row height (px)">
-            <input
-              type="number"
-              min={4}
-              max={200}
-              value={globalStyle.baselineUnit ?? 24}
-              onChange={(e) => setGlobalStyle((prev) => ({ ...prev, baselineUnit: Number(e.target.value) }))}
-              className={inputClasses}
-            />
-          </Field>
           <Field label="Columns">
             <input
               type="number"
               min={1}
-              max={6}
-              value={globalStyle.baselineColumns ?? 1}
-              onChange={(e) => setGlobalStyle((prev) => ({ ...prev, baselineColumns: Number(e.target.value) }))}
+              max={12}
+              value={globalStyle.structureColumns ?? 1}
+              onChange={(e) => setGlobalStyle((prev) => ({ ...prev, structureColumns: Number(e.target.value) }))}
+              className={inputClasses}
+            />
+          </Field>
+          <Field label="Rows">
+            <input
+              type="number"
+              min={1}
+              max={12}
+              value={globalStyle.structureRows ?? 1}
+              onChange={(e) => setGlobalStyle((prev) => ({ ...prev, structureRows: Number(e.target.value) }))}
               className={inputClasses}
             />
           </Field>
         </div>
-        {(globalStyle.baselineColumns ?? 1) > 1 && (
-          <Field label="Column gutter (px)">
+        {((globalStyle.structureColumns ?? 1) > 1 || (globalStyle.structureRows ?? 1) > 1) && (
+          <Field label="Gutter (px)">
             <input
               type="number"
               min={0}
               max={200}
-              value={globalStyle.baselineGutter ?? 24}
-              onChange={(e) => setGlobalStyle((prev) => ({ ...prev, baselineGutter: Number(e.target.value) }))}
+              value={globalStyle.structureGutter ?? 24}
+              onChange={(e) => setGlobalStyle((prev) => ({ ...prev, structureGutter: Number(e.target.value) }))}
               className={inputClasses}
             />
           </Field>
         )}
         <p className="text-xs text-slate-400">
-          A block's top edge (and, with more than one column, its left/
-          right edge) snaps to these lines — the app doesn't measure a
-          block's actual text baseline, so this keeps blocks in rhythm
-          rather than individual lines of type.
+          A block's edges or center snap to a column/row line, same as the
+          golden ratio guide's lines — the whole grid stays inside the
+          page margins on both axes.
         </p>
       </div>
 

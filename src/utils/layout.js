@@ -7,33 +7,57 @@ export const CONTENT_WIDTH = SHEET_WIDTH - SHEET_PADDING * 2
 
 // Shared between the visual grid overlay (Canvas.jsx) and drag/resize
 // snapping (FreeBlock.jsx), so a block actually snaps to the same lines
-// the grid draws. The sheet's dimensions aren't exact multiples of
-// GRID_SIZE, so the pattern is centered (see Canvas.jsx) rather than
-// flush at the top-left corner — these offsets are that same centering,
-// kept here once instead of duplicated.
+// the grid draws. The grid lives entirely inside the margins (like the
+// golden ratio and column/row guides) rather than the whole page, and the
+// content box's dimensions aren't exact multiples of GRID_SIZE, so the
+// pattern is centered within that box rather than flush at its top-left
+// corner.
 export const GRID_SIZE = 20
-export const GRID_OFFSET_X = ((SHEET_WIDTH % GRID_SIZE) / 2 + GRID_SIZE) % GRID_SIZE
-export const GRID_OFFSET_Y = ((SHEET_HEIGHT % GRID_SIZE) / 2 + GRID_SIZE) % GRID_SIZE
+function centeredGridOffset(size) {
+  return ((size % GRID_SIZE) / 2 + GRID_SIZE) % GRID_SIZE
+}
+
+// `local.x`/`local.y`: the pattern's own centering offset (0..GRID_SIZE-1),
+// relative to the margin box's own top-left corner — for the overlay
+// div's CSS `background-position`, which is relative to that div's own
+// box, not the page's.
+// `x`/`y`: the same centering offset translated into absolute page
+// coordinates (margins.left/top + the local offset) — for
+// nearestGridLine, which snaps a block's page-space position.
+export function resolveGridOffsets(margins) {
+  const contentWidth = SHEET_WIDTH - margins.left - margins.right
+  const contentHeight = SHEET_HEIGHT - margins.top - margins.bottom
+  const localX = centeredGridOffset(contentWidth)
+  const localY = centeredGridOffset(contentHeight)
+  return {
+    local: { x: localX, y: localY },
+    x: margins.left + localX,
+    y: margins.top + localY,
+  }
+}
 
 // Shared between the golden ratio guide overlay (Canvas.jsx) and drag/
 // resize snapping (FreeBlock.jsx), so a block actually snaps to the same
 // lines the guide draws — the classic "golden ratio" composition guide
 // (the same overlay Photoshop/Lightroom offer as "Golden Ratio" cropping):
-// two lines per axis, at ~38.2%/~61.8% of the page instead of plain
+// two lines per axis, at ~38.2%/~61.8% of the space between the margins
+// (not the whole page — same as the column/row grid) instead of plain
 // thirds. These are always the exact mathematical split — never moved by
 // an offset — so they stay a fixed reference (see
 // goldenRatioOffsetLinesX/Y below for the adjustable duplicate lines
 // measured from them).
 const PHI = (1 + Math.sqrt(5)) / 2
 
-export function goldenRatioLinesX(width) {
+export function goldenRatioLinesX(margins) {
+  const width = SHEET_WIDTH - margins.left - margins.right
   const a = width / PHI
-  return { sx: width - a, dx: a }
+  return { sx: margins.left + (width - a), dx: margins.left + a }
 }
 
-export function goldenRatioLinesY(height) {
+export function goldenRatioLinesY(margins) {
+  const height = SHEET_HEIGHT - margins.top - margins.bottom
   const a = height / PHI
-  return { top: height - a, bottom: a }
+  return { top: margins.top + (height - a), bottom: margins.top + a }
 }
 
 // A symmetric pair of lines duplicated from each exact golden ratio line
@@ -45,16 +69,16 @@ export function goldenRatioLinesY(height) {
 // line whose offset is 0 has no pair at all (both would sit exactly on
 // top of the reference line), so it comes back `null` — callers skip
 // drawing/snapping to it.
-export function goldenRatioOffsetLinesX(width, offsets) {
-  const { sx, dx } = goldenRatioLinesX(width)
+export function goldenRatioOffsetLinesX(margins, offsets) {
+  const { sx, dx } = goldenRatioLinesX(margins)
   return {
     sx: offsets.sx ? [sx - offsets.sx, sx + offsets.sx] : null,
     dx: offsets.dx ? [dx - offsets.dx, dx + offsets.dx] : null,
   }
 }
 
-export function goldenRatioOffsetLinesY(height, offsets) {
-  const { top, bottom } = goldenRatioLinesY(height)
+export function goldenRatioOffsetLinesY(margins, offsets) {
+  const { top, bottom } = goldenRatioLinesY(margins)
   return {
     top: offsets.top ? [top - offsets.top, top + offsets.top] : null,
     bottom: offsets.bottom ? [bottom - offsets.bottom, bottom + offsets.bottom] : null,
@@ -73,47 +97,32 @@ export function resolveGoldenRatioOffsets(globalStyle) {
   }
 }
 
-// The grid line nearest to `value` along one axis (pass GRID_OFFSET_X or
-// GRID_OFFSET_Y as `offset`).
+// The grid line nearest to `value` along one axis (pass resolveGridOffsets's
+// `.x`/`.y` as `offset`).
 export function nearestGridLine(value, offset) {
   return Math.round((value - offset) / GRID_SIZE) * GRID_SIZE + offset
 }
 
-// The classic print-design "structure grid" (baseline rhythm + column
-// grid — see https://visme.co/blog/layout-design/): evenly spaced
-// horizontal lines a body of text's baselines are meant to land on
-// ("create a common rhythm" across headline/subhead/body/caption, each
-// set at a multiple of the same unit), plus vertical column dividers
-// within the margins so several text columns stay aligned with each
-// other. Purely a visual/snap guide, same family as the grid/margin/
-// golden ratio guides — this app doesn't measure a block's actual text
-// baseline, so it's the block's own top edge (and column edges) that
-// align to it, not individual lines of text.
-export function resolveBaselineGrid(globalStyle) {
+// The classic print-design "structure grid" (see
+// https://visme.co/blog/layout-design/): `columns` × `rows` equal-size
+// cells filling the space between the margins, separated by `gutter` px
+// of empty space on both axes — the same modular grid a real layout
+// tool's column/row guide gives you. Purely a visual/snap guide, same
+// family as the grid/margin/golden ratio guides.
+export function resolveStructureGrid(globalStyle) {
   return {
-    unit: globalStyle.baselineUnit ?? 24,
-    columns: Math.max(1, globalStyle.baselineColumns ?? 1),
-    gutter: globalStyle.baselineGutter ?? 24,
+    columns: Math.max(1, globalStyle.structureColumns ?? 1),
+    rows: Math.max(1, globalStyle.structureRows ?? 1),
+    gutter: globalStyle.structureGutter ?? 24,
   }
-}
-
-// Horizontal rhythm lines spanning the content area, starting at the top
-// margin and repeating every `unit` px down to the bottom margin.
-export function baselineLines(margins, unit) {
-  const lines = []
-  const bottom = SHEET_HEIGHT - margins.bottom
-  for (let y = margins.top; y <= bottom; y += unit) {
-    lines.push(y)
-  }
-  return lines
 }
 
 // The vertical line at each column's left and right edge — `columns`
-// equal-width columns filling the space between the margins, separated
-// by `gutter` px of empty space. A single column (the default) has no
-// internal dividers to draw, so this returns nothing until the user
-// actually asks for more than one.
-export function baselineColumnLines(margins, columns, gutter) {
+// equal-width columns filling the space between the left/right margins,
+// separated by `gutter` px of empty space. A single column (the default)
+// has no internal dividers to draw, so this returns nothing until the
+// user actually asks for more than one.
+export function structureColumnLines(margins, columns, gutter) {
   if (columns <= 1) return []
   const contentWidth = SHEET_WIDTH - margins.left - margins.right
   const columnWidth = (contentWidth - gutter * (columns - 1)) / columns
@@ -121,6 +130,21 @@ export function baselineColumnLines(margins, columns, gutter) {
   for (let i = 0; i < columns; i++) {
     const left = margins.left + i * (columnWidth + gutter)
     lines.push(left, left + columnWidth)
+  }
+  return lines
+}
+
+// The horizontal line at each row's top and bottom edge — same idea as
+// structureColumnLines above, along the vertical axis between the top/
+// bottom margins.
+export function structureRowLines(margins, rows, gutter) {
+  if (rows <= 1) return []
+  const contentHeight = SHEET_HEIGHT - margins.top - margins.bottom
+  const rowHeight = (contentHeight - gutter * (rows - 1)) / rows
+  const lines = []
+  for (let i = 0; i < rows; i++) {
+    const top = margins.top + i * (rowHeight + gutter)
+    lines.push(top, top + rowHeight)
   }
   return lines
 }

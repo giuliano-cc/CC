@@ -2,18 +2,16 @@ import { useRef } from 'react'
 import { Trash2 } from 'lucide-react'
 import { BLOCK_TYPES } from '../../utils/blockTypes'
 import {
-  baselineColumnLines,
   clamp,
   goldenRatioLinesX,
   goldenRatioLinesY,
   goldenRatioOffsetLinesX,
   goldenRatioOffsetLinesY,
-  GRID_OFFSET_X,
-  GRID_OFFSET_Y,
-  nearestBaselineLine,
   nearestGridLine,
   SHEET_HEIGHT,
   SHEET_WIDTH,
+  structureColumnLines,
+  structureRowLines,
 } from '../../utils/layout'
 import BlockRenderer from './BlockRenderer'
 
@@ -132,10 +130,11 @@ export default function FreeBlock({
   siblings = [],
   globalStyle,
   snapToGrid = false,
+  gridOffsets = { x: 0, y: 0 },
   snapToGoldenRatio = false,
   goldenOffsets = { sx: 0, dx: 0, top: 0, bottom: 0 },
-  snapToBaseline = false,
-  baselineGrid = { unit: 24, columns: 1, gutter: 24 },
+  snapToStructureGrid = false,
+  structureGrid = { columns: 1, rows: 1, gutter: 24 },
   zoom = 1,
   preview = false,
   onGuides,
@@ -236,32 +235,31 @@ export default function FreeBlock({
         yTargets.push(margins.top, SHEET_HEIGHT - margins.bottom - block.height)
       }
       if (snapToGrid) {
-        xTargets.push(nearestGridLine(x, GRID_OFFSET_X))
-        yTargets.push(nearestGridLine(y, GRID_OFFSET_Y))
+        xTargets.push(nearestGridLine(x, gridOffsets.x))
+        yTargets.push(nearestGridLine(y, gridOffsets.y))
       }
       if (snapToGoldenRatio) {
         // Each golden ratio line (and its own offset duplicate, if any)
         // is a true reference line, not just an edge to butt up against —
         // so, like a sibling's edge, a block can align its left edge,
         // right edge, or center to it.
-        goldenSnapTargets(goldenRatioLinesX(SHEET_WIDTH), goldenRatioOffsetLinesX(SHEET_WIDTH, goldenOffsets)).forEach(
+        goldenSnapTargets(goldenRatioLinesX(margins), goldenRatioOffsetLinesX(margins, goldenOffsets)).forEach(
           (v) => xTargets.push(v, v - block.width, v - block.width / 2),
         )
         goldenSnapTargets(
-          goldenRatioLinesY(SHEET_HEIGHT),
-          goldenRatioOffsetLinesY(SHEET_HEIGHT, goldenOffsets),
+          goldenRatioLinesY(margins),
+          goldenRatioOffsetLinesY(margins, goldenOffsets),
         ).forEach((v) => yTargets.push(v, v - block.height, v - block.height / 2))
       }
-      if (snapToBaseline) {
-        // The rhythm line nearest wherever this block is being dragged to
-        // — like the plain grid, it's the single nearest row (a block's
-        // top edge lands on the beat), not every row on the page.
-        yTargets.push(nearestBaselineLine(y, margins, baselineGrid.unit))
-        // Column edges are true reference lines like the golden ratio's,
-        // so a block can align its left edge, right edge, or center to
-        // one.
-        baselineColumnLines(margins, baselineGrid.columns, baselineGrid.gutter).forEach((v) =>
+      if (snapToStructureGrid) {
+        // Column/row edges are true reference lines like the golden
+        // ratio's, so a block can align its left/right/top/bottom edge or
+        // center to one.
+        structureColumnLines(margins, structureGrid.columns, structureGrid.gutter).forEach((v) =>
           xTargets.push(v, v - block.width, v - block.width / 2),
+        )
+        structureRowLines(margins, structureGrid.rows, structureGrid.gutter).forEach((v) =>
+          yTargets.push(v, v - block.height, v - block.height / 2),
         )
       }
       x = snapTo(x, xTargets)
@@ -284,18 +282,19 @@ export default function FreeBlock({
     const topEdgeTargets = bottomEdgeTargets
 
     const goldenX = snapToGoldenRatio
-      ? goldenSnapTargets(goldenRatioLinesX(SHEET_WIDTH), goldenRatioOffsetLinesX(SHEET_WIDTH, goldenOffsets))
+      ? goldenSnapTargets(goldenRatioLinesX(margins), goldenRatioOffsetLinesX(margins, goldenOffsets))
       : []
     const goldenY = snapToGoldenRatio
-      ? goldenSnapTargets(goldenRatioLinesY(SHEET_HEIGHT), goldenRatioOffsetLinesY(SHEET_HEIGHT, goldenOffsets))
+      ? goldenSnapTargets(goldenRatioLinesY(margins), goldenRatioOffsetLinesY(margins, goldenOffsets))
       : []
-    const columnX = snapToBaseline ? baselineColumnLines(margins, baselineGrid.columns, baselineGrid.gutter) : []
+    const columnX = snapToStructureGrid ? structureColumnLines(margins, structureGrid.columns, structureGrid.gutter) : []
+    const rowY = snapToStructureGrid ? structureRowLines(margins, structureGrid.rows, structureGrid.gutter) : []
 
     if (handle.x === 1) {
       width = clamp(state.origWidth + dx, MIN_WIDTH, SHEET_WIDTH - state.origX)
       const targets = [...rightEdgeTargets, ...goldenX, ...columnX]
       if (margins.right > 0) targets.push(SHEET_WIDTH - margins.right)
-      if (snapToGrid) targets.push(nearestGridLine(x + width, GRID_OFFSET_X))
+      if (snapToGrid) targets.push(nearestGridLine(x + width, gridOffsets.x))
       width = snapTo(x + width, targets) - x
     } else if (handle.x === -1) {
       const maxDx = state.origWidth - MIN_WIDTH
@@ -304,7 +303,7 @@ export default function FreeBlock({
       x = state.origX + clampedDx
       const targets = [...leftEdgeTargets, ...goldenX, ...columnX]
       if (margins.left > 0) targets.push(margins.left)
-      if (snapToGrid) targets.push(nearestGridLine(x, GRID_OFFSET_X))
+      if (snapToGrid) targets.push(nearestGridLine(x, gridOffsets.x))
       const snappedX = snapTo(x, targets)
       width += x - snappedX
       x = snappedX
@@ -312,20 +311,18 @@ export default function FreeBlock({
 
     if (handle.y === 1) {
       height = clamp(state.origHeight + dy, MIN_HEIGHT, SHEET_HEIGHT - state.origY)
-      const targets = [...bottomEdgeTargets, ...goldenY]
+      const targets = [...bottomEdgeTargets, ...goldenY, ...rowY]
       if (margins.bottom > 0) targets.push(SHEET_HEIGHT - margins.bottom)
-      if (snapToGrid) targets.push(nearestGridLine(y + height, GRID_OFFSET_Y))
-      if (snapToBaseline) targets.push(nearestBaselineLine(y + height, margins, baselineGrid.unit))
+      if (snapToGrid) targets.push(nearestGridLine(y + height, gridOffsets.y))
       height = snapTo(y + height, targets) - y
     } else if (handle.y === -1) {
       const maxDy = state.origHeight - MIN_HEIGHT
       const clampedDy = clamp(dy, -state.origY, maxDy)
       height = state.origHeight - clampedDy
       y = state.origY + clampedDy
-      const targets = [...topEdgeTargets, ...goldenY]
+      const targets = [...topEdgeTargets, ...goldenY, ...rowY]
       if (margins.top > 0) targets.push(margins.top)
-      if (snapToGrid) targets.push(nearestGridLine(y, GRID_OFFSET_Y))
-      if (snapToBaseline) targets.push(nearestBaselineLine(y, margins, baselineGrid.unit))
+      if (snapToGrid) targets.push(nearestGridLine(y, gridOffsets.y))
       const snappedY = snapTo(y, targets)
       height += y - snappedY
       y = snappedY

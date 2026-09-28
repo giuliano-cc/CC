@@ -1,22 +1,21 @@
 import { useDroppable } from '@dnd-kit/core'
 import { useState } from 'react'
-import { Baseline, Eye, EyeOff, Grid3x3, Minus, Plus, Ratio, X } from 'lucide-react'
+import { Eye, EyeOff, Grid3x3, LayoutTemplate, Minus, Plus, Ratio, X } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import {
-  baselineColumnLines,
-  baselineLines,
   goldenRatioLinesX,
   goldenRatioLinesY,
   goldenRatioOffsetLinesX,
   goldenRatioOffsetLinesY,
-  GRID_OFFSET_X,
-  GRID_OFFSET_Y,
   GRID_SIZE,
-  resolveBaselineGrid,
   resolveGoldenRatioOffsets,
+  resolveGridOffsets,
   resolveMargins,
+  resolveStructureGrid,
   SHEET_HEIGHT,
   SHEET_WIDTH,
+  structureColumnLines,
+  structureRowLines,
 } from '../../utils/layout'
 import FreeBlock from './FreeBlock'
 
@@ -35,12 +34,13 @@ function Page({
   pageIndex,
   blocks,
   margins,
+  gridOffsets,
   globalStyle,
   showGrid,
   showGoldenRatio,
   goldenOffsets,
-  showBaseline,
-  baselineGrid,
+  showStructureGrid,
+  structureGrid,
   preview,
   zoom,
 }) {
@@ -91,16 +91,22 @@ function Page({
       {!preview && showGrid && (
         <div
           style={{
+            top: margins.top,
+            right: margins.right,
+            bottom: margins.bottom,
+            left: margins.left,
             backgroundImage:
               'linear-gradient(to right, rgba(15, 23, 42, 0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(15, 23, 42, 0.08) 1px, transparent 1px)',
             backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
-            backgroundPosition: `${GRID_OFFSET_X}px ${GRID_OFFSET_Y}px`,
+            backgroundPosition: `${gridOffsets.local.x}px ${gridOffsets.local.y}px`,
           }}
-          // A purely editor-side alignment aid — printing/exporting builds
-          // its own separate tree (see components/builder/PrintDocument.jsx)
-          // that never includes this at all, so `pdf-ignore` is vestigial,
-          // kept only in case anything else still reads it.
-          className="pdf-ignore pointer-events-none absolute inset-0"
+          // A purely editor-side alignment aid, confined to the margin box
+          // like the golden ratio/column/row guides — printing/exporting
+          // builds its own separate tree (see
+          // components/builder/PrintDocument.jsx) that never includes this
+          // at all, so `pdf-ignore` is vestigial, kept only in case
+          // anything else still reads it.
+          className="pdf-ignore pointer-events-none absolute"
         />
       )}
 
@@ -118,7 +124,7 @@ function Page({
 
       {!preview &&
         showGoldenRatio &&
-        Object.values(goldenRatioLinesX(SHEET_WIDTH)).map((x, i) => (
+        Object.values(goldenRatioLinesX(margins)).map((x, i) => (
           <div
             key={`phi-v-${i}`}
             style={{ left: x }}
@@ -127,7 +133,7 @@ function Page({
         ))}
       {!preview &&
         showGoldenRatio &&
-        Object.values(goldenRatioLinesY(SHEET_HEIGHT)).map((y, i) => (
+        Object.values(goldenRatioLinesY(margins)).map((y, i) => (
           <div
             key={`phi-h-${i}`}
             style={{ top: y }}
@@ -143,7 +149,7 @@ function Page({
           of the reference). */}
       {!preview &&
         showGoldenRatio &&
-        Object.entries(goldenRatioOffsetLinesX(SHEET_WIDTH, goldenOffsets))
+        Object.entries(goldenRatioOffsetLinesX(margins, goldenOffsets))
           .filter(([, pair]) => pair !== null)
           .flatMap(([side, pair]) => pair.map((x, i) => ({ key: `${side}-${i}`, x })))
           .map(({ key, x }) => (
@@ -155,7 +161,7 @@ function Page({
           ))}
       {!preview &&
         showGoldenRatio &&
-        Object.entries(goldenRatioOffsetLinesY(SHEET_HEIGHT, goldenOffsets))
+        Object.entries(goldenRatioOffsetLinesY(margins, goldenOffsets))
           .filter(([, pair]) => pair !== null)
           .flatMap(([side, pair]) => pair.map((y, i) => ({ key: `${side}-${i}`, y })))
           .map(({ key, y }) => (
@@ -166,25 +172,26 @@ function Page({
             />
           ))}
 
-      {/* Baseline & column "structure grid" (see utils/layout.js) — a
+      {/* Column × row "structure grid" (see utils/layout.js) — a
           separate teal color from the grid/margin/golden-ratio guides so
-          all four stay visually distinct when several are on at once. */}
+          all four stay visually distinct when several are on at once.
+          Entirely inside the margins, on both axes. */}
       {!preview &&
-        showBaseline &&
-        baselineLines(margins, baselineGrid.unit).map((y, i) => (
+        showStructureGrid &&
+        structureColumnLines(margins, structureGrid.columns, structureGrid.gutter).map((x, i) => (
           <div
-            key={`baseline-h-${i}`}
-            style={{ top: y }}
-            className="pdf-ignore pointer-events-none absolute inset-x-0 z-10 h-px border-t border-dashed border-teal-500/70"
+            key={`structure-v-${i}`}
+            style={{ left: x }}
+            className="pdf-ignore pointer-events-none absolute inset-y-0 z-10 w-px border-l border-dashed border-teal-500/70"
           />
         ))}
       {!preview &&
-        showBaseline &&
-        baselineColumnLines(margins, baselineGrid.columns, baselineGrid.gutter).map((x, i) => (
+        showStructureGrid &&
+        structureRowLines(margins, structureGrid.rows, structureGrid.gutter).map((y, i) => (
           <div
-            key={`baseline-v-${i}`}
-            style={{ left: x }}
-            className="pdf-ignore pointer-events-none absolute inset-y-0 z-10 w-px border-l border-teal-500/70"
+            key={`structure-h-${i}`}
+            style={{ top: y }}
+            className="pdf-ignore pointer-events-none absolute inset-x-0 z-10 h-px border-t border-dashed border-teal-500/70"
           />
         ))}
 
@@ -205,10 +212,11 @@ function Page({
           siblings={blocks.filter((b) => b.id !== block.id && typeof b.x === 'number')}
           globalStyle={globalStyle}
           snapToGrid={showGrid}
+          gridOffsets={gridOffsets}
           snapToGoldenRatio={showGoldenRatio}
           goldenOffsets={goldenOffsets}
-          snapToBaseline={showBaseline}
-          baselineGrid={baselineGrid}
+          snapToStructureGrid={showStructureGrid}
+          structureGrid={structureGrid}
           zoom={zoom}
           preview={preview}
           onGuides={setGuides}
@@ -244,11 +252,12 @@ const ZOOM_STEP = 0.1
 export default function Canvas() {
   const { blocks, globalStyle, selectBlock, pageCount, addPage, removeLastPage } = useBuilder()
   const margins = resolveMargins(globalStyle)
+  const gridOffsets = resolveGridOffsets(margins)
   const goldenOffsets = resolveGoldenRatioOffsets(globalStyle)
-  const baselineGrid = resolveBaselineGrid(globalStyle)
+  const structureGrid = resolveStructureGrid(globalStyle)
   const [showGrid, setShowGrid] = useState(false)
   const [showGoldenRatio, setShowGoldenRatio] = useState(false)
-  const [showBaseline, setShowBaseline] = useState(false)
+  const [showStructureGrid, setShowStructureGrid] = useState(false)
   const [preview, setPreview] = useState(false)
   const [zoom, setZoom] = useState(1)
 
@@ -309,16 +318,16 @@ export default function Canvas() {
         </button>
         <button
           type="button"
-          onClick={() => setShowBaseline((v) => !v)}
+          onClick={() => setShowStructureGrid((v) => !v)}
           disabled={preview}
-          title={showBaseline ? 'Hide baseline & column grid' : 'Show baseline & column grid'}
+          title={showStructureGrid ? 'Hide column & row grid' : 'Show column & row grid'}
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-30 ${
-            showBaseline
+            showStructureGrid
               ? 'border-primary bg-primary/10 text-primary'
               : 'border-slate-200 bg-white text-slate-500 hover:border-primary hover:text-primary'
           }`}
         >
-          <Baseline size={16} />
+          <LayoutTemplate size={16} />
         </button>
         <div className="flex flex-col items-center gap-1 rounded-md border border-slate-200 bg-white p-1 shadow-sm">
           <button
@@ -357,12 +366,13 @@ export default function Canvas() {
                 pageIndex={pageIndex}
                 blocks={blocks.filter((b) => (b.page ?? 0) === pageIndex)}
                 margins={margins}
+                gridOffsets={gridOffsets}
                 globalStyle={globalStyle}
                 showGrid={showGrid}
                 showGoldenRatio={showGoldenRatio}
                 goldenOffsets={goldenOffsets}
-                showBaseline={showBaseline}
-                baselineGrid={baselineGrid}
+                showStructureGrid={showStructureGrid}
+                structureGrid={structureGrid}
                 preview={preview}
                 zoom={zoom}
               />
