@@ -388,17 +388,17 @@ function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, show
           {showDates && (
             <div className="flex items-center gap-1.5">
               <input
-                type="text"
+                type="month"
                 value={item.startDate}
                 onChange={(e) => updateItem(i, { startDate: e.target.value })}
-                placeholder="Start (e.g. Jan 2022)"
+                title="Start"
                 className={`${inputClasses} min-w-0 flex-1`}
               />
               <input
-                type="text"
+                type="month"
                 value={item.endDate}
                 onChange={(e) => updateItem(i, { endDate: e.target.value })}
-                placeholder="End (e.g. Jan 2024)"
+                title="End"
                 disabled={item.current}
                 className={`${inputClasses} min-w-0 flex-1 disabled:bg-slate-50 disabled:text-slate-400`}
               />

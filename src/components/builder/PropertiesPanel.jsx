@@ -1536,17 +1536,17 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
               </div>
               <div className="flex items-center gap-1.5">
                 <input
-                  type="text"
+                  type="month"
                   value={item.startDate}
                   onChange={(e) => updateItem(i, { startDate: e.target.value })}
-                  placeholder="Start"
+                  title="Start"
                   className={`${inputClasses} min-w-0 flex-1`}
                 />
                 <input
-                  type="text"
+                  type="month"
                   value={item.endDate}
                   onChange={(e) => updateItem(i, { endDate: e.target.value })}
-                  placeholder="End"
+                  title="End"
                   disabled={item.current}
                   className={`${inputClasses} min-w-0 flex-1 disabled:bg-slate-50 disabled:text-slate-400`}
                 />

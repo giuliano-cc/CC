@@ -7,7 +7,7 @@ import {
 } from '../../utils/blockTypes'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
-import { parseChecklist, parseEntries, parseLanguages, sortEntriesByDate } from '../../utils/contentLists'
+import { formatEntryDate, parseChecklist, parseEntries, parseLanguages, sortEntriesByDate } from '../../utils/contentLists'
 import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
 
@@ -442,7 +442,7 @@ export default function BlockRenderer({
         <div className={`flex flex-col gap-3 ${alignClass(block.align)}`}>
           {parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]).map((item, i) => {
             const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
-            const dateRange = [item.startDate, item.current ? 'Present' : item.endDate]
+            const dateRange = [formatEntryDate(item.startDate), item.current ? 'Present' : formatEntryDate(item.endDate)]
               .filter((v) => v?.trim())
               .join(' – ')
             const titleStyle = {
@@ -854,7 +854,7 @@ export default function BlockRenderer({
           )}
           {items.map((item, i) => {
             const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
-            const dateRange = [item.startDate, item.current ? 'Present' : item.endDate]
+            const dateRange = [formatEntryDate(item.startDate), item.current ? 'Present' : formatEntryDate(item.endDate)]
               .filter((v) => v?.trim())
               .join(' – ')
             const descriptionLines = (item.description || '').split('\n').filter(Boolean)

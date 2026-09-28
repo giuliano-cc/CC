@@ -93,16 +93,35 @@ export function parseEntries(itemsJson, fallbackText) {
   return [{ ...emptyEntry(), description: fallbackText }]
 }
 
-function entryDateRange(entry) {
-  const end = entry.current ? 'Present' : entry.endDate
-  const range = [entry.startDate, end].filter((v) => v?.trim()).join(' – ')
-  return range
-}
-
 const MONTH_NAMES = [
   'january', 'february', 'march', 'april', 'may', 'june',
   'july', 'august', 'september', 'october', 'november', 'december',
 ]
+
+const MONTH_ABBR = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+]
+
+// Start/end dates are picked from a native <input type="month"> (ISO
+// "YYYY-MM"), so every entry across the whole catalog — Experience,
+// Education, Selected Works, any future 'entries' slot — renders in the
+// exact same "Mon YYYY" shape, instead of whatever free text someone
+// happened to type ("Jan 2022", "01/2022", "January 2022", ...). A value
+// that isn't ISO (typed before this became a date picker) is shown as-is,
+// so nothing already written looks broken.
+export function formatEntryDate(value) {
+  if (!value) return ''
+  const iso = /^(\d{4})-(\d{2})$/.exec(value)
+  if (!iso) return value
+  const monthIndex = Number(iso[2]) - 1
+  return MONTH_ABBR[monthIndex] ? `${MONTH_ABBR[monthIndex]} ${iso[1]}` : value
+}
+
+function entryDateRange(entry) {
+  const end = entry.current ? 'Present' : formatEntryDate(entry.endDate)
+  const range = [formatEntryDate(entry.startDate), end].filter((v) => v?.trim()).join(' – ')
+  return range
+}
 
 // Best-effort parse of a free-text date ("January 2024", "Jan 2024",
 // "01/2024", "2024", ...) into a single sortable number (higher = more
@@ -113,6 +132,8 @@ const MONTH_NAMES = [
 // year zero.
 function parseDateForSort(text) {
   if (!text?.trim()) return null
+  const iso = /^(\d{4})-(\d{2})$/.exec(text)
+  if (iso) return Number(iso[1]) * 12 + (Number(iso[2]) - 1)
   const monthYear = /([a-zA-Z]+)\.?\s+(\d{4})/.exec(text)
   if (monthYear) {
     const monthIndex = MONTH_NAMES.findIndex((m) => m.startsWith(monthYear[1].toLowerCase()))
