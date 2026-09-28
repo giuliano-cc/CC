@@ -222,6 +222,11 @@ export const BLOCK_DEFINITIONS = [
       // Company) on the same line instead of stacked — see the matching
       // field on Experience/Education below.
       titleLocationInline: false,
+      // Also 'entries'-only: shows the City/Country (or Company) first
+      // and the entry's own title second, instead of the other way
+      // around — the two lines just swap, whichever is now first keeps
+      // the title's own bold styling.
+      locationFirst: false,
     },
   },
   {
@@ -413,6 +418,14 @@ export const BLOCK_DEFINITIONS = [
       // line instead of stacked — the date range still gets its own line
       // either way.
       titleLocationInline: false,
+      // Experience-only: shows the Company/Location first and the job
+      // title second — the two lines just swap, whichever is now first
+      // keeps the title's own bold styling.
+      locationFirst: false,
+      // Joins the Company/Location line with the date range when they
+      // share a line (i.e. titleLocationInline is off) — a plain text
+      // field so it can be any separator, not just " / ".
+      subtitleSeparator: ' / ',
       items: [
         {
           id: 'exp-default-1',

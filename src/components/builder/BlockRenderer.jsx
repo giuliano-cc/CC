@@ -444,27 +444,33 @@ export default function BlockRenderer({
               color: block.color || undefined,
               ...entryExtraStyle,
             }
+            // Location/place first, title second — the same two lines,
+            // just swapped, so whichever now sits in the title's own
+            // (bold) position keeps that styling regardless of which
+            // field it is.
+            const primaryText = block.locationFirst ? subLine : item.title
+            const secondaryText = block.locationFirst ? item.title : subLine
             return (
               <div key={item.id || i} className="flex flex-col gap-0.5">
-                {item.title && block.titleLocationInline && subLine ? (
+                {primaryText && block.titleLocationInline && secondaryText ? (
                   <p className="flex flex-wrap items-baseline gap-x-2">
                     <span className="font-bold" style={titleStyle}>
-                      {item.title}
+                      {primaryText}
                     </span>
                     <span className="text-sm text-slate-500" style={entryMetaStyle}>
-                      {subLine}
+                      {secondaryText}
                     </span>
                   </p>
                 ) : (
                   <>
-                    {item.title && (
+                    {primaryText && (
                       <p className="text-base font-bold" style={titleStyle}>
-                        {item.title}
+                        {primaryText}
                       </p>
                     )}
-                    {subLine && !block.titleLocationInline && (
+                    {secondaryText && !block.titleLocationInline && (
                       <p className="text-sm text-slate-500" style={entryMetaStyle}>
-                        {subLine}
+                        {secondaryText}
                       </p>
                     )}
                   </>
@@ -854,27 +860,37 @@ export default function BlockRenderer({
                   : undefined,
               lineHeight: block.lineSpacing || undefined,
             }
+            // Experience only (not Education) can show the location/company
+            // first, with the job title second — the same two lines, just
+            // swapped, so whichever now sits in the title's own (bold)
+            // position keeps that styling regardless of which field it is.
+            const swapOrder = isExperience && block.locationFirst
+            const primaryText = swapOrder ? subLine : item.title
+            const secondaryText = swapOrder ? item.title : subLine
+            const subtitleSeparator = block.subtitleSeparator ?? ' / '
             return (
               <div key={item.id || i} className="flex flex-col gap-0.5">
-                {item.title && block.titleLocationInline && subLine ? (
+                {primaryText && block.titleLocationInline && secondaryText ? (
                   <p className="flex flex-wrap items-baseline gap-x-2">
                     <span className="font-bold" style={entryTitleStyle}>
-                      {item.title}
+                      {primaryText}
                     </span>
                     <span className="text-sm text-slate-500" style={bodyStyle}>
-                      {subLine}
+                      {secondaryText}
                     </span>
                   </p>
                 ) : (
-                  item.title && (
+                  primaryText && (
                     <p className="text-base font-bold" style={entryTitleStyle}>
-                      {item.title}
+                      {primaryText}
                     </p>
                   )
                 )}
-                {(block.titleLocationInline ? dateRange : subLine || dateRange) && (
+                {(block.titleLocationInline ? dateRange : secondaryText || dateRange) && (
                   <p className="text-sm text-slate-500" style={bodyStyle}>
-                    {block.titleLocationInline ? dateRange : [subLine, dateRange].filter(Boolean).join(' / ')}
+                    {block.titleLocationInline
+                      ? dateRange
+                      : [secondaryText, dateRange].filter(Boolean).join(subtitleSeparator)}
                   </p>
                 )}
                 {descriptionLines.length > 0 && (

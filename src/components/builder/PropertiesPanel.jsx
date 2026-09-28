@@ -11,6 +11,7 @@ import {
   AlignVerticalJustifyStart,
   Crop,
   Maximize2,
+  Shuffle,
   Trash2,
   Upload,
 } from 'lucide-react'
@@ -18,6 +19,7 @@ import { useBuilder } from '../../context/BuilderContext'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import {
   BLOCK_TYPES,
+  FONT_FAMILY_OPTIONS,
   getTemplateTypographyStyles,
   matchesTypographyRow,
   sectionTitleSizeField,
@@ -208,6 +210,18 @@ function GlobalStylePanel() {
           includeInherit={false}
         />
       </Field>
+      <button
+        type="button"
+        onClick={() => {
+          const realFonts = FONT_FAMILY_OPTIONS.filter((f) => f.value)
+          const pick = () => realFonts[Math.floor(Math.random() * realFonts.length)].value
+          setGlobalStyle((prev) => ({ ...prev, titleFontFamily: pick(), bodyFontFamily: pick() }))
+        }}
+        className="flex items-center justify-center gap-1.5 self-start rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+      >
+        <Shuffle size={13} />
+        Randomize title/body fonts
+      </button>
       <p className="-mt-2 text-xs text-slate-400">
         Title font is used for every heading and section title (Experience,
         Education, chart titles, ...); Body font for paragraph text, entry
@@ -1454,6 +1468,26 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
         />
         Show title and location on the same line
       </label>
+      {block.type === BLOCK_TYPES.EXPERIENCE && (
+        <>
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={block.locationFirst === true}
+              onChange={(e) => onChange({ locationFirst: e.target.checked })}
+            />
+            Show location before the job title
+          </label>
+          <Field label="Separator between location and dates">
+            <input
+              type="text"
+              value={block.subtitleSeparator ?? ' / '}
+              onChange={(e) => onChange({ subtitleSeparator: e.target.value })}
+              className={`${inputClasses} !w-20`}
+            />
+          </Field>
+        </>
+      )}
       <Field label="Content from library">
         <select
           value={usesLibrary ? 'library' : ''}
@@ -2132,14 +2166,24 @@ function BlockPropertiesPanel({ block, onChange }) {
 
       {block.type === BLOCK_TYPES.TEXT &&
         CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.type === 'entries' && (
-          <label className="flex items-center gap-1.5 text-xs text-slate-600">
-            <input
-              type="checkbox"
-              checked={block.titleLocationInline === true}
-              onChange={(e) => onChange({ titleLocationInline: e.target.checked })}
-            />
-            Show title and location on the same line
-          </label>
+          <>
+            <label className="flex items-center gap-1.5 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={block.titleLocationInline === true}
+                onChange={(e) => onChange({ titleLocationInline: e.target.checked })}
+              />
+              Show title and location on the same line
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={block.locationFirst === true}
+                onChange={(e) => onChange({ locationFirst: e.target.checked })}
+              />
+              Show location before the title
+            </label>
+          </>
         )}
 
       {showContent && !block.contentSlot && (

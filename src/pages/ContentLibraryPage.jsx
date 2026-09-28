@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ChevronDown, Crop, Download, Trash2, Upload, User } from 'lucide-react'
+import { ChevronDown, Copy, Crop, Download, Trash2, Upload, User } from 'lucide-react'
 import { CONTENT_SLOTS, useContentLibrary } from '../context/ContentLibraryContext'
 import ImageCropModal from '../components/builder/ImageCropModal'
 import { formatSocialLinks, parseSocialLinks, SOCIAL_PLATFORMS } from '../utils/socialIcons'
@@ -576,12 +576,24 @@ function CollapsibleSection({ title, children }) {
 }
 
 export default function ContentLibraryPage() {
-  const { getLibrary, languages, updateSlot, exportLibrary, importLibrary } = useContentLibrary()
+  const { getLibrary, languages, updateSlot, copyLanguageContent, exportLibrary, importLibrary } = useContentLibrary()
   const importInputRef = useRef(null)
   const libraries = Object.fromEntries(languages.map((l) => [l.key, getLibrary(l.key)]))
 
   function handleChange(key, value, lang) {
     updateSlot(key, value, lang)
+  }
+
+  function handleCopyEnToDe() {
+    if (
+      !window.confirm(
+        'Copy every English field into German? This overwrites whatever is currently written in German.',
+      )
+    ) {
+      return
+    }
+    copyLanguageContent('en', 'de')
+    toast.success('English content copied to German')
   }
 
   function handleBlur() {
@@ -639,6 +651,15 @@ export default function ContentLibraryPage() {
             className="hidden"
             onChange={handleImportFile}
           />
+          <button
+            type="button"
+            onClick={handleCopyEnToDe}
+            title="Overwrite the German column with a copy of the English one, as a starting point to translate from"
+            className="flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+          >
+            <Copy size={13} />
+            Copy EN → DE
+          </button>
           <button
             type="button"
             onClick={() => importInputRef.current?.click()}

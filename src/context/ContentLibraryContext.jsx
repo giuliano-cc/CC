@@ -189,6 +189,19 @@ export function ContentLibraryProvider({ children }) {
     }))
   }
 
+  // Overwrites every wording field of `toLang` with `fromLang`'s own — a
+  // starting point for translating (copy English into German, then edit
+  // the copy in place) instead of retyping everything from a blank
+  // language. Shared image slots aren't touched (there's only one copy of
+  // those to begin with).
+  function copyLanguageContent(fromLang, toLang) {
+    if (!isValidLanguage(fromLang) || !isValidLanguage(toLang) || fromLang === toLang) return
+    setState((prev) => ({
+      ...prev,
+      content: { ...prev.content, [toLang]: { ...prev.content[fromLang] } },
+    }))
+  }
+
   // Keeps each language's composed 'contact' text in sync with its own
   // four structured fields, so existing contactsSlot/contentSlot bindings
   // (which read 'contact' as one newline-joined string) keep working
@@ -246,7 +259,14 @@ export function ContentLibraryProvider({ children }) {
     }
   }
 
-  const value = { getLibrary, languages: CONTENT_LANGUAGES, updateSlot, exportLibrary, importLibrary }
+  const value = {
+    getLibrary,
+    languages: CONTENT_LANGUAGES,
+    updateSlot,
+    copyLanguageContent,
+    exportLibrary,
+    importLibrary,
+  }
 
   return (
     <ContentLibraryContext.Provider value={value}>
