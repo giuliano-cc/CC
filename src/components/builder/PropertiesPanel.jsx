@@ -1708,8 +1708,19 @@ function ContentSlotBinder({ block, onChange }) {
         {/* 'checklist'/'languages' slots still resolve to a plain, newline-
             joined string (see utils/contentLists.js) — bindable here like
             any other text slot. Only 'image'/'social'/'contactGroup' need
-            their own dedicated editor UI instead of a text block. */}
-        {CONTENT_SLOTS.filter((s) => !['image', 'social', 'contactGroup'].includes(s.type)).map((slot) => (
+            their own dedicated editor UI instead of a text block.
+            'experience'/'education' are hidden too — a Text block bound
+            to either renders the same entries structurally but without
+            the dedicated Experience/Education block's chronological
+            sorting, so it's a strictly worse duplicate of a block that's
+            already one drag away in the Blocks panel. Still shown if a
+            block already uses one (from before this changed), so its own
+            dropdown doesn't appear to have lost its selection. */}
+        {CONTENT_SLOTS.filter(
+          (s) =>
+            !['image', 'social', 'contactGroup'].includes(s.type) &&
+            (!['experience', 'education'].includes(s.key) || s.key === block.contentSlot),
+        ).map((slot) => (
           <option key={slot.key} value={slot.key}>
             {slot.label}
           </option>
@@ -2267,6 +2278,14 @@ function BlockPropertiesPanel({ block, onChange }) {
       {block.type === BLOCK_TYPES.TEXT &&
         CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.type === 'entries' && (
           <>
+            <label className="flex items-center gap-1.5 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={block.sortByDate !== false}
+                onChange={(e) => onChange({ sortByDate: e.target.checked })}
+              />
+              Sort entries most recent first
+            </label>
             <label className="flex items-center gap-1.5 text-xs text-slate-600">
               <input
                 type="checkbox"

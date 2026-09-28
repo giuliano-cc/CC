@@ -482,10 +482,12 @@ export default function BlockRenderer({
         fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
         ...entryExtraStyle,
       }
+      const entriesRawItems = boundSlot?.type === 'entries' ? parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]) : []
+      const entriesItems = block.sortByDate !== false ? sortEntriesByDate(entriesRawItems) : entriesRawItems
       const body = boundSlot?.type === 'entries' ? (
         <div className={`group/entries relative flex flex-col gap-3 ${alignClass(block.align)}`}>
           <EntryLayoutCycleButton block={block} onUpdateBlock={onUpdateBlock} />
-          {parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]).map((item, i) => {
+          {entriesItems.map((item, i) => {
             const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
             const dateRange = [
               formatEntryDate(item.startDate, globalStyle.dateFormat),
@@ -549,19 +551,26 @@ export default function BlockRenderer({
                     {secondaryNode}
                   </>
                 )}
-                {item.description && (
-                  <p
-                    className="whitespace-pre-line text-sm leading-relaxed text-slate-600"
-                    style={{
-                      fontFamily: entryBodyFont,
-                      fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
-                      color: block.color || undefined,
-                      ...entryExtraStyle,
-                    }}
-                  >
-                    {item.description}
-                  </p>
-                )}
+                {(() => {
+                  const descriptionLines = (item.description || '').split('\n').filter(Boolean)
+                  return (
+                    descriptionLines.length > 0 && (
+                      <ul
+                        className="mt-0.5 list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400"
+                        style={{
+                          fontFamily: entryBodyFont,
+                          fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
+                          color: block.color || undefined,
+                          ...entryExtraStyle,
+                        }}
+                      >
+                        {descriptionLines.map((line, li) => (
+                          <li key={li}>{line}</li>
+                        ))}
+                      </ul>
+                    )
+                  )
+                })()}
               </div>
             )
           })}
