@@ -1562,26 +1562,22 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
         />
         Show title and location on the same line
       </label>
-      {block.type === BLOCK_TYPES.EXPERIENCE && (
-        <>
-          <label className="flex items-center gap-1.5 text-xs text-slate-600">
-            <input
-              type="checkbox"
-              checked={block.locationFirst === true}
-              onChange={(e) => onChange({ locationFirst: e.target.checked })}
-            />
-            Show location before the job title
-          </label>
-          <Field label="Separator between location and dates">
-            <input
-              type="text"
-              value={block.subtitleSeparator ?? ' / '}
-              onChange={(e) => onChange({ subtitleSeparator: e.target.value })}
-              className={`${inputClasses} !w-20`}
-            />
-          </Field>
-        </>
-      )}
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={block.locationFirst === true}
+          onChange={(e) => onChange({ locationFirst: e.target.checked })}
+        />
+        Show location before the title
+      </label>
+      <Field label="Separator between location and dates">
+        <input
+          type="text"
+          value={block.subtitleSeparator ?? ' / '}
+          onChange={(e) => onChange({ subtitleSeparator: e.target.value })}
+          className={`${inputClasses} !w-20`}
+        />
+      </Field>
       <Field label="Content from library">
         <select
           value={usesLibrary ? 'library' : ''}

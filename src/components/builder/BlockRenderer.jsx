@@ -11,6 +11,46 @@ import { formatEntryDate, parseChecklist, parseEntries, parseLanguages, sortEntr
 import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
 
+// Shared by Experience/Education and a Text block bound to an 'entries'
+// slot (Selected Works): which of the title/location-date pair sits in
+// the bold "primary" spot, and whether they share a line or stack on
+// separate ones — the description always stays exactly where it is,
+// only this pair's position cycles. Same "cycle style" hover button
+// pattern as the chart blocks (see Chart below), so all three entry
+// blocks share one control for it.
+const ENTRY_LAYOUT_MODES = [
+  { titleLocationInline: false, locationFirst: false },
+  { titleLocationInline: true, locationFirst: false },
+  { titleLocationInline: false, locationFirst: true },
+  { titleLocationInline: true, locationFirst: true },
+]
+
+function entryLayoutIndex(block) {
+  const index = ENTRY_LAYOUT_MODES.findIndex(
+    (m) => !!m.titleLocationInline === !!block.titleLocationInline && !!m.locationFirst === !!block.locationFirst,
+  )
+  return index === -1 ? 0 : index
+}
+
+function EntryLayoutCycleButton({ block, onUpdateBlock }) {
+  if (!onUpdateBlock) return null
+  return (
+    <button
+      type="button"
+      data-no-drag
+      title="Cycle title/location layout"
+      onClick={(event) => {
+        event.stopPropagation()
+        const next = ENTRY_LAYOUT_MODES[(entryLayoutIndex(block) + 1) % ENTRY_LAYOUT_MODES.length]
+        onUpdateBlock(next)
+      }}
+      className="invisible absolute right-0 top-0 z-10 flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-primary group-hover/entries:visible"
+    >
+      <RefreshCw size={13} />
+    </button>
+  )
+}
+
 function alignClass(align) {
   return align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
 }
@@ -439,7 +479,8 @@ export default function BlockRenderer({
         ...entryExtraStyle,
       }
       const body = boundSlot?.type === 'entries' ? (
-        <div className={`flex flex-col gap-3 ${alignClass(block.align)}`}>
+        <div className={`group/entries relative flex flex-col gap-3 ${alignClass(block.align)}`}>
+          <EntryLayoutCycleButton block={block} onUpdateBlock={onUpdateBlock} />
           {parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]).map((item, i) => {
             const subLine = [item.subtitle, item.location].filter((v) => v?.trim()).join(', ')
             const dateRange = [
@@ -846,7 +887,8 @@ export default function BlockRenderer({
         fontFamily: block.entryTitleFontFamily || resolveTitleFont(globalStyle),
       }
       return (
-        <div className={`flex flex-col gap-3 ${alignClass(block.align)}`}>
+        <div className={`group/entries relative flex flex-col gap-3 ${alignClass(block.align)}`}>
+          <EntryLayoutCycleButton block={block} onUpdateBlock={onUpdateBlock} />
           {block.title && block.showTitle !== false && (
             <p
               className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
@@ -873,11 +915,12 @@ export default function BlockRenderer({
                   : undefined,
               lineHeight: block.lineSpacing || undefined,
             }
-            // Experience only (not Education) can show the location/company
-            // first, with the job title second — the same two lines, just
-            // swapped, so whichever now sits in the title's own (bold)
-            // position keeps that styling regardless of which field it is.
-            const swapOrder = isExperience && block.locationFirst
+            // Location/company first, job title second — the same two
+            // lines, just swapped, so whichever now sits in the title's
+            // own (bold) position keeps that styling regardless of which
+            // field it is. Cycled via EntryLayoutCycleButton above,
+            // together with titleLocationInline.
+            const swapOrder = block.locationFirst
             const primaryText = swapOrder ? subLine : item.title
             const secondaryText = swapOrder ? item.title : subLine
             const subtitleSeparator = block.subtitleSeparator ?? ' / '
