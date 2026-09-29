@@ -577,7 +577,13 @@ export const SECTION_TITLE_TYPES = [
 // the same `titleSize`/`titleColor` fields.
 function hasSectionTitle(block) {
   if (SECTION_TITLE_TYPES.includes(block.type)) return !!block.title && block.showTitle !== false
-  if (block.type === BLOCK_TYPES.TEXT) return block.showTitle === true && !!block.contentSlot
+  // A Text block's title used to require a bound Content Library field
+  // (contentSlot) — but BlockRenderer's own title logic (autoTitle =
+  // block.titleText || translateSectionTitle(boundSlot?.label, ...)) has
+  // always let `titleText` stand on its own for a free-text block too.
+  // Matching that here is what lets a free-text block's title share the
+  // same H2 row/typography-matching identity as a library-bound one's.
+  if (block.type === BLOCK_TYPES.TEXT) return block.showTitle === true && !!(block.contentSlot || block.titleText)
   return false
 }
 

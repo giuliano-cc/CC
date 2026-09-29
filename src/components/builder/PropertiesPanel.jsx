@@ -2504,7 +2504,7 @@ function BlockPropertiesPanel({ block, onChange }) {
 
       {canBindContent && <ContentSlotBinder block={block} onChange={onChange} />}
 
-      {block.type === BLOCK_TYPES.TEXT && block.contentSlot && (
+      {block.type === BLOCK_TYPES.TEXT && (
         <>
           <label className="flex items-center gap-1.5 text-xs text-slate-600">
             <input
@@ -2512,16 +2512,16 @@ function BlockPropertiesPanel({ block, onChange }) {
               checked={block.showTitle === true}
               onChange={(e) => onChange({ showTitle: e.target.checked })}
             />
-            Show the field's name as a title above it
+            {block.contentSlot ? "Show the field's name as a title above it" : 'Add a title above this text'}
           </label>
           {block.showTitle === true && (
             <>
-              <Field label="Title text (optional)">
+              <Field label={block.contentSlot ? 'Title text (optional)' : 'Title text'}>
                 <input
                   type="text"
                   value={block.titleText || ''}
                   onChange={(e) => onChange({ titleText: e.target.value || null })}
-                  placeholder={CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.label || ''}
+                  placeholder={CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.label || 'e.g. Portfolio'}
                   className={inputClasses}
                 />
               </Field>
