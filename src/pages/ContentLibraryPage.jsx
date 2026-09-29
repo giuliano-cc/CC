@@ -328,41 +328,50 @@ function LanguagesField({ itemsJson, fallbackText, onUpdate }) {
   return (
     <div className="flex flex-col gap-2">
       {items.map((item, i) => (
-        <div key={i} className="flex items-center gap-1.5">
+        <div key={i} className="flex flex-col gap-1 rounded-md border border-slate-200 p-2">
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              value={item.name}
+              onChange={(e) => updateItem(i, { name: e.target.value })}
+              placeholder="Language"
+              className={`${inputClasses} min-w-0 flex-1`}
+            />
+            <select
+              value={item.level}
+              onChange={(e) => updateItem(i, { level: Number(e.target.value) })}
+              className={`${inputClasses} !w-36 shrink-0`}
+            >
+              {LANGUAGE_LEVELS.map((l) => (
+                <option key={l.level} value={l.level}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={item.level}
+              onChange={(e) => updateItem(i, { level: Math.max(0, Math.min(100, Number(e.target.value))) })}
+              title="Exact percentage (used by the Skills Chart block)"
+              className={`${inputClasses} !w-16 shrink-0`}
+            />
+            <button
+              type="button"
+              onClick={() => removeItem(i)}
+              className="shrink-0 rounded-md px-2 py-1.5 text-xs text-red-500 hover:bg-red-50"
+            >
+              ✕
+            </button>
+          </div>
           <input
             type="text"
-            value={item.name}
-            onChange={(e) => updateItem(i, { name: e.target.value })}
-            placeholder="Language"
-            className={`${inputClasses} min-w-0 flex-1`}
+            value={item.customLevel || ''}
+            onChange={(e) => updateItem(i, { customLevel: e.target.value || null })}
+            placeholder="Text version instead of the level above, e.g. B2 / C1 in Vorbereitung"
+            className={`${inputClasses} text-xs`}
           />
-          <select
-            value={item.level}
-            onChange={(e) => updateItem(i, { level: Number(e.target.value) })}
-            className={`${inputClasses} !w-36 shrink-0`}
-          >
-            {LANGUAGE_LEVELS.map((l) => (
-              <option key={l.level} value={l.level}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={item.level}
-            onChange={(e) => updateItem(i, { level: Math.max(0, Math.min(100, Number(e.target.value))) })}
-            title="Exact percentage (used by the Skills Chart block)"
-            className={`${inputClasses} !w-16 shrink-0`}
-          />
-          <button
-            type="button"
-            onClick={() => removeItem(i)}
-            className="shrink-0 rounded-md px-2 py-1.5 text-xs text-red-500 hover:bg-red-50"
-          >
-            ✕
-          </button>
         </div>
       ))}
       <div className="flex items-center gap-3">

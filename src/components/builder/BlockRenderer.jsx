@@ -7,7 +7,7 @@ import {
 } from '../../utils/blockTypes'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
-import { formatEntryDate, parseChecklist, parseEntries, parseLanguages, sortEntriesByDate } from '../../utils/contentLists'
+import { formatEntryDate, languageLevelText, parseChecklist, parseEntries, parseLanguages, sortEntriesByDate } from '../../utils/contentLists'
 import { translateSectionTitle } from '../../utils/sectionTitles'
 import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
@@ -297,12 +297,12 @@ function guessContactIcon(text) {
   return MapPin
 }
 
-function SkillBar({ label, level, color }) {
+function SkillBar({ label, level, levelText, color }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium text-slate-700">{label}</span>
-        <span className="text-slate-400">{level}%</span>
+        <span className="text-slate-400">{levelText || `${level}%`}</span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
         <div
@@ -314,23 +314,28 @@ function SkillBar({ label, level, color }) {
   )
 }
 
-function SkillDots({ label, level, color, dotSize = 10, dotCount = 5 }) {
+function SkillDots({ label, level, levelText, color, dotSize = 10, dotCount = 5 }) {
   const filled = Math.round((Math.max(0, Math.min(100, level)) / 100) * dotCount)
   return (
     <div className="flex items-center justify-between text-xs">
       <span className="font-medium text-slate-700">{label}</span>
-      <div className="flex items-center gap-1">
-        {Array.from({ length: dotCount }).map((_, i) => (
-          <span
-            key={i}
-            className="shrink-0 rounded-full"
-            style={{
-              width: dotSize,
-              height: dotSize,
-              backgroundColor: i < filled ? color : '#e2e8f0',
-            }}
-          />
-        ))}
+      <div className="flex items-center gap-2">
+        {/* Dots are purely visual (no default numeric text, unlike SkillBar)
+            — only shown at all when a custom text version is actually set. */}
+        {levelText && <span className="text-slate-400">{levelText}</span>}
+        <div className="flex items-center gap-1">
+          {Array.from({ length: dotCount }).map((_, i) => (
+            <span
+              key={i}
+              className="shrink-0 rounded-full"
+              style={{
+                width: dotSize,
+                height: dotSize,
+                backgroundColor: i < filled ? color : '#e2e8f0',
+              }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -369,7 +374,7 @@ function Chart({ block, items, onUpdateBlock, accentColor, titleFont, lang, titl
       {chartStyle === 'tags' ? (
         <div className="flex flex-wrap gap-2">
           {items.map((item, i) => (
-            <SkillTag key={i} label={item.label} color={block.color || accentColor} />
+            <SkillTag key={i} label={item.label} levelText={item.levelText} color={block.color || accentColor} />
           ))}
         </div>
       ) : (
@@ -380,12 +385,19 @@ function Chart({ block, items, onUpdateBlock, accentColor, titleFont, lang, titl
                 key={i}
                 label={item.label}
                 level={item.level}
+                levelText={item.levelText}
                 color={block.color || accentColor}
                 dotSize={block.dotSize}
                 dotCount={block.dotCount || 5}
               />
             ) : (
-              <SkillBar key={i} label={item.label} level={item.level} color={block.color || accentColor} />
+              <SkillBar
+                key={i}
+                label={item.label}
+                level={item.level}
+                levelText={item.levelText}
+                color={block.color || accentColor}
+              />
             ),
           )}
         </div>
@@ -394,13 +406,13 @@ function Chart({ block, items, onUpdateBlock, accentColor, titleFont, lang, titl
   )
 }
 
-function SkillTag({ label, color }) {
+function SkillTag({ label, levelText, color }) {
   return (
     <span
       className="rounded-full px-2.5 py-1 text-xs font-medium text-white"
       style={{ backgroundColor: color }}
     >
-      {label}
+      {levelText ? `${label}: ${levelText}` : label}
     </span>
   )
 }
@@ -867,7 +879,7 @@ export default function BlockRenderer({
       const items = block.useLibraryLanguages
         ? parseLanguages(library.languagesItems, library.languages)
             .filter((i) => i.name?.trim())
-            .map((i) => ({ label: i.name, level: i.level }))
+            .map((i) => ({ label: i.name, level: i.level, levelText: languageLevelText(i) }))
         : block.items
       return (
         <Chart

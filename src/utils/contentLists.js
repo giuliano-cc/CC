@@ -77,8 +77,20 @@ export function parseLanguages(itemsJson, fallbackText) {
 export function composeLanguagesText(items) {
   return items
     .filter((item) => item.name?.trim())
-    .map((item) => `${item.name} (${languageLevelLabel(item.level)})`)
+    .map((item) => `${item.name} (${languageLevelText(item)})`)
     .join('\n')
+}
+
+// The Native/Fluent/... scale doesn't fit every case — a CEFR level, "in
+// preparation", or a two-part note like "B2 / C1 in Vorbereitung" has
+// nowhere to go otherwise. `item.customLevel`, when set, is shown verbatim
+// instead of the level-derived label everywhere a language's level is
+// displayed as text (composed plain text, the Languages Chart's bars/dots
+// percentage, and its tags style) — the bar/dot fill itself still comes
+// from `item.level`, so the numeric level keeps mattering even when its
+// label is overridden.
+export function languageLevelText(item) {
+  return item.customLevel?.trim() || languageLevelLabel(item.level)
 }
 
 // Entry items (Work Experience, Education): a repeatable row with a
