@@ -17,6 +17,7 @@ import {
   parseEntries,
   parseLanguages,
   SKILL_LEVELS,
+  sortEntriesByDate,
 } from '../utils/contentLists'
 
 const cardClasses = 'flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4'
@@ -425,6 +426,15 @@ function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, show
     set(items.filter((_, i) => i !== index))
   }
 
+  // Most-recent-first, current/ongoing entries leading — same rule a
+  // bound Experience/Education/Selected Works block already applies at
+  // render time by default (see sortEntriesByDate) — this just lets the
+  // catalog's own order match what's shown, instead of the two only
+  // agreeing once "Sort entries most recent first" is on for every block.
+  function sortByDate() {
+    set(sortEntriesByDate(items))
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {items.map((item, i) => (
@@ -499,9 +509,16 @@ function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, show
           />
         </div>
       ))}
-      <button type="button" onClick={addItem} className="self-start text-xs font-medium text-primary hover:underline">
-        + Add entry
-      </button>
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={addItem} className="text-xs font-medium text-primary hover:underline">
+          + Add entry
+        </button>
+        {showDates && items.length > 1 && (
+          <button type="button" onClick={sortByDate} className="text-xs font-medium text-primary hover:underline">
+            Sort by date
+          </button>
+        )}
+      </div>
     </div>
   )
 }
