@@ -201,7 +201,7 @@ function sectionTitleStyle(block, color, fallbackFont) {
   const sizePx = block.fontSize || HEADING_SIZE_PX[block.titleSize || 'md'] || HEADING_SIZE_PX.md
   return {
     fontSize: `${sizePx}px`,
-    fontWeight: 700,
+    fontWeight: block.titleBold === false ? 400 : 700,
     color,
     fontFamily: block.fontFamily || fallbackFont,
     ...titleTextTransformStyle(block, 'title'),
@@ -524,6 +524,7 @@ export default function BlockRenderer({
             const titleStyle = {
               fontFamily: entryTitleFont,
               fontSize: `${entryTitleSizePx}px`,
+              fontWeight: block.entryTitleBold === false ? 400 : 700,
               color: block.entryTitleColor || globalStyle.textColor,
               ...entryExtraStyle,
               ...titleTextTransformStyle(block, 'entryTitle'),
@@ -646,6 +647,7 @@ export default function BlockRenderer({
                 titleSize: block.titleSize,
                 fontFamily: block.fontFamily,
                 fontSize: block.titleFontSize,
+                titleBold: block.titleBold,
                 titleItalic: block.titleItalic,
                 titleTextTransform: block.titleTextTransform,
               },
@@ -956,6 +958,7 @@ export default function BlockRenderer({
       // fallback the Global Style "Text styles used" row itself displays.
       const entryTitleStyle = {
         fontSize: block.entryTitleFontSize ? `${block.entryTitleFontSize}px` : undefined,
+        fontWeight: block.entryTitleBold === false ? 400 : 700,
         color: block.entryTitleColor || globalStyle.textColor,
         fontFamily: block.entryTitleFontFamily || resolveTitleFont(globalStyle),
         ...titleTextTransformStyle(block, 'entryTitle'),

@@ -85,34 +85,34 @@ function GlobalStylePanel() {
   // — at that size), including nested inside a Columns block — so "change
   // the H2 style" changes every H2, not just one instance. A block matched
   // into an H2 row that isn't itself a literal Heading (a section-title
-  // block, or a Text block's auto-title) uses `titleColor`/a size field of
-  // its own instead of `color`/`fontSize` (which, where it has them at
-  // all, mean something else — e.g. a chart's bar color, or a Text
-  // block's own paragraph size) and doesn't support a bold toggle (its
-  // title is always bold), so the patch is translated for it.
+  // block, or a Text block's auto-title) uses `titleColor`/`titleBold`/a
+  // size field of its own instead of `color`/`bold`/`fontSize` (which,
+  // where it has them at all, mean something else — e.g. a chart's bar
+  // color, or a Text block's own paragraph size), so the patch is
+  // translated for it.
   function applyTypographyChange(row, patch) {
     function walk(list) {
       list.forEach((block) => {
         if (matchesTypographyRow(block, row)) {
           const isTitleOnlyMatch = row.matchType === BLOCK_TYPES.HEADING && block.type !== BLOCK_TYPES.HEADING
           if (isTitleOnlyMatch) {
-            const { color, fontSize, bold: _bold, italic, textTransform, ...rest } = patch
+            const { color, fontSize, bold, italic, textTransform, ...rest } = patch
             const translated = { ...rest }
             if (color !== undefined) translated.titleColor = color
             if (fontSize !== undefined) translated[sectionTitleSizeField(block)] = fontSize
+            if (bold !== undefined) translated.titleBold = bold
             if (italic !== undefined) translated.titleItalic = italic
             if (textTransform !== undefined) translated.titleTextTransform = textTransform
             updateBlock(block.id, translated)
           } else if (row.matchType === 'entryTitle') {
-            // Entry titles are always bold (no toggle of their own — see
-            // the Chart's/section title's own "always bold" comment above)
-            // and use their own dedicated fields so they never collide
-            // with the block's own section-title color/font/size.
-            const { color, fontSize, fontFamily, bold: _bold, italic, textTransform, ...rest } = patch
+            // Entry titles use their own dedicated fields so they never
+            // collide with the block's own section-title color/font/size.
+            const { color, fontSize, fontFamily, bold, italic, textTransform, ...rest } = patch
             const translated = { ...rest }
             if (color !== undefined) translated.entryTitleColor = color
             if (fontSize !== undefined) translated.entryTitleFontSize = fontSize
             if (fontFamily !== undefined) translated.entryTitleFontFamily = fontFamily
+            if (bold !== undefined) translated.entryTitleBold = bold
             if (italic !== undefined) translated.entryTitleItalic = italic
             if (textTransform !== undefined) translated.entryTitleTextTransform = textTransform
             updateBlock(block.id, translated)
@@ -482,14 +482,10 @@ function GlobalStylePanel() {
                       className={`${inputClasses} !w-14 shrink-0 py-1`}
                       title="Size (px)"
                     />
-                    <label
-                      className={`flex shrink-0 items-center gap-1 ${row.matchType === 'entryTitle' ? 'text-slate-300' : 'text-slate-600'}`}
-                      title={row.matchType === 'entryTitle' ? 'Entry titles are always bold' : undefined}
-                    >
+                    <label className="flex shrink-0 items-center gap-1 text-slate-600">
                       <input
                         type="checkbox"
                         checked={row.bold}
-                        disabled={row.matchType === 'entryTitle'}
                         onChange={(e) => applyTypographyChange(row, { bold: e.target.checked })}
                       />
                       Bold
