@@ -9,6 +9,7 @@ import {
   exportTemplates,
   getTemplates,
   importTemplates,
+  updateTemplate,
 } from '../services/templatesService'
 import TemplateCard from '../components/templates/TemplateCard'
 import Skeleton from '../components/common/Skeleton'
@@ -61,6 +62,16 @@ export default function TemplatesPage() {
       toast.success('Template duplicated')
     } catch {
       toast.error('Unable to duplicate the template')
+    }
+  }
+
+  async function handleRename(id, title) {
+    try {
+      const updated = await updateTemplate(id, { title })
+      setData((prev) => (prev ?? []).map((t) => (t.id === id ? updated : t)))
+      toast.success('Template renamed')
+    } catch {
+      toast.error('Unable to rename the template')
     }
   }
 
@@ -152,6 +163,7 @@ export default function TemplatesPage() {
               template={template}
               onDuplicate={handleDuplicate}
               onDelete={handleDelete}
+              onRename={handleRename}
             />
           ))}
         </div>
