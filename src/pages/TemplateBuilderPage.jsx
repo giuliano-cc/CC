@@ -198,6 +198,37 @@ function BuilderContent({ initialTitle }) {
     }
   }
 
+  // Otherwise the only way to persist edits is the explicit Save button —
+  // clicking "Edit in the library" (or any other in-app link away from the
+  // builder) discarded every unsaved block/style change with no warning.
+  // Kept in a ref (rather than a useEffect dependency) so the unmount
+  // cleanup below always fires with the LATEST title/blocks/pageCount/
+  // globalStyle, not whatever they were when the component first mounted —
+  // an effect's cleanup closes over the render it belonged to, not the
+  // most recent one. Silent (no toast) since it fires on every navigation
+  // away, not just an explicit click; failures still show a toast because
+  // those are the one case the user actually needs to know about.
+  const latestSaveRef = useRef(null)
+  latestSaveRef.current = async () => {
+    try {
+      const payload = { title, blocks, pageCount, globalStyle }
+      if (isNew) {
+        if (blocks.length === 0) return
+        await createTemplate({ ...payload, category: 'Custom' })
+      } else {
+        await updateTemplate(id, payload)
+      }
+    } catch {
+      toast.error('Unable to save your latest changes to this template.')
+    }
+  }
+  useEffect(() => {
+    return () => {
+      latestSaveRef.current?.()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="flex h-screen flex-col">

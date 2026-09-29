@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   AlignHorizontalDistributeCenter,
   AlignHorizontalJustifyCenter,
@@ -31,6 +31,21 @@ import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import { SOCIAL_PLATFORMS } from '../../utils/socialIcons'
 import FontPicker from './FontPicker'
 import ImageCropModal from './ImageCropModal'
+
+// A link to the Content Library that remembers the builder page it was
+// opened from (via router state, not a query param — nothing else reads
+// it) so the library page can offer a "Back to template" link of its own
+// instead of leaving Nao to hunt for the browser back button. `children`
+// defaults to the plain wording used everywhere this was already a bare
+// "Edit in the library" text link.
+function LibraryLink({ children = 'Edit in the library', className = 'text-primary hover:underline' }) {
+  const location = useLocation()
+  return (
+    <Link to="/content-library" state={{ from: location.pathname }} className={className}>
+      {children}
+    </Link>
+  )
+}
 
 function Field({ label, children }) {
   return (
@@ -882,6 +897,7 @@ function LibraryItemOverridesField({ block, onChange, items, getKey, getLabel, g
       </div>
       <p className="text-xs text-slate-400">
         Overrides what's checked in the Content Library, just for this block — the catalog itself isn't changed.
+        To add, remove, or permanently hide an item instead, <LibraryLink>edit the catalog</LibraryLink>.
       </p>
     </div>
   )
@@ -1974,10 +1990,7 @@ function ContentSlotBinder({ block, onChange }) {
       {block.contentSlot && (
         <p className="mt-1 text-xs text-slate-400">
           The displayed text comes from "{CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.label}"
-          {!library[block.contentSlot] && ' (still empty)'}.{' '}
-          <Link to="/content-library" className="text-primary hover:underline">
-            Edit in the library
-          </Link>
+          {!library[block.contentSlot] && ' (still empty)'}. <LibraryLink />
         </p>
       )}
     </Field>

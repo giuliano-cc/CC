@@ -156,7 +156,7 @@ export function BuilderProvider({
         type === BLOCK_TYPES.SHAPE
           ? Math.min(0, ...pageSiblings.map((b) => b.zIndex || 0)) - 1
           : zCounter.current++
-      return [...prev, matchNewBlockToSiblings(newBlock, pageSiblings)]
+      return [...prev, matchNewBlockToSiblings(newBlock, pageSiblings, prev)]
     })
     setSelectedIds([newBlock.id])
     setActivePage(page)
@@ -235,7 +235,7 @@ export function BuilderProvider({
                 ...column,
                 items: [
                   ...column.items,
-                  matchNewBlockToSiblings(newItem, block.columns.flatMap((c) => c.items)),
+                  matchNewBlockToSiblings(newItem, block.columns.flatMap((c) => c.items), prev),
                 ],
               }
             : column,

@@ -638,20 +638,114 @@ function inferSiblingTitleStyle(siblingBlocks, allowH1 = false) {
   return null
 }
 
+// Copies a typography row's weight/style/color/font onto a freshly created
+// block, using the same row identities and field-name translation as the
+// Global Style bulk editor (PropertiesPanel's applyTypographyChange) — so a
+// block added after a bulk edit matches it immediately instead of coming in
+// with the type's hardcoded defaults and needing the same edit redone by
+// hand. `allBlocks` is the template's full block list (every page, pre-
+// recursion into Columns — getTemplateTypographyStyles walks those itself)
+// so this applies even to rows (Body text, Quote, Entry title) whose
+// identity is template-wide rather than tied to one page's siblings.
+function applyMatchedTypography(item, allBlocks) {
+  if (!allBlocks?.length) return item
+  const rows = getTemplateTypographyStyles({ blocks: allBlocks })
+  const findRow = (key) => rows.find((row) => row.key === key)
+  let result = item
+
+  if (result.type === BLOCK_TYPES.HEADING) {
+    const row = findRow(`heading-${result.level || 'h1'}-${result.size || 'md'}`)
+    if (row) {
+      result = {
+        ...result,
+        bold: row.bold,
+        italic: row.italic,
+        textTransform: row.textTransform,
+        color: row.color,
+        fontFamily: row.fontFamily,
+      }
+    }
+  } else if (result.type === BLOCK_TYPES.TEXT && !hasSectionTitle(result)) {
+    const row = findRow('text')
+    if (row) {
+      result = {
+        ...result,
+        bold: row.bold,
+        italic: row.italic,
+        textTransform: row.textTransform,
+        color: row.color,
+        fontFamily: row.fontFamily,
+        fontSize: row.sizePx,
+      }
+    }
+  } else if (result.type === BLOCK_TYPES.QUOTE) {
+    const row = findRow('quote')
+    if (row) {
+      result = {
+        ...result,
+        bold: row.bold,
+        italic: row.italic,
+        textTransform: row.textTransform,
+        color: row.color,
+        fontFamily: row.fontFamily,
+        fontSize: row.sizePx,
+      }
+    }
+  }
+
+  if (
+    result.type === BLOCK_TYPES.EXPERIENCE ||
+    result.type === BLOCK_TYPES.EDUCATION ||
+    isEntriesBoundText(result)
+  ) {
+    const row = findRow('entryTitle')
+    if (row) {
+      result = {
+        ...result,
+        entryTitleBold: row.bold,
+        entryTitleItalic: row.italic,
+        entryTitleTextTransform: row.textTransform,
+        entryTitleColor: row.color,
+        entryTitleFontFamily: row.fontFamily,
+        entryTitleFontSize: row.sizePx,
+      }
+    }
+  }
+
+  if (hasSectionTitle(result)) {
+    const row = findRow(`heading-h2-${result.titleSize || 'md'}`)
+    if (row) {
+      result = {
+        ...result,
+        titleBold: row.bold,
+        titleItalic: row.italic,
+        titleTextTransform: row.textTransform,
+        titleColor: row.color,
+        fontFamily: row.fontFamily,
+      }
+    }
+  }
+
+  return result
+}
+
 // Applies that inferred sibling style to a newly created block, before
 // it's added — a HEADING gets a matching level/size, a section-title
 // block (Contact Info, Leisure, Experience, Education, Technical Skills,
 // Languages) gets a matching titleSize. Anything else is left untouched.
-export function matchNewBlockToSiblings(newItem, siblingBlocks) {
+// `allBlocks` (the template's full, ungrouped block list) then layers on
+// the matching row's weight/style/color/font — see applyMatchedTypography.
+export function matchNewBlockToSiblings(newItem, siblingBlocks, allBlocks) {
   const style = inferSiblingTitleStyle(siblingBlocks) || inferSiblingTitleStyle(siblingBlocks, true)
-  if (!style) return newItem
-  if (newItem.type === BLOCK_TYPES.HEADING) {
-    return { ...newItem, size: style.size, level: style.level || newItem.level }
+  let result = newItem
+  if (style) {
+    if (result.type === BLOCK_TYPES.HEADING) {
+      result = { ...result, size: style.size, level: style.level || result.level }
+    } else if (SECTION_TITLE_TYPES.includes(result.type) || (result.type === BLOCK_TYPES.TEXT && result.showTitle)) {
+      result = { ...result, titleSize: style.size }
+    }
   }
-  if (SECTION_TITLE_TYPES.includes(newItem.type) || (newItem.type === BLOCK_TYPES.TEXT && newItem.showTitle)) {
-    return { ...newItem, titleSize: style.size }
-  }
-  return newItem
+  return applyMatchedTypography(result, allBlocks || siblingBlocks)
 }
 
 // Block types that can be added *inside* a Columns block's column (via its

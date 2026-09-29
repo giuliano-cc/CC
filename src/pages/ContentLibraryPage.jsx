@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ChevronDown, Copy, Crop, Download, Trash2, Upload, User } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Copy, Crop, Download, Trash2, Upload, User } from 'lucide-react'
 import { CONTENT_SLOTS, useContentLibrary } from '../context/ContentLibraryContext'
 import ImageCropModal from '../components/builder/ImageCropModal'
 import { resizeImageFile } from '../utils/imageResize'
@@ -640,6 +641,13 @@ function CollapsibleSection({ title, children }) {
 }
 
 export default function ContentLibraryPage() {
+  // Set by LibraryLink (PropertiesPanel.jsx) when this page is opened from
+  // a template's "Edit in the library"/"edit the catalog" link — router
+  // state, not a query param, since nothing besides this page reads it.
+  // Opened from the sidebar nav instead, `from` is undefined and no back
+  // link shows.
+  const location = useLocation()
+  const backTo = location.state?.from
   const {
     getLibrary,
     getTitleOverrides,
@@ -707,6 +715,18 @@ export default function ContentLibraryPage() {
 
   return (
     <div>
+      {backTo && (
+        <div className="mb-3 flex items-center gap-2">
+          <Link
+            to={backTo}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          >
+            <ArrowLeft size={15} />
+            Back to template
+          </Link>
+          <span className="text-xs text-slate-400">— every change here saves automatically</span>
+        </div>
+      )}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Content Library</h1>
