@@ -23,7 +23,10 @@ export const CONTENT_SLOTS = [
   // utils/contentLists.js — library[key] stays the plain-text, checked-
   // only version every existing binding already expects).
   { key: 'coreCompetencies', label: 'Core Competencies', type: 'checklist' },
-  { key: 'achievements', label: 'Achievements', type: 'checklist' },
+  // 'entries' rather than 'checklist': an achievement is a one-off prize/
+  // award (title + description), not a skill with a proficiency level —
+  // same shape as Selected Works, not Technical Skills/Core Competencies.
+  { key: 'achievements', label: 'Achievements', type: 'entries' },
   { key: 'keywords', label: 'Keywords', multiline: true, isList: true },
   // 'entries' slots: a repeatable row with title/subtitle/location/dates
   // (see utils/contentLists.js parseEntries/composeEntriesText) — library[key]

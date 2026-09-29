@@ -38,9 +38,12 @@ const SECTIONS = [
   { title: 'Experience & Education', keys: ['experience', 'education'] },
   {
     title: 'Skills & Languages',
-    keys: ['coreCompetencies', 'skills', 'languages', 'keywords', 'achievements'],
+    keys: ['coreCompetencies', 'skills', 'languages', 'keywords'],
   },
-  { title: 'Portfolio', keys: ['selectedWorks', 'selectedClients', 'certifications', 'publications'] },
+  {
+    title: 'Portfolio',
+    keys: ['selectedWorks', 'selectedClients', 'certifications', 'publications', 'achievements'],
+  },
   { title: 'Contact & Links', keys: ['contact', 'socialLinks', 'qrValue'] },
   { title: 'Additional', keys: ['references', 'additionalInfo', 'hobbies'] },
   { title: 'Cover Letter', keys: ['coverLetterBody'] },
@@ -407,7 +410,16 @@ function LanguagesField({ itemsJson, fallbackText, onUpdate }) {
 // subtitle (Company / Institution), an optional location, a date range
 // with a "current/ongoing" flag, and a description (rendered as bullet
 // lines by the matching builder block — see BLOCK_TYPES.EXPERIENCE/EDUCATION).
-function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, showSubtitle = true, showDates = true, onUpdate }) {
+function EntriesField({
+  itemsJson,
+  fallbackText,
+  titleLabel,
+  subtitleLabel,
+  showSubtitle = true,
+  showLocation = true,
+  showDates = true,
+  onUpdate,
+}) {
   const items = parseEntries(itemsJson, fallbackText)
 
   function set(next) {
@@ -455,24 +467,28 @@ function EntriesField({ itemsJson, fallbackText, titleLabel, subtitleLabel, show
               ✕
             </button>
           </div>
-          <div className="flex items-center gap-1.5">
-            {showSubtitle && (
-              <input
-                type="text"
-                value={item.subtitle}
-                onChange={(e) => updateItem(i, { subtitle: e.target.value })}
-                placeholder={subtitleLabel}
-                className={`${inputClasses} min-w-0 flex-1`}
-              />
-            )}
-            <input
-              type="text"
-              value={item.location}
-              onChange={(e) => updateItem(i, { location: e.target.value })}
-              placeholder="City, Country"
-              className={`${inputClasses} min-w-0 flex-1`}
-            />
-          </div>
+          {(showSubtitle || showLocation) && (
+            <div className="flex items-center gap-1.5">
+              {showSubtitle && (
+                <input
+                  type="text"
+                  value={item.subtitle}
+                  onChange={(e) => updateItem(i, { subtitle: e.target.value })}
+                  placeholder={subtitleLabel}
+                  className={`${inputClasses} min-w-0 flex-1`}
+                />
+              )}
+              {showLocation && (
+                <input
+                  type="text"
+                  value={item.location}
+                  onChange={(e) => updateItem(i, { location: e.target.value })}
+                  placeholder="City, Country"
+                  className={`${inputClasses} min-w-0 flex-1`}
+                />
+              )}
+            </div>
+          )}
           {showDates && (
             <div className="flex items-center gap-1.5">
               <input
@@ -565,9 +581,19 @@ function SlotField({ slot, library, onChange, onBlur }) {
         <EntriesField
           itemsJson={library[`${slot.key}Items`]}
           fallbackText={library[slot.key]}
-          titleLabel={slot.key === 'education' ? 'Degree' : slot.key === 'selectedWorks' ? 'Project Title' : 'Job Role'}
+          titleLabel={
+            slot.key === 'education'
+              ? 'Degree'
+              : slot.key === 'selectedWorks'
+                ? 'Project Title'
+                : slot.key === 'achievements'
+                  ? 'Achievement / Award'
+                  : 'Job Role'
+          }
           subtitleLabel={slot.key === 'education' ? 'Institution Name' : 'Company Name'}
-          showSubtitle={slot.key !== 'selectedWorks'}
+          showSubtitle={slot.key !== 'selectedWorks' && slot.key !== 'achievements'}
+          showLocation={slot.key !== 'achievements'}
+          showDates={slot.key !== 'achievements'}
           onUpdate={(items) => {
             onChange(`${slot.key}Items`, JSON.stringify(items))
             onChange(slot.key, composeEntriesText(items))

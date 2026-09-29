@@ -174,10 +174,46 @@ export function nearestBaselineLine(value, margins, unit) {
   return Math.round((value - margins.top) / unit) * unit + margins.top
 }
 
+// A flat "70px per item" guess (the previous version of this function)
+// badly under-measures a nested item that's actually an entries block with
+// several full entries, or a multi-paragraph Text block — real bug found
+// via a user report: the shipped cv-1 template's own Education/Achievements
+// column came out too short, silently clipping the tail of its Achievements
+// text below the column's own overflow:hidden edge, with no visual cue
+// (unlike a top-level block, whose resize handles at least make "too
+// short" obvious) that anything was missing at all. Per-item estimates
+// below are still guesses (real height depends on the eventual font/size/
+// line-height from Global Style, which isn't known yet at seed time) but
+// they track what's actually in each item instead of assuming every kind
+// of block is roughly the same size.
+function estimateItemHeight(item) {
+  if (item.type === BLOCK_TYPES.HEADING) return 40
+  if (item.type === BLOCK_TYPES.EXPERIENCE || item.type === BLOCK_TYPES.EDUCATION) {
+    const entryCount = Math.max(1, item.items?.length ?? 1)
+    return (item.title ? 32 : 0) + entryCount * 95 + 20
+  }
+  if (item.type === BLOCK_TYPES.TEXT || item.type === BLOCK_TYPES.QUOTE) {
+    const content = item.content || ''
+    // Every explicit newline is its own line; a long unbroken line also
+    // wraps onto more than one, roughly every 55 characters at this
+    // column's typical width.
+    const lines = content
+      .split('\n')
+      .reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 55)), 0)
+    return Math.max(24, lines * 20 + 12)
+  }
+  if (item.type === BLOCK_TYPES.COLUMNS) {
+    // No real nesting of Columns-in-Columns today (see NON_NESTABLE_TYPES),
+    // but fall back sanely rather than crashing if that ever changes.
+    return Math.max(1, ...item.columns.map((c) => c.items.reduce((sum, i) => sum + estimateItemHeight(i), 0)))
+  }
+  return DEFAULT_BLOCK_SIZE[item.type]?.height ?? 70
+}
+
 function estimateHeight(block) {
   if (block.type === BLOCK_TYPES.COLUMNS) {
-    const maxItems = Math.max(1, ...block.columns.map((c) => c.items.length))
-    return Math.max(220, maxItems * 70 + 40)
+    const columnHeights = block.columns.map((c) => c.items.reduce((sum, item) => sum + estimateItemHeight(item) + 12, 0))
+    return Math.max(220, ...columnHeights)
   }
   return DEFAULT_BLOCK_SIZE[block.type]?.height ?? 80
 }
