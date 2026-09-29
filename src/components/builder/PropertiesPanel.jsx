@@ -877,6 +877,36 @@ function EntryTitleStyleFields({ block, onChange }) {
           />
         </Field>
       </div>
+      <div className="flex items-center gap-1.5">
+        <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600">
+          <input
+            type="checkbox"
+            checked={block.entryTitleBold !== false}
+            onChange={(e) => onChange({ entryTitleBold: e.target.checked })}
+          />
+          Bold
+        </label>
+        <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600">
+          <input
+            type="checkbox"
+            checked={block.entryTitleItalic === true}
+            onChange={(e) => onChange({ entryTitleItalic: e.target.checked })}
+          />
+          Italic
+        </label>
+        <select
+          value={block.entryTitleTextTransform || ''}
+          onChange={(e) => onChange({ entryTitleTextTransform: e.target.value || null })}
+          title="Text case"
+          className={`${inputClasses} !w-auto flex-1`}
+        >
+          {TEXT_TRANSFORM_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   )
 }
@@ -1655,43 +1685,55 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
       <label className="flex items-center gap-1.5 text-xs text-slate-600">
         <input
           type="checkbox"
-          checked={block.list !== false}
-          onChange={(e) => onChange({ list: e.target.checked })}
+          checked={block.titleOnly === true}
+          onChange={(e) => onChange({ titleOnly: e.target.checked })}
         />
-        Show description as a bulleted list
+        Minimal — show only the title (hide company/location, dates, description)
       </label>
-      <label className="flex items-center gap-1.5 text-xs text-slate-600">
-        <input
-          type="checkbox"
-          checked={block.titleLocationInline === true}
-          onChange={(e) => onChange({ titleLocationInline: e.target.checked })}
-        />
-        Show title and location on the same line
-      </label>
-      <label className="flex items-center gap-1.5 text-xs text-slate-600">
-        <input
-          type="checkbox"
-          checked={block.locationFirst === true}
-          onChange={(e) => onChange({ locationFirst: e.target.checked })}
-        />
-        Show location/date before the title (title stays bold either way)
-      </label>
-      <label className="flex items-center gap-1.5 text-xs text-slate-600">
-        <input
-          type="checkbox"
-          checked={block.dateFirst === true}
-          onChange={(e) => onChange({ dateFirst: e.target.checked })}
-        />
-        Show date before location
-      </label>
-      <Field label="Separator between location and dates">
-        <input
-          type="text"
-          value={block.subtitleSeparator ?? ' / '}
-          onChange={(e) => onChange({ subtitleSeparator: e.target.value })}
-          className={`${inputClasses} !w-20`}
-        />
-      </Field>
+      {!block.titleOnly && (
+        <>
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={block.list !== false}
+              onChange={(e) => onChange({ list: e.target.checked })}
+            />
+            Show description as a bulleted list
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={block.titleLocationInline === true}
+              onChange={(e) => onChange({ titleLocationInline: e.target.checked })}
+            />
+            Show title and location on the same line
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={block.locationFirst === true}
+              onChange={(e) => onChange({ locationFirst: e.target.checked })}
+            />
+            Show location/date before the title (title stays bold either way)
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={block.dateFirst === true}
+              onChange={(e) => onChange({ dateFirst: e.target.checked })}
+            />
+            Show date before location
+          </label>
+          <Field label="Separator between location and dates">
+            <input
+              type="text"
+              value={block.subtitleSeparator ?? ' / '}
+              onChange={(e) => onChange({ subtitleSeparator: e.target.value })}
+              className={`${inputClasses} !w-20`}
+            />
+          </Field>
+        </>
+      )}
       <Field label="Content from library">
         <select
           value={usesLibrary ? 'library' : ''}
@@ -2394,43 +2436,55 @@ function BlockPropertiesPanel({ block, onChange }) {
             <label className="flex items-center gap-1.5 text-xs text-slate-600">
               <input
                 type="checkbox"
-                checked={block.list !== false}
-                onChange={(e) => onChange({ list: e.target.checked })}
+                checked={block.titleOnly === true}
+                onChange={(e) => onChange({ titleOnly: e.target.checked })}
               />
-              Show description as a bulleted list
+              Minimal — show only the title (hide company/location, dates, description)
             </label>
-            <label className="flex items-center gap-1.5 text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={block.titleLocationInline === true}
-                onChange={(e) => onChange({ titleLocationInline: e.target.checked })}
-              />
-              Show title and location on the same line
-            </label>
-            <label className="flex items-center gap-1.5 text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={block.locationFirst === true}
-                onChange={(e) => onChange({ locationFirst: e.target.checked })}
-              />
-              Show location/date before the title (title stays bold either way)
-            </label>
-            <label className="flex items-center gap-1.5 text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={block.dateFirst === true}
-                onChange={(e) => onChange({ dateFirst: e.target.checked })}
-              />
-              Show date before location
-            </label>
-            <Field label="Separator between location and dates">
-              <input
-                type="text"
-                value={block.subtitleSeparator ?? ' / '}
-                onChange={(e) => onChange({ subtitleSeparator: e.target.value })}
-                className={`${inputClasses} !w-20`}
-              />
-            </Field>
+            {!block.titleOnly && (
+              <>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={block.list !== false}
+                    onChange={(e) => onChange({ list: e.target.checked })}
+                  />
+                  Show description as a bulleted list
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={block.titleLocationInline === true}
+                    onChange={(e) => onChange({ titleLocationInline: e.target.checked })}
+                  />
+                  Show title and location on the same line
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={block.locationFirst === true}
+                    onChange={(e) => onChange({ locationFirst: e.target.checked })}
+                  />
+                  Show location/date before the title (title stays bold either way)
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={block.dateFirst === true}
+                    onChange={(e) => onChange({ dateFirst: e.target.checked })}
+                  />
+                  Show date before location
+                </label>
+                <Field label="Separator between location and dates">
+                  <input
+                    type="text"
+                    value={block.subtitleSeparator ?? ' / '}
+                    onChange={(e) => onChange({ subtitleSeparator: e.target.value })}
+                    className={`${inputClasses} !w-20`}
+                  />
+                </Field>
+              </>
+            )}
             <EntryTitleStyleFields block={block} onChange={onChange} />
           </>
         )}

@@ -550,7 +550,9 @@ export default function BlockRenderer({
             )
             return (
               <div key={item.id || i} className="flex flex-col gap-0.5">
-                {block.titleLocationInline ? (
+                {block.titleOnly ? (
+                  titleNode
+                ) : block.titleLocationInline ? (
                   <>
                     {(item.title || subLine) && (
                       <p className="flex flex-wrap items-baseline gap-x-2">
@@ -579,7 +581,7 @@ export default function BlockRenderer({
                     {secondaryNode}
                   </>
                 )}
-                {(() => {
+                {!block.titleOnly && (() => {
                   if (!item.description) return null
                   const descriptionStyle = {
                     fontFamily: entryBodyFont,
@@ -1013,7 +1015,9 @@ export default function BlockRenderer({
             )
             return (
               <div key={item.id || i} className="flex flex-col gap-0.5">
-                {block.titleLocationInline ? (
+                {block.titleOnly ? (
+                  titleNode
+                ) : block.titleLocationInline ? (
                   <>
                     {(item.title || subLine) && (
                       <p className="flex flex-wrap items-baseline gap-x-2">
@@ -1042,7 +1046,8 @@ export default function BlockRenderer({
                     {secondaryNode}
                   </>
                 )}
-                {item.description &&
+                {!block.titleOnly &&
+                  item.description &&
                   (block.list === false ? (
                     <p className="mt-0.5 whitespace-pre-line text-sm leading-relaxed text-slate-600" style={bodyStyle}>
                       {item.description}
