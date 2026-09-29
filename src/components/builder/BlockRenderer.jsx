@@ -151,6 +151,18 @@ function showEntryDescription(block) {
   return !block.titleOnly && block.showEntryDescription !== false
 }
 
+// Whether one Content Library item is included in THIS block, honoring a
+// per-block override (see PropertiesPanel.jsx's LibraryItemOverridesField)
+// that lets a document show a different subset of a shared library list
+// than what's checked in the catalog (ContentLibraryPage.jsx) — without
+// ever changing the catalog itself. `catalogVisible` is the fallback when
+// no override exists for that key (an entries item has no visibility
+// flag of its own, so callers just pass `true`).
+function isLibraryItemShown(block, key, catalogVisible) {
+  const override = block.libraryItemOverrides?.[key]
+  return override !== undefined ? override : catalogVisible
+}
+
 // Global Style's Title/Body font fields fall back to the legacy single
 // `fontFamily` (a template saved before they existed only has that one),
 // and ultimately to `undefined` (inherit the page's own — see Canvas.jsx,
@@ -520,7 +532,12 @@ export default function BlockRenderer({
         fontSize: entrySizePx ? `${entrySizePx}px` : undefined,
         ...entryExtraStyle,
       }
-      const entriesRawItems = boundSlot?.type === 'entries' ? parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]) : []
+      const entriesRawItems =
+        boundSlot?.type === 'entries'
+          ? parseEntries(library[`${boundSlot.key}Items`], library[boundSlot.key]).filter((item) =>
+              isLibraryItemShown(block, item.id, true),
+            )
+          : []
       const entriesItems = block.sortByDate !== false ? sortEntriesByDate(entriesRawItems) : entriesRawItems
       const body = boundSlot?.type === 'entries' ? (
         <div className={`group/entries relative flex flex-col gap-3 ${alignClass(block.align)}`}>
@@ -789,7 +806,7 @@ export default function BlockRenderer({
       const source = block.librarySource || 'skills'
       const items = block.useLibrarySkills
         ? parseChecklist(library[`${source}Items`], library[source])
-            .filter((i) => i.visible && i.text?.trim())
+            .filter((i) => i.text?.trim() && isLibraryItemShown(block, i.text, i.visible))
             .map((i) => ({ label: i.text, level: i.level ?? 75 }))
         : block.items
       return (
@@ -963,7 +980,9 @@ export default function BlockRenderer({
       const librarySlot = isExperience ? 'experience' : 'education'
       const usesLibrary = isExperience ? block.useLibraryExperience : block.useLibraryEducation
       const rawItems = usesLibrary
-        ? parseEntries(library[`${librarySlot}Items`], library[librarySlot])
+        ? parseEntries(library[`${librarySlot}Items`], library[librarySlot]).filter((item) =>
+            isLibraryItemShown(block, item.id, true),
+          )
         : block.items || []
       const items = block.sortByDate !== false ? sortEntriesByDate(rawItems) : rawItems
       const bodyFont = resolveBodyFont(globalStyle)

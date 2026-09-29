@@ -25,7 +25,7 @@ import {
   sectionTitleSizeField,
   TEXT_TRANSFORM_OPTIONS,
 } from '../../utils/blockTypes'
-import { emptyEntry } from '../../utils/contentLists'
+import { emptyEntry, parseChecklist, parseEntries } from '../../utils/contentLists'
 import { resizeImageFile } from '../../utils/imageResize'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import { SOCIAL_PLATFORMS } from '../../utils/socialIcons'
@@ -840,6 +840,53 @@ function BodyTextStyleFields({ block, onChange }) {
   )
 }
 
+// Lets one specific block show a different subset of a Content Library
+// list than what's checked in the catalog itself (ContentLibraryPage) —
+// e.g. this one CV's Experience block skips an older job that's still
+// checked "visible" for every other document using the same library
+// entry. `block.libraryItemOverrides` is `{ [itemKey]: boolean }`; a key
+// with no override falls back to the catalog's own visibility (always
+// true for an entries item, which has no visibility flag of its own).
+// Never touches the library itself — purely a per-block filter on top of
+// it.
+function LibraryItemOverridesField({ block, onChange, items, getKey, getLabel, getCatalogVisible }) {
+  if (items.length === 0) return null
+  const overrides = block.libraryItemOverrides || {}
+
+  function toggle(key, catalogVisible) {
+    const current = overrides[key] !== undefined ? overrides[key] : catalogVisible
+    onChange({ libraryItemOverrides: { ...overrides, [key]: !current } })
+  }
+
+  // A plain <div>, not <Field> — <Field>'s own root is a <label>, and
+  // nesting a <label> (each checklist row below) inside another <label>
+  // is invalid HTML that made browsers mistarget which checkbox a click
+  // actually toggled.
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-slate-500">Shown in this document</span>
+      <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-md border border-slate-200 p-2">
+        {items.map((item) => {
+          const key = getKey(item)
+          const catalogVisible = getCatalogVisible(item)
+          const shown = overrides[key] !== undefined ? overrides[key] : catalogVisible
+          return (
+            <label key={key} className="flex items-center gap-1.5 text-xs text-slate-600">
+              <input type="checkbox" checked={shown} onChange={() => toggle(key, catalogVisible)} />
+              <span className={!catalogVisible && overrides[key] === undefined ? 'text-slate-300' : ''}>
+                {getLabel(item)}
+              </span>
+            </label>
+          )
+        })}
+      </div>
+      <p className="text-xs text-slate-400">
+        Overrides what's checked in the Content Library, just for this block — the catalog itself isn't changed.
+      </p>
+    </div>
+  )
+}
+
 // Style controls for the entry title line itself (e.g. "Associate
 // Director") in Experience/Education — separate from the block's own
 // section title (above) and from BodyTextStyleFields (the subtitle/date
@@ -1148,6 +1195,8 @@ function ColumnsProperties({ block, onChange }) {
 
 function SkillsChartProperties({ block, onChange }) {
   const { globalStyle } = useBuilder()
+  const { getLibrary } = useContentLibrary()
+  const library = getLibrary(globalStyle.contentLanguage)
   const linesValue = (block.items || []).map((i) => `${i.label}|${i.level}`).join('\n')
 
   function handleLinesChange(text) {
@@ -1183,6 +1232,16 @@ function SkillsChartProperties({ block, onChange }) {
           ))}
         </select>
       </Field>
+      {block.useLibrarySkills && (
+        <LibraryItemOverridesField
+          block={block}
+          onChange={onChange}
+          items={parseChecklist(library[`${block.librarySource || 'skills'}Items`], library[block.librarySource || 'skills'])}
+          getKey={(item) => item.text}
+          getLabel={(item) => item.text}
+          getCatalogVisible={(item) => item.visible}
+        />
+      )}
       <Field label="Chart title">
         <input
           type="text"
@@ -1645,7 +1704,10 @@ function LeisureProperties({ block, onChange }) {
 // (title/subtitle/location/dates/description) either typed directly on
 // the block or read from the matching Content Library slot (kept in sync
 // there via ContentLibraryPage's own entry editor).
-function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlotLabel }) {
+function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlotLabel, librarySlotKey }) {
+  const { globalStyle } = useBuilder()
+  const { getLibrary } = useContentLibrary()
+  const library = getLibrary(globalStyle.contentLanguage)
   const items = block.items || []
 
   function updateItem(index, patch) {
@@ -1770,6 +1832,16 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
           <option value="library">{librarySlotLabel}</option>
         </select>
       </Field>
+      {usesLibrary && (
+        <LibraryItemOverridesField
+          block={block}
+          onChange={onChange}
+          items={parseEntries(library[`${librarySlotKey}Items`], library[librarySlotKey])}
+          getKey={(item) => item.id}
+          getLabel={(item) => item.title || '(untitled entry)'}
+          getCatalogVisible={() => true}
+        />
+      )}
       {!usesLibrary && (
         <div className="flex flex-col gap-3">
           {items.map((item, i) => (
@@ -2240,6 +2312,10 @@ function PositionSizeFields({ block, onChange }) {
 }
 
 function BlockPropertiesPanel({ block, onChange }) {
+  const { globalStyle } = useBuilder()
+  const { getLibrary } = useContentLibrary()
+  const library = getLibrary(globalStyle.contentLanguage)
+
   if (block.type === BLOCK_TYPES.CV_HEADER) {
     return (
       <div className="flex flex-col gap-4">
@@ -2371,6 +2447,7 @@ function BlockPropertiesPanel({ block, onChange }) {
           onChange={onChange}
           libraryToggleKey="useLibraryExperience"
           librarySlotLabel="Work Experience"
+          librarySlotKey="experience"
         />
         <PositionSizeFields block={block} onChange={onChange} />
       </div>
@@ -2388,6 +2465,7 @@ function BlockPropertiesPanel({ block, onChange }) {
           onChange={onChange}
           libraryToggleKey="useLibraryEducation"
           librarySlotLabel="Education"
+          librarySlotKey="education"
         />
         <PositionSizeFields block={block} onChange={onChange} />
       </div>
@@ -2451,6 +2529,14 @@ function BlockPropertiesPanel({ block, onChange }) {
       {block.type === BLOCK_TYPES.TEXT &&
         CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.type === 'entries' && (
           <>
+            <LibraryItemOverridesField
+              block={block}
+              onChange={onChange}
+              items={parseEntries(library[`${block.contentSlot}Items`], library[block.contentSlot])}
+              getKey={(item) => item.id}
+              getLabel={(item) => item.title || '(untitled entry)'}
+              getCatalogVisible={() => true}
+            />
             <label className="flex items-center gap-1.5 text-xs text-slate-600">
               <input
                 type="checkbox"
