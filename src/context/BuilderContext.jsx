@@ -179,6 +179,46 @@ export function BuilderProvider({
     })
   }, [])
 
+  // Inserts a copy of `pageIndex` right after it: every later page shifts
+  // up by one to make room, and every block on `pageIndex` is cloned (with
+  // fresh ids — see cloneBlockWithNewIds) onto the new page.
+  const duplicatePage = useCallback((pageIndex) => {
+    setBlocks((prev) => {
+      pushHistory(prev)
+      const shifted = prev.map((b) => {
+        const p = b.page ?? 0
+        return p > pageIndex ? { ...b, page: p + 1 } : b
+      })
+      const clones = prev
+        .filter((b) => (b.page ?? 0) === pageIndex)
+        .map((b) => ({ ...cloneBlockWithNewIds(b), page: pageIndex + 1 }))
+      return [...shifted, ...clones]
+    })
+    setPageCount((prev) => prev + 1)
+    setSelectedIds([])
+    setActivePage(pageIndex + 1)
+  }, [])
+
+  // Reorders pages by re-labelling every block's own `page` field — pages
+  // themselves are just that field's distinct values, not a separate
+  // array, so "moving a page" means shifting everything between the old
+  // and new position by one slot and relabelling the moved page itself.
+  const movePage = useCallback((fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return
+    setBlocks((prev) => {
+      pushHistory(prev)
+      return prev.map((b) => {
+        const p = b.page ?? 0
+        let nextPage = p
+        if (p === fromIndex) nextPage = toIndex
+        else if (fromIndex < toIndex && p > fromIndex && p <= toIndex) nextPage = p - 1
+        else if (fromIndex > toIndex && p >= toIndex && p < fromIndex) nextPage = p + 1
+        return nextPage !== p ? { ...b, page: nextPage } : b
+      })
+    })
+    setActivePage(toIndex)
+  }, [])
+
   // Adds a simple block (heading/text) inside a column of a COLUMNS
   // block: a column's items stay in vertical flow (they aren't free on the
   // sheet), but they're still selectable/editable like all the others.
@@ -425,6 +465,8 @@ export function BuilderProvider({
     setPageCount,
     addPage,
     removeLastPage,
+    duplicatePage,
+    movePage,
     // Replaces the whole sheet at once (blocks/style/page count) — used to
     // restore a built-in template to its shipped defaults, discarding
     // whatever's accumulated in it (including from an older, buggier

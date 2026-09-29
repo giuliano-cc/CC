@@ -1,6 +1,6 @@
 import { useDroppable } from '@dnd-kit/core'
 import { useState } from 'react'
-import { Eye, EyeOff, Grid3x3, LayoutTemplate, Minus, Plus, Ratio, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Copy, Eye, EyeOff, Grid3x3, LayoutTemplate, Minus, Plus, Ratio, X } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import {
   goldenRatioLinesX,
@@ -257,7 +257,7 @@ const ZOOM_MAX = 1.5
 const ZOOM_STEP = 0.1
 
 export default function Canvas() {
-  const { blocks, globalStyle, selectBlock, pageCount, addPage, removeLastPage } = useBuilder()
+  const { blocks, globalStyle, selectBlock, pageCount, addPage, removeLastPage, duplicatePage, movePage } = useBuilder()
   const margins = resolveMargins(globalStyle)
   const gridOffsets = resolveGridOffsets(margins)
   const goldenOffsets = resolveGoldenRatioOffsets(globalStyle)
@@ -385,7 +385,35 @@ export default function Canvas() {
               />
             </div>
           </div>
-          <span className="text-xs text-slate-400">Page {pageIndex + 1}</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => movePage(pageIndex, pageIndex - 1)}
+              disabled={pageIndex === 0}
+              title="Move page left"
+              className="flex h-6 w-6 items-center justify-center rounded text-slate-400 transition hover:bg-slate-200 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="text-xs text-slate-400">Page {pageIndex + 1}</span>
+            <button
+              type="button"
+              onClick={() => movePage(pageIndex, pageIndex + 1)}
+              disabled={pageIndex === pageCount - 1}
+              title="Move page right"
+              className="flex h-6 w-6 items-center justify-center rounded text-slate-400 transition hover:bg-slate-200 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ChevronRight size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => duplicatePage(pageIndex)}
+              title="Duplicate page"
+              className="flex h-6 w-6 items-center justify-center rounded text-slate-400 transition hover:bg-slate-200 hover:text-primary"
+            >
+              <Copy size={13} />
+            </button>
+          </div>
         </div>
       ))}
 
