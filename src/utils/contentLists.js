@@ -47,6 +47,16 @@ export function skillLevelLabel(level) {
   return match ? match.label : `${level}%`
 }
 
+// Same idea as languageLevelText below: item.customLevel, when set, is
+// shown verbatim instead of the Expert/Advanced/.../percentage label —
+// e.g. a certification name or "since 2019" instead of a level word that
+// doesn't fit every kind of checklist item (Technical Skills, but also
+// Core Competencies, Achievements, Certifications, ... since they all
+// share this same item shape).
+export function skillLevelText(item) {
+  return item.customLevel?.trim() || skillLevelLabel(item.level)
+}
+
 // Language items: { name, level } where level is 0-100.
 export const LANGUAGE_LEVELS = [
   { label: 'Native', level: 100 },

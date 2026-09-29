@@ -7,7 +7,7 @@ import {
 } from '../../utils/blockTypes'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
-import { formatEntryDate, languageLevelText, parseChecklist, parseEntries, parseLanguages, sortEntriesByDate } from '../../utils/contentLists'
+import { formatEntryDate, languageLevelText, parseChecklist, parseEntries, parseLanguages, skillLevelText, sortEntriesByDate } from '../../utils/contentLists'
 import { translateSectionTitle } from '../../utils/sectionTitles'
 import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
@@ -860,7 +860,7 @@ export default function BlockRenderer({
       const items = block.useLibrarySkills
         ? parseChecklist(library[`${source}Items`], library[source])
             .filter((i) => i.text?.trim() && isLibraryItemShown(block, i.text, i.visible))
-            .map((i) => ({ label: i.text, level: i.level ?? 75 }))
+            .map((i) => ({ label: i.text, level: i.level ?? 75, levelText: skillLevelText({ ...i, level: i.level ?? 75 }) }))
         : block.items
       return (
         <Chart

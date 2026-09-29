@@ -240,52 +240,66 @@ function ChecklistField({ itemsJson, fallbackText, onUpdate, showLevel }) {
   return (
     <div className="flex flex-col gap-2">
       {items.map((item, i) => (
-        <div key={i} className="flex items-center gap-1.5">
-          <input
-            type="checkbox"
-            checked={item.visible}
-            onChange={(e) => updateItem(i, { visible: e.target.checked })}
-            title="Visible on the CV"
-          />
-          <input
-            type="text"
-            value={item.text}
-            onChange={(e) => updateItem(i, { text: e.target.value })}
-            placeholder="Item"
-            className={`${inputClasses} min-w-0 flex-1`}
-          />
+        <div
+          key={i}
+          className={showLevel ? 'flex flex-col gap-1 rounded-md border border-slate-200 p-2' : 'flex items-center gap-1.5'}
+        >
+          <div className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={item.visible}
+              onChange={(e) => updateItem(i, { visible: e.target.checked })}
+              title="Visible on the CV"
+            />
+            <input
+              type="text"
+              value={item.text}
+              onChange={(e) => updateItem(i, { text: e.target.value })}
+              placeholder="Item"
+              className={`${inputClasses} min-w-0 flex-1`}
+            />
+            {showLevel && (
+              <>
+                <select
+                  value={item.level ?? 75}
+                  onChange={(e) => updateItem(i, { level: Number(e.target.value) })}
+                  title="Skill level — used by the Skills Chart block"
+                  className={`${inputClasses} !w-32 shrink-0`}
+                >
+                  {SKILL_LEVELS.map((l) => (
+                    <option key={l.level} value={l.level}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={item.level ?? 75}
+                  onChange={(e) => updateItem(i, { level: Math.max(0, Math.min(100, Number(e.target.value))) })}
+                  title="Exact percentage (used by the Skills Chart block)"
+                  className={`${inputClasses} !w-16 shrink-0`}
+                />
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => removeItem(i)}
+              className="shrink-0 rounded-md px-2 py-1.5 text-xs text-red-500 hover:bg-red-50"
+            >
+              ✕
+            </button>
+          </div>
           {showLevel && (
-            <>
-              <select
-                value={item.level ?? 75}
-                onChange={(e) => updateItem(i, { level: Number(e.target.value) })}
-                title="Skill level — used by the Skills Chart block"
-                className={`${inputClasses} !w-32 shrink-0`}
-              >
-                {SKILL_LEVELS.map((l) => (
-                  <option key={l.level} value={l.level}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={item.level ?? 75}
-                onChange={(e) => updateItem(i, { level: Math.max(0, Math.min(100, Number(e.target.value))) })}
-                title="Exact percentage (used by the Skills Chart block)"
-                className={`${inputClasses} !w-16 shrink-0`}
-              />
-            </>
+            <input
+              type="text"
+              value={item.customLevel || ''}
+              onChange={(e) => updateItem(i, { customLevel: e.target.value || null })}
+              placeholder="Text version instead of the level above, e.g. Certified, since 2019"
+              className={`${inputClasses} text-xs`}
+            />
           )}
-          <button
-            type="button"
-            onClick={() => removeItem(i)}
-            className="shrink-0 rounded-md px-2 py-1.5 text-xs text-red-500 hover:bg-red-50"
-          >
-            ✕
-          </button>
         </div>
       ))}
       <div className="flex items-center gap-3">
