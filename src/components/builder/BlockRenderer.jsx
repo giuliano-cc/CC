@@ -109,14 +109,55 @@ function toTitleCase(text) {
     .join('')
 }
 
+// The one bit of inline rich text a block's otherwise-flat content string
+// supports: "[label](url)" becomes a real hyperlink wherever it appears —
+// e.g. "...visit [my portfolio site.](https://example.com)". Deliberately
+// just this one markdown-style pattern rather than a full WYSIWYG editor,
+// since content is still edited as plain text (a <textarea>); this reads
+// naturally there and is trivial to type by hand. `mailto:` is allowed
+// alongside `http(s)://` so an email address can be linked the same way.
+const INLINE_LINK_PATTERN = /\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)/g
+
+// Splits `text` on INLINE_LINK_PATTERN into an array of plain strings and
+// <a> elements — safe to render directly as JSX children (never raw HTML,
+// so nothing here can inject markup). `transform` mirrors displayText's
+// titleCase handling per segment, since that still can't be done via CSS
+// the way uppercase/smallCaps can (see textTransformStyle).
+function renderInlineLinks(text, transform) {
+  if (typeof text !== 'string' || !text.includes('](')) {
+    return transform === 'titleCase' && typeof text === 'string' ? toTitleCase(text) : text
+  }
+  const applyTransform = (segment) => (transform === 'titleCase' ? toTitleCase(segment) : segment)
+  const nodes = []
+  let lastIndex = 0
+  INLINE_LINK_PATTERN.lastIndex = 0
+  let match
+  while ((match = INLINE_LINK_PATTERN.exec(text))) {
+    if (match.index > lastIndex) nodes.push(applyTransform(text.slice(lastIndex, match.index)))
+    nodes.push(
+      <a
+        key={match.index}
+        href={match[2]}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {applyTransform(match[1])}
+      </a>,
+    )
+    lastIndex = match.index + match[0].length
+  }
+  if (lastIndex < text.length) nodes.push(applyTransform(text.slice(lastIndex)))
+  return nodes
+}
+
 // Applied to the actual rendered string (not via a style/class, since
 // only titleCase needs it — everything else is textStyleClasses/
-// textTransformStyle above).
+// textTransformStyle above) — and now also where an inline "[label](url)"
+// link needs turning into a real <a>, see renderInlineLinks.
 function displayText(text, block) {
-  if (block.textTransform === 'titleCase' && typeof text === 'string') {
-    return toTitleCase(text)
-  }
-  return text
+  return renderInlineLinks(text, block.textTransform)
 }
 
 // Section/entry titles (Experience, Education, Contact Info, chart

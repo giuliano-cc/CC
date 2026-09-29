@@ -2648,6 +2648,10 @@ function BlockPropertiesPanel({ block, onChange }) {
             onChange={(e) => onChange({ content: e.target.value })}
             className={`${inputClasses} resize-none`}
           />
+          <p className="mt-1 text-xs text-slate-400">
+            Tip: <code className="rounded bg-slate-100 px-1">[link text](https://example.com)</code> turns those
+            words into a clickable link.
+          </p>
         </Field>
       )}
 
