@@ -5,9 +5,13 @@
 // editors in ContentLibraryPage read/write, so a checkbox or a language
 // level can be edited without losing the other rows' data.
 
-// Checklist items: { text, visible }. `visible` controls whether the item
-// is included in the derived plain-text value (and therefore shown on the
-// CV) without having to delete it.
+// Checklist items: { text, visible, level }. `visible` controls whether
+// the item is included in the derived plain-text value (and therefore
+// shown on the CV) without having to delete it. `level` (0-100, optional)
+// only matters when this same list is plotted by a Skills Chart block —
+// a legacy item with no level of its own falls back to a flat 75 there
+// (see BlockRenderer.jsx's SKILLS_CHART case), same as before this field
+// existed.
 export function parseChecklist(itemsJson, fallbackText) {
   try {
     const parsed = JSON.parse(itemsJson)
@@ -26,6 +30,21 @@ export function composeChecklistText(items) {
     .filter((item) => item.visible && item.text?.trim())
     .map((item) => item.text)
     .join('\n')
+}
+
+// Distinct label set from LANGUAGE_LEVELS below (a skill isn't "Native"/
+// "Fluent") but the same idea: a friendly label for a handful of common
+// percentages, with any other value shown as a plain "N%".
+export const SKILL_LEVELS = [
+  { label: 'Expert', level: 100 },
+  { label: 'Advanced', level: 80 },
+  { label: 'Intermediate', level: 60 },
+  { label: 'Basic', level: 35 },
+]
+
+export function skillLevelLabel(level) {
+  const match = SKILL_LEVELS.find((l) => l.level === level)
+  return match ? match.label : `${level}%`
 }
 
 // Language items: { name, level } where level is 0-100.

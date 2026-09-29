@@ -775,7 +775,7 @@ export default function BlockRenderer({
       const items = block.useLibrarySkills
         ? parseChecklist(library[`${source}Items`], library[source])
             .filter((i) => i.visible && i.text?.trim())
-            .map((i) => ({ label: i.text, level: 75 }))
+            .map((i) => ({ label: i.text, level: i.level ?? 75 }))
         : block.items
       return (
         <Chart

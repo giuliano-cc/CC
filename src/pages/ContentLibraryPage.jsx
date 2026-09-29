@@ -15,6 +15,7 @@ import {
   parseChecklist,
   parseEntries,
   parseLanguages,
+  SKILL_LEVELS,
 } from '../utils/contentLists'
 
 const cardClasses = 'flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4'
@@ -209,7 +210,7 @@ function ContactGroupField({ library, onChange }) {
 // Line-by-line editor with a visibility checkbox per row: unchecking an
 // item keeps it saved but excludes it from the plain-text value that the
 // rest of the app (bindings, "Fill with my content") already reads.
-function ChecklistField({ itemsJson, fallbackText, onUpdate }) {
+function ChecklistField({ itemsJson, fallbackText, onUpdate, showLevel }) {
   const items = parseChecklist(itemsJson, fallbackText)
 
   function set(next) {
@@ -221,7 +222,7 @@ function ChecklistField({ itemsJson, fallbackText, onUpdate }) {
   }
 
   function addItem() {
-    set([...items, { text: '', visible: true }])
+    set([...items, { text: '', visible: true, ...(showLevel ? { level: 75 } : {}) }])
   }
 
   function removeItem(index) {
@@ -245,6 +246,31 @@ function ChecklistField({ itemsJson, fallbackText, onUpdate }) {
             placeholder="Item"
             className={`${inputClasses} min-w-0 flex-1`}
           />
+          {showLevel && (
+            <>
+              <select
+                value={item.level ?? 75}
+                onChange={(e) => updateItem(i, { level: Number(e.target.value) })}
+                title="Skill level — used by the Skills Chart block"
+                className={`${inputClasses} !w-32 shrink-0`}
+              >
+                {SKILL_LEVELS.map((l) => (
+                  <option key={l.level} value={l.level}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={item.level ?? 75}
+                onChange={(e) => updateItem(i, { level: Math.max(0, Math.min(100, Number(e.target.value))) })}
+                title="Exact percentage (used by the Skills Chart block)"
+                className={`${inputClasses} !w-16 shrink-0`}
+              />
+            </>
+          )}
           <button
             type="button"
             onClick={() => removeItem(i)}
@@ -448,6 +474,7 @@ function SlotField({ slot, library, onChange, onBlur }) {
         <ChecklistField
           itemsJson={library[`${slot.key}Items`]}
           fallbackText={library[slot.key]}
+          showLevel
           onUpdate={(items) => {
             onChange(`${slot.key}Items`, JSON.stringify(items))
             onChange(slot.key, composeChecklistText(items))
@@ -533,7 +560,10 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
       <label className="text-sm font-semibold text-slate-800">{slot.label}</label>
       {slot.isList && <p className="-mt-1 text-xs text-slate-400">One item per line.</p>}
       {slot.type === 'checklist' && (
-        <p className="-mt-1 text-xs text-slate-400">Uncheck an item to hide it from the CV without deleting it.</p>
+        <p className="-mt-1 text-xs text-slate-400">
+          Uncheck an item to hide it from the CV without deleting it. The level sets how full its bar/dots show on a
+          Skills Chart block.
+        </p>
       )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {languages.map((lang) => (
