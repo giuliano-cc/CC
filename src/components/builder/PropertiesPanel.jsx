@@ -1210,6 +1210,27 @@ function ColumnsProperties({ block, onChange }) {
   )
 }
 
+// Shared by both chart blocks: whether a row shows its visual meter (bar/
+// dots/pill), its level as text (the custom text if set, else the derived
+// Expert/Advanced/.../Native/Fluent/... label), or both together — an
+// explicit choice instead of always showing both the moment a custom level
+// text is set, which crowded a plain percentage bar with redundant text.
+function LevelDisplayField({ block, onChange }) {
+  return (
+    <Field label="Show level as">
+      <select
+        value={block.levelDisplay || 'both'}
+        onChange={(e) => onChange({ levelDisplay: e.target.value })}
+        className={inputClasses}
+      >
+        <option value="visual">Visual only (bar/dots/pill)</option>
+        <option value="text">Text only</option>
+        <option value="both">Both (visual + text)</option>
+      </select>
+    </Field>
+  )
+}
+
 function SkillsChartProperties({ block, onChange }) {
   const { globalStyle } = useBuilder()
   const { getLibrary } = useContentLibrary()
@@ -1280,6 +1301,7 @@ function SkillsChartProperties({ block, onChange }) {
           <option value="tags">Tags</option>
         </select>
       </Field>
+      <LevelDisplayField block={block} onChange={onChange} />
       {block.chartStyle === 'dots' && (
         <>
           <Field label="Number of dots">
@@ -1388,6 +1410,7 @@ function LanguagesChartProperties({ block, onChange }) {
           <option value="tags">Tags</option>
         </select>
       </Field>
+      <LevelDisplayField block={block} onChange={onChange} />
       {block.chartStyle === 'dots' && (
         <>
           <Field label="Number of dots">
