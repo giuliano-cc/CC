@@ -1695,11 +1695,37 @@ function EntriesBlockProperties({ block, onChange, libraryToggleKey, librarySlot
           <label className="flex items-center gap-1.5 text-xs text-slate-600">
             <input
               type="checkbox"
-              checked={block.list !== false}
-              onChange={(e) => onChange({ list: e.target.checked })}
+              checked={block.showEntryLocation !== false}
+              onChange={(e) => onChange({ showEntryLocation: e.target.checked })}
             />
-            Show description as a bulleted list
+            Show company / location
           </label>
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={block.showEntryDate !== false}
+              onChange={(e) => onChange({ showEntryDate: e.target.checked })}
+            />
+            Show dates
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={block.showEntryDescription !== false}
+              onChange={(e) => onChange({ showEntryDescription: e.target.checked })}
+            />
+            Show description
+          </label>
+          {block.showEntryDescription !== false && (
+            <label className="flex items-center gap-1.5 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={block.list !== false}
+                onChange={(e) => onChange({ list: e.target.checked })}
+              />
+              Show description as a bulleted list
+            </label>
+          )}
           <label className="flex items-center gap-1.5 text-xs text-slate-600">
             <input
               type="checkbox"
@@ -2446,11 +2472,37 @@ function BlockPropertiesPanel({ block, onChange }) {
                 <label className="flex items-center gap-1.5 text-xs text-slate-600">
                   <input
                     type="checkbox"
-                    checked={block.list !== false}
-                    onChange={(e) => onChange({ list: e.target.checked })}
+                    checked={block.showEntryLocation !== false}
+                    onChange={(e) => onChange({ showEntryLocation: e.target.checked })}
                   />
-                  Show description as a bulleted list
+                  Show company / location
                 </label>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={block.showEntryDate !== false}
+                    onChange={(e) => onChange({ showEntryDate: e.target.checked })}
+                  />
+                  Show dates
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={block.showEntryDescription !== false}
+                    onChange={(e) => onChange({ showEntryDescription: e.target.checked })}
+                  />
+                  Show description
+                </label>
+                {block.showEntryDescription !== false && (
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={block.list !== false}
+                      onChange={(e) => onChange({ list: e.target.checked })}
+                    />
+                    Show description as a bulleted list
+                  </label>
+                )}
                 <label className="flex items-center gap-1.5 text-xs text-slate-600">
                   <input
                     type="checkbox"

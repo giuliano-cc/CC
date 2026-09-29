@@ -139,6 +139,18 @@ function titleTextTransformStyle(block, field) {
   }
 }
 
+// Independently hides an entry's own location/company line and/or its
+// date range — `block.titleOnly` (an older, all-or-nothing "Minimal"
+// toggle) still hides both, for a block saved before these existed.
+function visibleEntryParts(block, subLine, dateRange) {
+  const showLocation = !block.titleOnly && block.showEntryLocation !== false
+  const showDate = !block.titleOnly && block.showEntryDate !== false
+  return { subLine: showLocation ? subLine : '', dateRange: showDate ? dateRange : '' }
+}
+function showEntryDescription(block) {
+  return !block.titleOnly && block.showEntryDescription !== false
+}
+
 // Global Style's Title/Body font fields fall back to the legacy single
 // `fontFamily` (a template saved before they existed only has that one),
 // and ultimately to `undefined` (inherit the page's own — see Canvas.jsx,
@@ -521,6 +533,7 @@ export default function BlockRenderer({
             ]
               .filter((v) => v?.trim())
               .join(' – ')
+            const { subLine: subLineVisible, dateRange: dateRangeVisible } = visibleEntryParts(block, subLine, dateRange)
             const titleStyle = {
               fontFamily: entryTitleFont,
               fontSize: `${entryTitleSizePx}px`,
@@ -535,7 +548,7 @@ export default function BlockRenderer({
             // first (locationFirst) and, within the combined location +
             // date line, which of those two comes first (dateFirst).
             const subtitleSeparator = block.subtitleSeparator ?? ' / '
-            const secondaryLine = (block.dateFirst ? [dateRange, subLine] : [subLine, dateRange])
+            const secondaryLine = (block.dateFirst ? [dateRangeVisible, subLineVisible] : [subLineVisible, dateRangeVisible])
               .filter(Boolean)
               .join(subtitleSeparator)
             const titleNode = item.title && (
@@ -554,19 +567,19 @@ export default function BlockRenderer({
                   titleNode
                 ) : block.titleLocationInline ? (
                   <>
-                    {(item.title || subLine) && (
+                    {(item.title || subLineVisible) && (
                       <p className="flex flex-wrap items-baseline gap-x-2">
                         <span className="font-bold" style={titleStyle}>
                           {titleTextTransformValue(item.title, block, 'entryTitle')}
                         </span>
                         <span className="text-sm text-slate-500" style={entryMetaStyle}>
-                          {subLine}
+                          {subLineVisible}
                         </span>
                       </p>
                     )}
-                    {dateRange && (
+                    {dateRangeVisible && (
                       <p className="text-sm text-slate-500" style={entryMetaStyle}>
-                        {dateRange}
+                        {dateRangeVisible}
                       </p>
                     )}
                   </>
@@ -581,7 +594,7 @@ export default function BlockRenderer({
                     {secondaryNode}
                   </>
                 )}
-                {!block.titleOnly && (() => {
+                {showEntryDescription(block) && (() => {
                   if (!item.description) return null
                   const descriptionStyle = {
                     fontFamily: entryBodyFont,
@@ -984,6 +997,7 @@ export default function BlockRenderer({
             ]
               .filter((v) => v?.trim())
               .join(' – ')
+            const { subLine: subLineVisible, dateRange: dateRangeVisible } = visibleEntryParts(block, subLine, dateRange)
             const descriptionLines = (item.description || '').split('\n').filter(Boolean)
             const bodyStyle = {
               fontFamily: bodyFont,
@@ -1000,7 +1014,7 @@ export default function BlockRenderer({
             // first (locationFirst) and, within the combined location +
             // date line, which of those two comes first (dateFirst).
             const subtitleSeparator = block.subtitleSeparator ?? ' / '
-            const secondaryLine = (block.dateFirst ? [dateRange, subLine] : [subLine, dateRange])
+            const secondaryLine = (block.dateFirst ? [dateRangeVisible, subLineVisible] : [subLineVisible, dateRangeVisible])
               .filter(Boolean)
               .join(subtitleSeparator)
             const titleNode = item.title && (
@@ -1019,19 +1033,19 @@ export default function BlockRenderer({
                   titleNode
                 ) : block.titleLocationInline ? (
                   <>
-                    {(item.title || subLine) && (
+                    {(item.title || subLineVisible) && (
                       <p className="flex flex-wrap items-baseline gap-x-2">
                         <span className="font-bold" style={entryTitleStyle}>
                           {titleTextTransformValue(item.title, block, 'entryTitle')}
                         </span>
                         <span className="text-sm text-slate-500" style={bodyStyle}>
-                          {subLine}
+                          {subLineVisible}
                         </span>
                       </p>
                     )}
-                    {dateRange && (
+                    {dateRangeVisible && (
                       <p className="text-sm text-slate-500" style={bodyStyle}>
-                        {dateRange}
+                        {dateRangeVisible}
                       </p>
                     )}
                   </>
@@ -1046,7 +1060,7 @@ export default function BlockRenderer({
                     {secondaryNode}
                   </>
                 )}
-                {!block.titleOnly &&
+                {showEntryDescription(block) &&
                   item.description &&
                   (block.list === false ? (
                     <p className="mt-0.5 whitespace-pre-line text-sm leading-relaxed text-slate-600" style={bodyStyle}>
