@@ -638,6 +638,56 @@ function inferSiblingTitleStyle(siblingBlocks, allowH1 = false) {
   return null
 }
 
+// First block of `type` found in `blocks`, recursing into Columns — used
+// below to prefer a plain Text/Quote block's *nearest* sibling over the
+// Global Style bulk editor's single merged "Body text"/"Quote" row. Several
+// of the built-in templates already mix genuinely different paragraph
+// styles on one page (e.g. a header's tagline vs. an entry's description),
+// so "the first Text block anywhere in the template" is frequently a
+// different, unrelated block from the one actually customized right next
+// to where a new block is being dropped.
+function findSiblingOfType(blocks, type, recurseIntoColumns = true) {
+  // Pass 1: direct entries only. A block dropped straight onto the page
+  // should match another direct sibling first — recursing into a Columns
+  // block's nested items before finishing this pass meant an unrelated
+  // Text block buried inside, say, the Education column (which usually
+  // sits earlier in the array) got matched instead of one just customized
+  // at the top level, purely because of array order.
+  for (const block of blocks || []) {
+    if (block.type === type) return block
+  }
+  if (!recurseIntoColumns) return null
+  // Pass 2: only reached when nothing at this level matched — now it's
+  // worth digging into nested Columns items instead of matching nothing.
+  for (const block of blocks || []) {
+    if (block.type === BLOCK_TYPES.COLUMNS) {
+      for (const column of block.columns || []) {
+        const found = findSiblingOfType(column.items, type)
+        if (found) return found
+      }
+    }
+  }
+  return null
+}
+
+// Every per-instance typography field a plain Text/Quote block carries
+// (see BodyTextStyleFields in PropertiesPanel.jsx) — copied wholesale from
+// a matched sibling rather than going through the row/matchType
+// translation applyMatchedTypography below uses, since there's no
+// title/entryTitle field-name remapping to do for these two types.
+function extractTypographyFields(block) {
+  return {
+    bold: !!block.bold,
+    italic: !!block.italic,
+    textTransform: block.textTransform,
+    color: block.color,
+    fontFamily: block.fontFamily,
+    fontSize: block.fontSize,
+    lineHeight: block.lineHeight,
+    letterSpacing: block.letterSpacing,
+  }
+}
+
 // Copies a typography row's weight/style/color/font onto a freshly created
 // block, using the same row identities and field-name translation as the
 // Global Style bulk editor (PropertiesPanel's applyTypographyChange) — so a
@@ -663,6 +713,8 @@ function applyMatchedTypography(item, allBlocks) {
         textTransform: row.textTransform,
         color: row.color,
         fontFamily: row.fontFamily,
+        lineHeight: row.lineHeight,
+        letterSpacing: row.letterSpacing,
       }
     }
   } else if (result.type === BLOCK_TYPES.TEXT && !hasSectionTitle(result)) {
@@ -676,6 +728,8 @@ function applyMatchedTypography(item, allBlocks) {
         color: row.color,
         fontFamily: row.fontFamily,
         fontSize: row.sizePx,
+        lineHeight: row.lineHeight,
+        letterSpacing: row.letterSpacing,
       }
     }
   } else if (result.type === BLOCK_TYPES.QUOTE) {
@@ -689,6 +743,8 @@ function applyMatchedTypography(item, allBlocks) {
         color: row.color,
         fontFamily: row.fontFamily,
         fontSize: row.sizePx,
+        lineHeight: row.lineHeight,
+        letterSpacing: row.letterSpacing,
       }
     }
   }
@@ -745,6 +801,20 @@ export function matchNewBlockToSiblings(newItem, siblingBlocks, allBlocks) {
       result = { ...result, titleSize: style.size }
     }
   }
+
+  // A plain Text or Quote block: prefer whatever's right next to it on this
+  // page/column over the template-wide merged style (see
+  // findSiblingOfType/extractTypographyFields above) — falls through to
+  // the merged row below only when the page/column has no sibling of that
+  // type yet to copy from.
+  if (result.type === BLOCK_TYPES.TEXT && !hasSectionTitle(result)) {
+    const sibling = findSiblingOfType(siblingBlocks, BLOCK_TYPES.TEXT)
+    if (sibling) return { ...result, ...extractTypographyFields(sibling) }
+  } else if (result.type === BLOCK_TYPES.QUOTE) {
+    const sibling = findSiblingOfType(siblingBlocks, BLOCK_TYPES.QUOTE)
+    if (sibling) return { ...result, ...extractTypographyFields(sibling) }
+  }
+
   return applyMatchedTypography(result, allBlocks || siblingBlocks)
 }
 
@@ -865,7 +935,7 @@ export function getTemplateTypographyStyles(template) {
   // changing its size/weight/color/font re-applies to every block sharing
   // that identity, not just the one instance that happened to be walked
   // first.
-  function addRow(key, label, sizePx, bold, color, fontFamily, matchType, level, size, italic, textTransform) {
+  function addRow(key, label, sizePx, bold, color, fontFamily, matchType, level, size, italic, textTransform, lineHeight, letterSpacing) {
     if (rows.has(key)) return
     rows.set(key, {
       key,
@@ -879,6 +949,14 @@ export function getTemplateTypographyStyles(template) {
       size,
       italic: !!italic,
       textTransform: textTransform || '',
+      // Not shown in the bulk "Text styles used in this template" editor
+      // (Global Style has no per-row UI for these two, unlike size/bold/
+      // italic/color/font) — carried on the row purely so a freshly added
+      // block can still match an existing one's line height/letter spacing
+      // (see applyMatchedTypography below), the same way it already
+      // matches everything else this row tracks.
+      lineHeight: lineHeight ?? null,
+      letterSpacing: letterSpacing ?? null,
     })
   }
 
@@ -900,6 +978,8 @@ export function getTemplateTypographyStyles(template) {
           size,
           block.italic,
           block.textTransform,
+          block.lineHeight,
+          block.letterSpacing,
         )
       } else if (block.type === BLOCK_TYPES.TEXT) {
         addRow(
@@ -914,6 +994,8 @@ export function getTemplateTypographyStyles(template) {
           undefined,
           block.italic,
           block.textTransform,
+          block.lineHeight,
+          block.letterSpacing,
         )
       } else if (block.type === BLOCK_TYPES.QUOTE) {
         addRow(
@@ -928,6 +1010,8 @@ export function getTemplateTypographyStyles(template) {
           undefined,
           block.italic,
           block.textTransform,
+          block.lineHeight,
+          block.letterSpacing,
         )
       }
       // Independent of the branches above: a block can be BOTH a body
