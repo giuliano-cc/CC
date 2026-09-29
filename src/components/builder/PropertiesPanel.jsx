@@ -26,6 +26,7 @@ import {
   TEXT_TRANSFORM_OPTIONS,
 } from '../../utils/blockTypes'
 import { emptyEntry, parseChecklist, parseEntries } from '../../utils/contentLists'
+import { splitTextToFit } from '../../utils/textFlow'
 import { resizeImageFile } from '../../utils/imageResize'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import { SOCIAL_PLATFORMS } from '../../utils/socialIcons'
@@ -2324,6 +2325,102 @@ function PositionSizeFields({ block, onChange }) {
   )
 }
 
+// Threaded text / autoflow: a manual action, not a live-recomputing layout
+// engine (see utils/textFlow.js) — click it, and whatever doesn't fit this
+// block's current box gets cut off and pushed into another Text block
+// (freshly created the first time, or the same one again on a later
+// click, so editing the source and re-flowing is a two-click loop rather
+// than needing a brand new target every time). Only offered for a plain
+// paragraph Text block (no title, no list, no library binding) — the one
+// case that actually renders as the single flat <p> this measures.
+function TextFlowField({ block, onChange }) {
+  const { blocks, addBlock, updateBlock, selectBlock, pageCount, addPage } = useBuilder()
+  const [message, setMessage] = useState('')
+  const linkedBlock = block.flowTargetId ? blocks.find((b) => b.id === block.flowTargetId) : null
+
+  function handleFlow() {
+    const node = document.querySelector(`[data-block-content="${block.id}"]`)
+    if (!node) return
+    const result = splitTextToFit(block.content || '', node)
+    if (!result) {
+      setMessage("This text already fits — there's nothing to flow.")
+      return
+    }
+    setMessage('')
+
+    if (linkedBlock) {
+      onChange({ content: result.fits })
+      updateBlock(linkedBlock.id, { content: result.remainder })
+      return
+    }
+
+    let targetPage = (block.page ?? 0) + 1
+    if (targetPage >= pageCount) {
+      addPage()
+    }
+    const created = addBlock(BLOCK_TYPES.TEXT, { x: block.x, y: block.y }, targetPage, {
+      content: result.remainder,
+    })
+    // Applied after addBlock (which re-matches a fresh block's style to
+    // whatever else is already on that page — see matchNewBlockToSiblings)
+    // so the continuation reliably mirrors THIS block, not an unrelated
+    // sibling it happened to land next to.
+    updateBlock(created.id, {
+      width: block.width,
+      height: block.height,
+      fontFamily: block.fontFamily,
+      fontSize: block.fontSize,
+      lineHeight: block.lineHeight,
+      letterSpacing: block.letterSpacing,
+      bold: block.bold,
+      italic: block.italic,
+      color: block.color,
+      textTransform: block.textTransform,
+      align: block.align,
+    })
+    onChange({ content: result.fits, flowTargetId: created.id })
+    // addBlock leaves the freshly created continuation selected — jump
+    // back to the source block so its own panel (with the "Flows into"
+    // indicator) is what's showing right after the action that made it.
+    selectBlock(block.id)
+  }
+
+  function handleUnlink() {
+    onChange({ flowTargetId: null })
+    setMessage('')
+  }
+
+  return (
+    <Field label="Text flow (autoflow)">
+      <div className="flex flex-col gap-1.5">
+        {linkedBlock && (
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span>Flows into another block.</span>
+            <button
+              type="button"
+              onClick={() => selectBlock(linkedBlock.id)}
+              className="font-medium text-primary hover:underline"
+            >
+              Select it
+            </button>
+            <button type="button" onClick={handleUnlink} className="text-red-500 hover:underline">
+              Unlink
+            </button>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={handleFlow}
+          className="self-start rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+        >
+          {linkedBlock ? 'Re-flow overflow' : 'Flow overflow to new block'}
+        </button>
+        {message && <p className="text-xs text-slate-400">{message}</p>}
+      </div>
+    </Field>
+  )
+}
+
 function BlockPropertiesPanel({ block, onChange }) {
   const { globalStyle } = useBuilder()
   const { getLibrary } = useContentLibrary()
@@ -2654,6 +2751,11 @@ function BlockPropertiesPanel({ block, onChange }) {
           </p>
         </Field>
       )}
+
+      {block.type === BLOCK_TYPES.TEXT &&
+        !block.contentSlot &&
+        !block.list &&
+        !(block.showTitle === true && block.titleText) && <TextFlowField block={block} onChange={onChange} />}
 
       {block.type === BLOCK_TYPES.QUOTE && (
         <>
