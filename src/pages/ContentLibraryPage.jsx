@@ -230,6 +230,13 @@ function ChecklistField({ itemsJson, fallbackText, onUpdate, showLevel }) {
     set(items.filter((_, i) => i !== index))
   }
 
+  // Locale-aware, case-insensitive — "iPhone" and "Photoshop" sort by
+  // letter, not by which happens to start with a capital, and accented
+  // names (e.g. "Écriture") land where they'd actually be expected.
+  function sortAlphabetically() {
+    set([...items].sort((a, b) => a.text.localeCompare(b.text, undefined, { sensitivity: 'base' })))
+  }
+
   return (
     <div className="flex flex-col gap-2">
       {items.map((item, i) => (
@@ -281,9 +288,16 @@ function ChecklistField({ itemsJson, fallbackText, onUpdate, showLevel }) {
           </button>
         </div>
       ))}
-      <button type="button" onClick={addItem} className="self-start text-xs font-medium text-primary hover:underline">
-        + Add item
-      </button>
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={addItem} className="text-xs font-medium text-primary hover:underline">
+          + Add item
+        </button>
+        {items.length > 1 && (
+          <button type="button" onClick={sortAlphabetically} className="text-xs font-medium text-primary hover:underline">
+            Sort A→Z
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -305,6 +319,10 @@ function LanguagesField({ itemsJson, fallbackText, onUpdate }) {
 
   function removeItem(index) {
     set(items.filter((_, i) => i !== index))
+  }
+
+  function sortAlphabetically() {
+    set([...items].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })))
   }
 
   return (
@@ -347,9 +365,16 @@ function LanguagesField({ itemsJson, fallbackText, onUpdate }) {
           </button>
         </div>
       ))}
-      <button type="button" onClick={addItem} className="self-start text-xs font-medium text-primary hover:underline">
-        + Add language
-      </button>
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={addItem} className="text-xs font-medium text-primary hover:underline">
+          + Add language
+        </button>
+        {items.length > 1 && (
+          <button type="button" onClick={sortAlphabetically} className="text-xs font-medium text-primary hover:underline">
+            Sort A→Z
+          </button>
+        )}
+      </div>
     </div>
   )
 }
