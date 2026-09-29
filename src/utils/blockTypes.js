@@ -771,9 +771,21 @@ export function getTemplateTypographyStyles(template) {
   // changing its size/weight/color/font re-applies to every block sharing
   // that identity, not just the one instance that happened to be walked
   // first.
-  function addRow(key, label, sizePx, bold, color, fontFamily, matchType, level, size) {
+  function addRow(key, label, sizePx, bold, color, fontFamily, matchType, level, size, italic, textTransform) {
     if (rows.has(key)) return
-    rows.set(key, { key, label, sizePx, bold, color: color || null, fontFamily: fontFamily || null, matchType, level, size })
+    rows.set(key, {
+      key,
+      label,
+      sizePx,
+      bold,
+      color: color || null,
+      fontFamily: fontFamily || null,
+      matchType,
+      level,
+      size,
+      italic: !!italic,
+      textTransform: textTransform || '',
+    })
   }
 
   function walk(blocks) {
@@ -792,11 +804,37 @@ export function getTemplateTypographyStyles(template) {
           BLOCK_TYPES.HEADING,
           level,
           size,
+          block.italic,
+          block.textTransform,
         )
       } else if (block.type === BLOCK_TYPES.TEXT) {
-        addRow('text', 'Body text (P)', block.fontSize || 14, !!block.bold, block.color, block.fontFamily, BLOCK_TYPES.TEXT)
+        addRow(
+          'text',
+          'Body text (P)',
+          block.fontSize || 14,
+          !!block.bold,
+          block.color,
+          block.fontFamily,
+          BLOCK_TYPES.TEXT,
+          undefined,
+          undefined,
+          block.italic,
+          block.textTransform,
+        )
       } else if (block.type === BLOCK_TYPES.QUOTE) {
-        addRow('quote', 'Quote', block.fontSize || 14, !!block.bold, block.color, block.fontFamily, BLOCK_TYPES.QUOTE)
+        addRow(
+          'quote',
+          'Quote',
+          block.fontSize || 14,
+          !!block.bold,
+          block.color,
+          block.fontFamily,
+          BLOCK_TYPES.QUOTE,
+          undefined,
+          undefined,
+          block.italic,
+          block.textTransform,
+        )
       }
       // Independent of the branches above: a block can be BOTH a body
       // paragraph (Text) AND carry its own auto-title (a section-title
@@ -817,6 +855,8 @@ export function getTemplateTypographyStyles(template) {
           BLOCK_TYPES.HEADING,
           'h2',
           size,
+          block.titleItalic,
+          block.titleTextTransform,
         )
       }
       // An Experience/Education block's per-entry title ("Job Role",
@@ -835,6 +875,10 @@ export function getTemplateTypographyStyles(template) {
           block.entryTitleColor,
           block.entryTitleFontFamily,
           'entryTitle',
+          undefined,
+          undefined,
+          block.entryTitleItalic,
+          block.entryTitleTextTransform,
         )
       }
       if (block.type === BLOCK_TYPES.COLUMNS) {

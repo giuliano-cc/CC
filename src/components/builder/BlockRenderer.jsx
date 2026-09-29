@@ -119,6 +119,26 @@ function displayText(text, block) {
   return text
 }
 
+// Section/entry titles (Experience, Education, Contact Info, chart
+// titles, ...) don't go through the same block.bold/italic/textTransform/
+// textStyleClasses fields a plain Heading or Text block does — they're
+// always-bold, dedicated-field titles of their own (titleItalic/
+// titleTextTransform, entryTitleItalic/entryTitleTextTransform), set from
+// the Global Style panel's "Text styles used in this template" editor
+// (see PropertiesPanel.jsx's applyTypographyChange). `field` is which of
+// those two field-name pairs to read.
+function titleTextTransformValue(text, block, field) {
+  return block[`${field}TextTransform`] === 'titleCase' && typeof text === 'string' ? toTitleCase(text) : text
+}
+function titleTextTransformStyle(block, field) {
+  const transform = block[`${field}TextTransform`]
+  return {
+    fontStyle: block[`${field}Italic`] ? 'italic' : undefined,
+    textTransform: transform === 'uppercase' ? 'uppercase' : transform === 'startCase' ? 'capitalize' : undefined,
+    fontVariant: transform === 'smallCaps' ? 'small-caps' : undefined,
+  }
+}
+
 // Global Style's Title/Body font fields fall back to the legacy single
 // `fontFamily` (a template saved before they existed only has that one),
 // and ultimately to `undefined` (inherit the page's own — see Canvas.jsx,
@@ -179,7 +199,13 @@ const HEADING_SCALE_LEVEL_BY_SIZE = { xl: 'h1', lg: 'h2', md: 'h3' }
 // underline rule those headings use.
 function sectionTitleStyle(block, color, fallbackFont) {
   const sizePx = block.fontSize || HEADING_SIZE_PX[block.titleSize || 'md'] || HEADING_SIZE_PX.md
-  return { fontSize: `${sizePx}px`, fontWeight: 700, color, fontFamily: block.fontFamily || fallbackFont }
+  return {
+    fontSize: `${sizePx}px`,
+    fontWeight: 700,
+    color,
+    fontFamily: block.fontFamily || fallbackFont,
+    ...titleTextTransformStyle(block, 'title'),
+  }
 }
 
 // A block can be "linked" to a Content Library entry (block.contentSlot):
@@ -256,7 +282,7 @@ function Chart({ block, items, onUpdateBlock, accentColor, titleFont, lang, titl
       <div className={`flex items-end justify-between ${showTitle && block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}`}>
         {showTitle && (
           <p style={sectionTitleStyle(block, block.titleColor || accentColor, titleFont)}>
-            {translateSectionTitle(block.title, lang, titleOverrides)}
+            {titleTextTransformValue(translateSectionTitle(block.title, lang, titleOverrides), block, 'title')}
           </p>
         )}
         {onUpdateBlock && (
@@ -500,6 +526,7 @@ export default function BlockRenderer({
               fontSize: `${entryTitleSizePx}px`,
               color: block.entryTitleColor || globalStyle.textColor,
               ...entryExtraStyle,
+              ...titleTextTransformStyle(block, 'entryTitle'),
             }
             // The title is always item.title, always bold — it never
             // swaps with the location/date line. What cycles (via
@@ -512,7 +539,7 @@ export default function BlockRenderer({
               .join(subtitleSeparator)
             const titleNode = item.title && (
               <p className="text-base font-bold" style={titleStyle}>
-                {item.title}
+                {titleTextTransformValue(item.title, block, 'entryTitle')}
               </p>
             )
             const secondaryNode = secondaryLine && (
@@ -527,7 +554,7 @@ export default function BlockRenderer({
                     {(item.title || subLine) && (
                       <p className="flex flex-wrap items-baseline gap-x-2">
                         <span className="font-bold" style={titleStyle}>
-                          {item.title}
+                          {titleTextTransformValue(item.title, block, 'entryTitle')}
                         </span>
                         <span className="text-sm text-slate-500" style={entryMetaStyle}>
                           {subLine}
@@ -615,12 +642,18 @@ export default function BlockRenderer({
           <p
             className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
             style={sectionTitleStyle(
-              { titleSize: block.titleSize, fontFamily: block.fontFamily, fontSize: block.titleFontSize },
+              {
+                titleSize: block.titleSize,
+                fontFamily: block.fontFamily,
+                fontSize: block.titleFontSize,
+                titleItalic: block.titleItalic,
+                titleTextTransform: block.titleTextTransform,
+              },
               block.titleColor || globalStyle.primaryColor,
               resolveTitleFont(globalStyle),
             )}
           >
-            {title}
+            {titleTextTransformValue(title, block, 'title')}
           </p>
           {body}
         </div>
@@ -850,7 +883,7 @@ export default function BlockRenderer({
               className={`w-full ${alignClass(block.align)} ${block.titleRule !== false ? 'mb-0.5 border-b border-slate-200 pb-1.5' : ''}`}
               style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
-              {translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides)}
+              {titleTextTransformValue(translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides), block, 'title')}
             </p>
           )}
           <div
@@ -892,7 +925,7 @@ export default function BlockRenderer({
               className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
               style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
-              {translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides)}
+              {titleTextTransformValue(translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides), block, 'title')}
             </p>
           )}
           <ul
@@ -925,6 +958,7 @@ export default function BlockRenderer({
         fontSize: block.entryTitleFontSize ? `${block.entryTitleFontSize}px` : undefined,
         color: block.entryTitleColor || globalStyle.textColor,
         fontFamily: block.entryTitleFontFamily || resolveTitleFont(globalStyle),
+        ...titleTextTransformStyle(block, 'entryTitle'),
       }
       return (
         <div className={`group/entries relative flex flex-col gap-3 ${alignClass(block.align)}`}>
@@ -934,7 +968,7 @@ export default function BlockRenderer({
               className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
               style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
             >
-              {translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides)}
+              {titleTextTransformValue(translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides), block, 'title')}
             </p>
           )}
           {items.map((item, i) => {
@@ -966,7 +1000,7 @@ export default function BlockRenderer({
               .join(subtitleSeparator)
             const titleNode = item.title && (
               <p className="text-base font-bold" style={entryTitleStyle}>
-                {item.title}
+                {titleTextTransformValue(item.title, block, 'entryTitle')}
               </p>
             )
             const secondaryNode = secondaryLine && (
@@ -981,7 +1015,7 @@ export default function BlockRenderer({
                     {(item.title || subLine) && (
                       <p className="flex flex-wrap items-baseline gap-x-2">
                         <span className="font-bold" style={entryTitleStyle}>
-                          {item.title}
+                          {titleTextTransformValue(item.title, block, 'entryTitle')}
                         </span>
                         <span className="text-sm text-slate-500" style={bodyStyle}>
                           {subLine}

@@ -23,6 +23,7 @@ import {
   getTemplateTypographyStyles,
   matchesTypographyRow,
   sectionTitleSizeField,
+  TEXT_TRANSFORM_OPTIONS,
 } from '../../utils/blockTypes'
 import { emptyEntry } from '../../utils/contentLists'
 import { resizeImageFile } from '../../utils/imageResize'
@@ -95,21 +96,25 @@ function GlobalStylePanel() {
         if (matchesTypographyRow(block, row)) {
           const isTitleOnlyMatch = row.matchType === BLOCK_TYPES.HEADING && block.type !== BLOCK_TYPES.HEADING
           if (isTitleOnlyMatch) {
-            const { color, fontSize, bold: _bold, ...rest } = patch
+            const { color, fontSize, bold: _bold, italic, textTransform, ...rest } = patch
             const translated = { ...rest }
             if (color !== undefined) translated.titleColor = color
             if (fontSize !== undefined) translated[sectionTitleSizeField(block)] = fontSize
+            if (italic !== undefined) translated.titleItalic = italic
+            if (textTransform !== undefined) translated.titleTextTransform = textTransform
             updateBlock(block.id, translated)
           } else if (row.matchType === 'entryTitle') {
             // Entry titles are always bold (no toggle of their own — see
             // the Chart's/section title's own "always bold" comment above)
             // and use their own dedicated fields so they never collide
             // with the block's own section-title color/font/size.
-            const { color, fontSize, fontFamily, bold: _bold, ...rest } = patch
+            const { color, fontSize, fontFamily, bold: _bold, italic, textTransform, ...rest } = patch
             const translated = { ...rest }
             if (color !== undefined) translated.entryTitleColor = color
             if (fontSize !== undefined) translated.entryTitleFontSize = fontSize
             if (fontFamily !== undefined) translated.entryTitleFontFamily = fontFamily
+            if (italic !== undefined) translated.entryTitleItalic = italic
+            if (textTransform !== undefined) translated.entryTitleTextTransform = textTransform
             updateBlock(block.id, translated)
           } else {
             updateBlock(block.id, patch)
@@ -489,6 +494,14 @@ function GlobalStylePanel() {
                       />
                       Bold
                     </label>
+                    <label className="flex shrink-0 items-center gap-1 text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={row.italic}
+                        onChange={(e) => applyTypographyChange(row, { italic: e.target.checked })}
+                      />
+                      Italic
+                    </label>
                     <input
                       type="color"
                       value={row.color || inheritedColor}
@@ -513,6 +526,18 @@ function GlobalStylePanel() {
                       onChange={(v) => applyTypographyChange(row, { fontFamily: v || null })}
                       className="flex-1"
                     />
+                    <select
+                      value={row.textTransform}
+                      onChange={(e) => applyTypographyChange(row, { textTransform: e.target.value || null })}
+                      title="Text case"
+                      className={`${inputClasses} !w-auto shrink-0 py-1`}
+                    >
+                      {TEXT_TRANSFORM_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               )
