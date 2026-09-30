@@ -283,8 +283,8 @@ export default function Canvas() {
     // don't let you scroll back into — page 1 (and everything on it) would
     // become unreachable. Left-aligning keeps every page reachable by
     // scrolling right, however many there are.
-    <div className="relative flex flex-1 items-start justify-start gap-6 overflow-auto bg-slate-100 p-8">
-      <div className="sticky left-8 top-8 z-20 flex flex-col gap-1.5">
+    <div className="relative flex flex-1 items-start justify-start gap-12 overflow-auto bg-slate-100 p-8">
+      <div className="sticky left-8 top-8 z-20 flex w-11 shrink-0 flex-col gap-1.5">
         <button
           type="button"
           onClick={togglePreview}
