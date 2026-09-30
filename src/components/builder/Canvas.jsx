@@ -284,7 +284,7 @@ export default function Canvas() {
     // become unreachable. Left-aligning keeps every page reachable by
     // scrolling right, however many there are.
     <div className="relative flex flex-1 items-start justify-start gap-6 overflow-auto bg-slate-100 p-8">
-      <div className="sticky left-8 top-8 z-20 -mr-9 -mb-9 flex flex-col gap-1.5">
+      <div className="sticky left-8 top-8 z-20 flex flex-col gap-1.5">
         <button
           type="button"
           onClick={togglePreview}
