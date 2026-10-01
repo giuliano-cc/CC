@@ -484,15 +484,25 @@ export default function BlockRenderer({
   const titleOverrides = getTitleOverrides(globalStyle.contentLanguage)
 
   switch (block.type) {
-    case BLOCK_TYPES.HEADER:
+    case BLOCK_TYPES.HEADER: {
+      // Falls back to the H2 row of Global Style's typography scale
+      // (same mechanism Heading/Text/Quote already use) instead of a
+      // fixed "text-lg" — so resizing the whole document's scale also
+      // resizes this, like every other section-title-ish block does.
+      const headerSizePx = globalStyle.typographyScale?.h2?.sizePx
       return (
         <div
-          className={`border-b border-slate-200 pb-3 text-lg ${textStyleClasses(block)}`}
-          style={{ fontFamily: resolveTitleFont(globalStyle), ...textTransformStyle(block) }}
+          className={`border-b border-slate-200 pb-3 ${headerSizePx ? '' : 'text-lg'} ${textStyleClasses(block)}`}
+          style={{
+            fontFamily: resolveTitleFont(globalStyle),
+            fontSize: headerSizePx ? `${headerSizePx}px` : undefined,
+            ...textTransformStyle(block),
+          }}
         >
           {displayText(resolvedContent, block)}
         </div>
       )
+    }
 
     case BLOCK_TYPES.CV_HEADER: {
       const isStacked = block.layout === 'stacked'
@@ -501,19 +511,44 @@ export default function BlockRenderer({
         ? (library[block.contactsSlot] || '').split('\n').filter(Boolean)
         : block.contacts
       const resolvedUsp = block.uspSlot ? library[block.uspSlot] || '' : block.usp
+      // Same idea as Header above: the name/role/USP now fall back to the
+      // typography scale (H1 for the name, P2/P1 for the secondary lines)
+      // instead of a fixed size, so they scale with the rest of the
+      // document instead of always staying the same size.
+      const nameSizePx = globalStyle.typographyScale?.h1?.sizePx
+      const roleSizePx = globalStyle.typographyScale?.p2?.sizePx
+      const uspSizePx = globalStyle.typographyScale?.p1?.sizePx
       return (
         <div
           className={`flex ${isStacked ? 'items-start' : 'flex-wrap items-baseline'} justify-between gap-4 border-b border-slate-200 pb-4`}
         >
           <div>
             <p
-              className="whitespace-pre-line text-lg font-bold leading-tight"
-              style={{ color: block.color || undefined, fontFamily: resolveTitleFont(globalStyle) }}
+              className={`whitespace-pre-line font-bold leading-tight ${nameSizePx ? '' : 'text-lg'}`}
+              style={{
+                color: block.color || undefined,
+                fontFamily: resolveTitleFont(globalStyle),
+                fontSize: nameSizePx ? `${nameSizePx}px` : undefined,
+              }}
             >
               {resolvedName}
             </p>
-            {block.role && <p className="text-sm text-slate-500">{block.role}</p>}
-            {resolvedUsp && <p className="mt-1 text-sm italic text-slate-600">{resolvedUsp}</p>}
+            {block.role && (
+              <p
+                className={`text-slate-500 ${roleSizePx ? '' : 'text-sm'}`}
+                style={{ fontFamily: resolveBodyFont(globalStyle), fontSize: roleSizePx ? `${roleSizePx}px` : undefined }}
+              >
+                {block.role}
+              </p>
+            )}
+            {resolvedUsp && (
+              <p
+                className={`mt-1 italic text-slate-600 ${uspSizePx ? '' : 'text-sm'}`}
+                style={{ fontFamily: resolveBodyFont(globalStyle), fontSize: uspSizePx ? `${uspSizePx}px` : undefined }}
+              >
+                {resolvedUsp}
+              </p>
+            )}
           </div>
           {resolvedContacts?.length > 0 && (
             <div

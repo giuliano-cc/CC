@@ -22,8 +22,8 @@ import { DEFAULT_GLOBAL_STYLE } from '../context/BuilderContext'
 // row (if any) this block/variant actually reads — see scaleBadge below for
 // how each was confirmed by reading BlockRenderer.jsx itself, not guessed.
 const AUDIT_SAMPLES = [
-  { type: BLOCK_TYPES.HEADER, label: 'Header', scale: 'none', scaleNote: 'Fixed Tailwind "text-lg" — not wired to the H1–H3/P1–P3 scale at all.' },
-  { type: BLOCK_TYPES.CV_HEADER, label: 'Resume Header (CV Header)', scale: 'none', scaleNote: 'Name is a fixed "text-lg"; role/USP are fixed "text-sm" — none read the scale.' },
+  { type: BLOCK_TYPES.HEADER, label: 'Header', scale: 'H2', scaleNote: 'Falls back to Global Style\'s H2 row, same mechanism as Heading/Text.' },
+  { type: BLOCK_TYPES.CV_HEADER, label: 'Resume Header (CV Header)', scale: 'H1', scaleNote: 'Name falls back to H1; role falls back to P2; USP falls back to P1.' },
   { type: BLOCK_TYPES.HEADING, overrides: { size: 'xl' }, label: 'Heading — size "xl"', scale: 'H1', scaleNote: 'Reads Global Style\'s H1 row (unless this block has its own Font Size override).' },
   { type: BLOCK_TYPES.HEADING, overrides: { size: 'lg' }, label: 'Heading — size "lg"', scale: 'H2', scaleNote: 'Reads Global Style\'s H2 row.' },
   { type: BLOCK_TYPES.HEADING, overrides: { size: 'md' }, label: 'Heading — size "md"', scale: 'H3', scaleNote: 'Reads Global Style\'s H3 row.' },
