@@ -3040,6 +3040,35 @@ function BlockPropertiesPanel({ block, onChange }) {
         </div>
       )}
 
+      {isHeading && (
+        <Field label="Heading level (HTML tag)">
+          <select
+            value={block.level || 'h1'}
+            onChange={(e) => onChange({ level: e.target.value })}
+            className={inputClasses}
+          >
+            <option value="h1">H1</option>
+            <option value="h2">H2</option>
+          </select>
+        </Field>
+      )}
+
+      {showContent && (
+        <Field label="Text case">
+          <select
+            value={block.textTransform || ''}
+            onChange={(e) => onChange({ textTransform: e.target.value || null })}
+            className={inputClasses}
+          >
+            {TEXT_TRANSFORM_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+
       <PositionSizeFields block={block} onChange={onChange} />
     </div>
   )

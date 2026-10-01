@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { ArrowLeft, Loader2, Printer, RotateCcw, Save, Wand2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Printer, Redo2, RotateCcw, Save, Undo2, Wand2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { BuilderProvider, useBuilder } from '../context/BuilderContext'
 import { useContentLibrary } from '../context/ContentLibraryContext'
@@ -9,7 +9,6 @@ import BlockPalette from '../components/builder/BlockPalette'
 import Canvas, { parsePageDroppableId } from '../components/builder/Canvas'
 import PrintDocument from '../components/builder/PrintDocument'
 import PropertiesPanel from '../components/builder/PropertiesPanel'
-import Toolbar from '../components/builder/Toolbar'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
@@ -28,7 +27,23 @@ function BuilderContent({ initialTitle }) {
   const navigate = useNavigate()
   const { id } = useParams()
   const isNew = !id || id === 'new'
-  const { blocks, addBlock, updateBlock, pageCount, globalStyle, selectBlock, resetTo } = useBuilder()
+  const {
+    blocks,
+    addBlock,
+    updateBlock,
+    pageCount,
+    globalStyle,
+    selectBlock,
+    resetTo,
+    selectedIds,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    nudgeSelection,
+    copySelection,
+    pasteSelection,
+  } = useBuilder()
   const builtInTemplate = CV_TEMPLATES.find((t) => t.id === id)
   const { getLibrary } = useContentLibrary()
   const library = getLibrary(globalStyle.contentLanguage)
@@ -43,6 +58,56 @@ function BuilderContent({ initialTitle }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   )
+
+  // Cmd/Ctrl+Z to undo, Cmd/Ctrl+Shift+Z (or Ctrl+Y) to redo, Cmd/Ctrl+C /
+  // Cmd/Ctrl+V to copy/paste the selected block(s), and the arrow keys to
+  // nudge them by 1px (10px with Shift held) — all ignored while typing in
+  // an input/textarea so they don't fight the browser's own native
+  // shortcuts inside that field.
+  useEffect(() => {
+    function handleKeyDown(event) {
+      const target = event.target
+      if (target?.closest?.('input, textarea, select, [contenteditable="true"]')) return
+
+      const isMod = event.metaKey || event.ctrlKey
+      if (isMod) {
+        const key = event.key.toLowerCase()
+        if (key === 'z') {
+          event.preventDefault()
+          if (event.shiftKey) redo()
+          else undo()
+          return
+        }
+        if (key === 'y') {
+          event.preventDefault()
+          redo()
+          return
+        }
+        if (key === 'c') {
+          if (selectedIds.length === 0) return
+          event.preventDefault()
+          copySelection()
+          return
+        }
+        if (key === 'v') {
+          event.preventDefault()
+          pasteSelection()
+          return
+        }
+        return
+      }
+
+      const ARROW_DELTAS = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }
+      const delta = ARROW_DELTAS[event.key]
+      if (delta && selectedIds.length > 0) {
+        event.preventDefault()
+        const step = event.shiftKey ? 10 : 1
+        nudgeSelection(delta[0] * step, delta[1] * step)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [undo, redo, selectedIds, nudgeSelection, copySelection, pasteSelection])
 
   // Preview: sends the blocks to the backend 800ms after the last change.
   useEffect(() => {
@@ -247,6 +312,28 @@ function BuilderContent({ initialTitle }) {
               onChange={(e) => setTitle(e.target.value)}
               className="rounded-md px-2 py-1 text-sm font-medium text-slate-800 outline-none transition hover:bg-slate-50 focus:bg-slate-50"
             />
+            <div className="ml-1 flex items-center gap-0.5 border-l border-slate-200 pl-3">
+              <button
+                type="button"
+                onClick={undo}
+                disabled={!canUndo}
+                aria-label="Undo (Ctrl/Cmd+Z)"
+                title="Undo (Ctrl/Cmd+Z)"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                <Undo2 size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={redo}
+                disabled={!canRedo}
+                aria-label="Redo (Ctrl/Cmd+Shift+Z)"
+                title="Redo (Ctrl/Cmd+Shift+Z)"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                <Redo2 size={16} />
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -294,8 +381,6 @@ function BuilderContent({ initialTitle }) {
             </button>
           </div>
         </header>
-
-        <Toolbar />
 
         <div className="flex flex-1 overflow-hidden">
           <BlockPalette />
