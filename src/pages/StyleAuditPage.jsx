@@ -14,39 +14,30 @@ import { DEFAULT_GLOBAL_STYLE } from '../context/BuilderContext'
 // BlockRenderer produced for that block, so it can never drift out of
 // sync with the component code the way a written-out doc would.
 
-// One instance per block type worth auditing — every type BlockRenderer
-// treats as "text" in some way. Columns/Divider/Image/Shape/QR/Social are
+// One instance per block/variant worth auditing — every type BlockRenderer
+// treats as "text" in some way, plus one row per Heading size so the H1/H2/
+// H3 mapping is actually visible. Columns/Divider/Image/Shape/QR/Social are
 // left out: they're not primarily text, so a font/size/color audit of them
-// wouldn't mean much.
-const AUDIT_TYPES = [
-  BLOCK_TYPES.HEADER,
-  BLOCK_TYPES.CV_HEADER,
-  BLOCK_TYPES.HEADING,
-  BLOCK_TYPES.TEXT,
-  BLOCK_TYPES.QUOTE,
-  BLOCK_TYPES.FOOTER,
-  BLOCK_TYPES.CONTACT_INFO,
-  BLOCK_TYPES.LEISURE,
-  BLOCK_TYPES.EXPERIENCE,
-  BLOCK_TYPES.EDUCATION,
-  BLOCK_TYPES.SKILLS_CHART,
-  BLOCK_TYPES.LANGUAGES_CHART,
+// wouldn't mean much. `scale` describes which Global Style typography-scale
+// row (if any) this block/variant actually reads — see scaleBadge below for
+// how each was confirmed by reading BlockRenderer.jsx itself, not guessed.
+const AUDIT_SAMPLES = [
+  { type: BLOCK_TYPES.HEADER, label: 'Header', scale: 'none', scaleNote: 'Fixed Tailwind "text-lg" — not wired to the H1–H3/P1–P3 scale at all.' },
+  { type: BLOCK_TYPES.CV_HEADER, label: 'Resume Header (CV Header)', scale: 'none', scaleNote: 'Name is a fixed "text-lg"; role/USP are fixed "text-sm" — none read the scale.' },
+  { type: BLOCK_TYPES.HEADING, overrides: { size: 'xl' }, label: 'Heading — size "xl"', scale: 'H1', scaleNote: 'Reads Global Style\'s H1 row (unless this block has its own Font Size override).' },
+  { type: BLOCK_TYPES.HEADING, overrides: { size: 'lg' }, label: 'Heading — size "lg"', scale: 'H2', scaleNote: 'Reads Global Style\'s H2 row.' },
+  { type: BLOCK_TYPES.HEADING, overrides: { size: 'md' }, label: 'Heading — size "md"', scale: 'H3', scaleNote: 'Reads Global Style\'s H3 row.' },
+  { type: BLOCK_TYPES.HEADING, overrides: { size: 'sm' }, label: 'Heading — size "sm"', scale: 'none', scaleNote: '"sm" has its own fixed baseline — outside the H1–H3 scale.' },
+  { type: BLOCK_TYPES.TEXT, label: 'Text / Paragraph', scale: 'P1', scaleNote: 'Falls back to Global Style\'s P1 size (unless this block has its own Font Size override).' },
+  { type: BLOCK_TYPES.QUOTE, label: 'Quote', scale: 'P1', scaleNote: 'Same P1 fallback as a plain paragraph.' },
+  { type: BLOCK_TYPES.FOOTER, label: 'Footer', scale: 'none', scaleNote: 'Fixed Tailwind "text-xs" — not wired to the scale at all.' },
+  { type: BLOCK_TYPES.CONTACT_INFO, label: 'Contact Info', scale: 'P1', scaleNote: 'Body lines fall back to P1 (unless "Body size" is set on this block).' },
+  { type: BLOCK_TYPES.LEISURE, label: 'Leisure / Hobbies', scale: 'none', scaleNote: 'Hardcoded Tailwind "text-sm" — never reads P1, unlike every other body-text block.' },
+  { type: BLOCK_TYPES.EXPERIENCE, label: 'Experience (entries)', scale: 'P1', scaleNote: 'Description/date lines fall back to P1; the entry title itself is a separate fixed-16px identity, not part of the scale.' },
+  { type: BLOCK_TYPES.EDUCATION, label: 'Education (entries)', scale: 'P1', scaleNote: 'Same as Experience.' },
+  { type: BLOCK_TYPES.SKILLS_CHART, label: 'Technical Skills (chart)', scale: 'none*', scaleNote: 'Title uses its own fixed sm/md/lg/xl baseline (not the editable H1–H3 scale) — only grouped with it visually in "Text styles used in this template".' },
+  { type: BLOCK_TYPES.LANGUAGES_CHART, label: 'Languages (chart)', scale: 'none*', scaleNote: 'Same as Technical Skills.' },
 ]
-
-const AUDIT_LABELS = {
-  [BLOCK_TYPES.HEADER]: 'Header',
-  [BLOCK_TYPES.CV_HEADER]: 'Resume Header (CV Header)',
-  [BLOCK_TYPES.HEADING]: 'Heading',
-  [BLOCK_TYPES.TEXT]: 'Text / Paragraph',
-  [BLOCK_TYPES.QUOTE]: 'Quote',
-  [BLOCK_TYPES.FOOTER]: 'Footer',
-  [BLOCK_TYPES.CONTACT_INFO]: 'Contact Info',
-  [BLOCK_TYPES.LEISURE]: 'Leisure / Hobbies',
-  [BLOCK_TYPES.EXPERIENCE]: 'Experience (entries)',
-  [BLOCK_TYPES.EDUCATION]: 'Education (entries)',
-  [BLOCK_TYPES.SKILLS_CHART]: 'Technical Skills (chart)',
-  [BLOCK_TYPES.LANGUAGES_CHART]: 'Languages (chart)',
-}
 
 // A hardcoded Tailwind text-color utility (e.g. "text-slate-500") always
 // wins over an inherited `color` — and everywhere in this codebase, Global
@@ -83,10 +74,15 @@ function collectStyleInfo(root) {
   return rows
 }
 
-function AuditRow({ type, globalStyle }) {
+const SCALE_BADGE_CLASSES = {
+  none: 'bg-slate-100 text-slate-500',
+  'none*': 'bg-slate-100 text-slate-500',
+}
+
+function AuditRow({ sample: config, globalStyle }) {
   const containerRef = useRef(null)
   const [rows, setRows] = useState([])
-  const sample = createBlockInstance(type)
+  const sample = { ...createBlockInstance(config.type), ...config.overrides }
 
   useEffect(() => {
     if (containerRef.current) setRows(collectStyleInfo(containerRef.current))
@@ -97,17 +93,26 @@ function AuditRow({ type, globalStyle }) {
   return (
     <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            {AUDIT_LABELS[type] || type}
-          </span>
-          {flaggedCount > 0 && (
-            <span className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-              <AlertTriangle size={11} />
-              {flaggedCount} hardcoded
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{config.label}</span>
+          <div className="flex items-center gap-1.5">
+            <span
+              title={config.scaleNote}
+              className={`cursor-help rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                SCALE_BADGE_CLASSES[config.scale] || 'bg-primary/10 text-primary'
+              }`}
+            >
+              scale: {config.scale}
             </span>
-          )}
+            {flaggedCount > 0 && (
+              <span className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                <AlertTriangle size={11} />
+                {flaggedCount} hardcoded
+              </span>
+            )}
+          </div>
         </div>
+        <p className="-mt-1 text-[11px] text-slate-400">{config.scaleNote}</p>
         <div
           className="rounded-lg border border-dashed border-slate-200 p-4"
           style={{
@@ -187,20 +192,6 @@ export default function StyleAuditPage() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-500">Base font size (P1)</label>
-          <input
-            type="number"
-            value={globalStyle.typographyScale?.p1?.sizePx || 14}
-            onChange={(e) =>
-              set('typographyScale', {
-                ...globalStyle.typographyScale,
-                p1: { ...globalStyle.typographyScale?.p1, sizePx: Number(e.target.value) },
-              })
-            }
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-slate-500">Primary color</label>
           <input
             type="color"
@@ -220,9 +211,39 @@ export default function StyleAuditPage() {
         </div>
       </div>
 
+      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <p className="mb-3 text-xs font-medium text-slate-500">
+          Typography scale (Global Style's "Text styles used in this template" sizes) — each "scale: …" badge
+          below names which of these rows that block/variant actually reads.
+        </p>
+        <div className="grid grid-cols-3 gap-4 sm:grid-cols-6">
+          {['h1', 'h2', 'h3', 'p1', 'p2', 'p3'].map((level) => (
+            <div key={level} className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-500">{level.toUpperCase()} size</label>
+              <input
+                type="number"
+                value={globalStyle.typographyScale?.[level]?.sizePx ?? ''}
+                onChange={(e) =>
+                  set('typographyScale', {
+                    ...globalStyle.typographyScale,
+                    [level]: { ...globalStyle.typographyScale?.[level], sizePx: Number(e.target.value) },
+                  })
+                }
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] text-slate-400">
+          P2/P3 aren't applied automatically anywhere — no block falls back to them the way plain body text falls
+          back to P1 (see "scale: none" badges above). They only reach a document if a specific block's own Font
+          Size is set to match one by hand.
+        </p>
+      </div>
+
       <div className="mt-6 flex flex-col gap-4">
-        {AUDIT_TYPES.map((type) => (
-          <AuditRow key={type} type={type} globalStyle={globalStyle} />
+        {AUDIT_SAMPLES.map((sample, i) => (
+          <AuditRow key={i} sample={sample} globalStyle={globalStyle} />
         ))}
       </div>
     </div>
