@@ -823,21 +823,38 @@ function TitleVisibilityFields({ block, onChange }) {
 // Experience/Education, the field list in Contact Info) — separate from
 // the block's own title size/color, which TitleSizeField controls.
 function BodyTextStyleFields({ block, onChange }) {
+  const { globalStyle } = useBuilder()
   return (
-    <div className="flex items-center gap-1.5">
-      <Field label="Body text size (px)">
-        <input
-          type="number"
-          min={8}
-          max={24}
-          placeholder="14"
-          value={block.bodyFontSize || ''}
-          onChange={(e) =>
-            onChange({ bodyFontSize: e.target.value ? Number(e.target.value) : null })
-          }
-          className={inputClasses}
+    <div className="flex flex-col gap-2">
+      <Field label="Body font">
+        <FontPicker
+          value={block.bodyFontFamily || ''}
+          onChange={(v) => onChange({ bodyFontFamily: v || null })}
         />
       </Field>
+      <div className="flex items-center gap-1.5">
+        <Field label="Body text size (px)">
+          <input
+            type="number"
+            min={8}
+            max={24}
+            placeholder="14"
+            value={block.bodyFontSize || ''}
+            onChange={(e) =>
+              onChange({ bodyFontSize: e.target.value ? Number(e.target.value) : null })
+            }
+            className={inputClasses}
+          />
+        </Field>
+        <Field label="Body text color">
+          <input
+            type="color"
+            value={block.bodyColor || globalStyle.textColor}
+            onChange={(e) => onChange({ bodyColor: e.target.value })}
+            className="h-9 w-full rounded-md border border-slate-200"
+          />
+        </Field>
+      </div>
       <Field label="Line spacing">
         <input
           type="number"

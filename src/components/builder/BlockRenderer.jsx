@@ -1052,12 +1052,13 @@ export default function BlockRenderer({
               isRowContact ? `flex-wrap items-center gap-x-4 gap-y-1.5 ${justify}` : `flex-col gap-1.5 ${alignItems}`
             }`}
             style={{
-              fontFamily: resolveBodyFont(globalStyle),
+              fontFamily: block.bodyFontFamily || resolveBodyFont(globalStyle),
               fontSize: block.bodyFontSize
                 ? `${block.bodyFontSize}px`
                 : globalStyle.typographyScale?.p1?.sizePx
                   ? `${globalStyle.typographyScale.p1.sizePx}px`
                   : undefined,
+              color: block.bodyColor || undefined,
               lineHeight: block.lineSpacing || undefined,
               rowGap: block.lineSpacing && !isRowContact ? `${block.lineSpacing * 6}px` : undefined,
             }}
@@ -1117,7 +1118,7 @@ export default function BlockRenderer({
           )
         : block.items || []
       const items = block.sortByDate !== false ? sortEntriesByDate(rawItems) : rawItems
-      const bodyFont = resolveBodyFont(globalStyle)
+      const bodyFont = block.bodyFontFamily || resolveBodyFont(globalStyle)
       // Falls back to the plain Text color (not left unset) so it's
       // never stuck on the browser's default black regardless of what
       // Global Style's Text color / entry-title row say — matching the
@@ -1157,6 +1158,7 @@ export default function BlockRenderer({
                 : globalStyle.typographyScale?.p1?.sizePx
                   ? `${globalStyle.typographyScale.p1.sizePx}px`
                   : undefined,
+              color: block.bodyColor || undefined,
               lineHeight: block.lineSpacing || undefined,
             }
             // The title is always item.title, always bold — it never
