@@ -308,8 +308,8 @@ function SkillBar({ label, level, levelText, levelDisplay = 'both', color }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="font-medium text-slate-700">{label}</span>
-        {showText && <span className="text-slate-400">{levelText || `${level}%`}</span>}
+        <span className="font-medium">{label}</span>
+        {showText && <span className="opacity-60">{levelText || `${level}%`}</span>}
       </div>
       {showBar && (
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
@@ -329,9 +329,9 @@ function SkillDots({ label, level, levelText, levelDisplay = 'both', color, dotS
   const showDots = levelDisplay !== 'text'
   return (
     <div className="flex items-center justify-between text-xs">
-      <span className="font-medium text-slate-700">{label}</span>
+      <span className="font-medium">{label}</span>
       <div className="flex items-center gap-2">
-        {showText && <span className="text-slate-400">{levelText || `${level}%`}</span>}
+        {showText && <span className="opacity-60">{levelText || `${level}%`}</span>}
         {showDots && (
           <div className="flex items-center gap-1">
             {Array.from({ length: dotCount }).map((_, i) => (
@@ -464,7 +464,7 @@ function SocialBadge({ platform, url }) {
       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[1.5px] border-slate-400 bg-transparent text-[10px] font-bold text-slate-400">
         {meta.badge}
       </span>
-      <span className="max-w-[9rem] truncate text-xs text-slate-600 underline">{url}</span>
+      <span className="max-w-[9rem] truncate text-xs underline">{url}</span>
     </a>
   )
 }
@@ -535,7 +535,7 @@ export default function BlockRenderer({
             </p>
             {block.role && (
               <p
-                className={`text-slate-500 ${roleSizePx ? '' : 'text-sm'}`}
+                className={`opacity-70 ${roleSizePx ? '' : 'text-sm'}`}
                 style={{ fontFamily: resolveBodyFont(globalStyle), fontSize: roleSizePx ? `${roleSizePx}px` : undefined }}
               >
                 {block.role}
@@ -543,7 +543,7 @@ export default function BlockRenderer({
             )}
             {resolvedUsp && (
               <p
-                className={`mt-1 italic text-slate-600 ${uspSizePx ? '' : 'text-sm'}`}
+                className={`mt-1 italic opacity-80 ${uspSizePx ? '' : 'text-sm'}`}
                 style={{ fontFamily: resolveBodyFont(globalStyle), fontSize: uspSizePx ? `${uspSizePx}px` : undefined }}
               >
                 {resolvedUsp}
@@ -552,7 +552,7 @@ export default function BlockRenderer({
           </div>
           {resolvedContacts?.length > 0 && (
             <div
-              className={`flex text-xs text-slate-500 ${
+              className={`flex text-xs opacity-70 ${
                 isStacked ? 'flex-col items-end gap-1' : 'flex-wrap justify-end gap-4'
               }`}
             >
@@ -560,7 +560,7 @@ export default function BlockRenderer({
                 const Icon = block.showContactIcons ? guessContactIcon(contact) : null
                 return (
                   <span key={i} className="flex items-center gap-1">
-                    {Icon && <Icon size={12} className="shrink-0 text-slate-400" />}
+                    {Icon && <Icon size={12} className="shrink-0" />}
                     {contact}
                   </span>
                 )
@@ -694,7 +694,7 @@ export default function BlockRenderer({
               </p>
             )
             const secondaryNode = secondaryLine && (
-              <p className="text-sm text-slate-500" style={entryMetaStyle}>
+              <p className="text-sm opacity-70" style={entryMetaStyle}>
                 {secondaryLine}
               </p>
             )
@@ -709,13 +709,13 @@ export default function BlockRenderer({
                         <span className="font-bold" style={titleStyle}>
                           {titleTextTransformValue(item.title, block, 'entryTitle')}
                         </span>
-                        <span className="text-sm text-slate-500" style={entryMetaStyle}>
+                        <span className="text-sm opacity-70" style={entryMetaStyle}>
                           {subLineVisible}
                         </span>
                       </p>
                     )}
                     {dateRangeVisible && (
-                      <p className="text-sm text-slate-500" style={entryMetaStyle}>
+                      <p className="text-sm opacity-70" style={entryMetaStyle}>
                         {dateRangeVisible}
                       </p>
                     )}
@@ -741,7 +741,7 @@ export default function BlockRenderer({
                   }
                   if (block.list === false) {
                     return (
-                      <p className="mt-0.5 whitespace-pre-line text-sm leading-relaxed text-slate-600" style={descriptionStyle}>
+                      <p className="mt-0.5 whitespace-pre-line text-sm leading-relaxed" style={descriptionStyle}>
                         {item.description}
                       </p>
                     )
@@ -750,7 +750,7 @@ export default function BlockRenderer({
                   return (
                     descriptionLines.length > 0 && (
                       <ul
-                        className="mt-0.5 list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400"
+                        className="mt-0.5 list-disc space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400"
                         style={descriptionStyle}
                       >
                         {descriptionLines.map((line, li) => (
@@ -892,7 +892,7 @@ export default function BlockRenderer({
       const resolvedAuthor = block.authorSlot ? library[block.authorSlot] || '' : block.author
       return (
         <blockquote
-          className={`border-l-4 pl-3 text-sm text-slate-600 ${textStyleClasses(block)}`}
+          className={`border-l-4 pl-3 text-sm ${textStyleClasses(block)}`}
           style={{
             borderColor: globalStyle.primaryColor,
             ...typographyStyle(block, resolveBodyFont(globalStyle), globalStyle.typographyScale?.p1?.sizePx),
@@ -911,7 +911,7 @@ export default function BlockRenderer({
     case BLOCK_TYPES.FOOTER:
       return (
         <div
-          className={`border-t border-slate-200 pt-3 text-xs text-slate-500 ${textStyleClasses(block)}`}
+          className={`border-t border-slate-200 pt-3 text-xs opacity-70 ${textStyleClasses(block)}`}
           style={textTransformStyle(block)}
         >
           {displayText(resolvedContent, block)}
@@ -969,7 +969,7 @@ export default function BlockRenderer({
         ? Math.max(20, block.height - 16)
         : Math.max(20, Math.min(block.width - 16, block.height - 32))
       const qr = <QRCodeImage value={value} size={size} />
-      const caption = block.caption && <p className="text-xs text-slate-500">{block.caption}</p>
+      const caption = block.caption && <p className="text-xs opacity-70">{block.caption}</p>
       const wrapperClass = {
         top: 'flex flex-col-reverse items-center gap-1.5',
         bottom: 'flex flex-col items-center gap-1.5',
@@ -1041,7 +1041,7 @@ export default function BlockRenderer({
             </p>
           )}
           <div
-            className={`flex text-sm text-slate-600 ${
+            className={`flex text-sm ${
               isRowContact ? `flex-wrap items-center gap-x-4 gap-y-1.5 ${justify}` : `flex-col gap-1.5 ${alignItems}`
             }`}
             style={{
@@ -1057,7 +1057,7 @@ export default function BlockRenderer({
           >
             {visible.map((f) => (
               <span key={f.key} className="flex items-center gap-2">
-                {block.showIcons && <f.Icon size={14} className="shrink-0 text-slate-400" />}
+                {block.showIcons && <f.Icon size={14} className="shrink-0 opacity-60" />}
                 {f.value}
               </span>
             ))}
@@ -1083,8 +1083,13 @@ export default function BlockRenderer({
             </p>
           )}
           <ul
-            className="list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400"
-            style={{ fontFamily: resolveBodyFont(globalStyle) }}
+            className="list-disc space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400"
+            style={{
+              fontFamily: resolveBodyFont(globalStyle),
+              fontSize: globalStyle.typographyScale?.p1?.sizePx
+                ? `${globalStyle.typographyScale.p1.sizePx}px`
+                : undefined,
+            }}
           >
             {items.map((item, i) => (
               <li key={i}>{item}</li>
@@ -1162,7 +1167,7 @@ export default function BlockRenderer({
               </p>
             )
             const secondaryNode = secondaryLine && (
-              <p className="text-sm text-slate-500" style={bodyStyle}>
+              <p className="text-sm opacity-70" style={bodyStyle}>
                 {secondaryLine}
               </p>
             )
@@ -1177,13 +1182,13 @@ export default function BlockRenderer({
                         <span className="font-bold" style={entryTitleStyle}>
                           {titleTextTransformValue(item.title, block, 'entryTitle')}
                         </span>
-                        <span className="text-sm text-slate-500" style={bodyStyle}>
+                        <span className="text-sm opacity-70" style={bodyStyle}>
                           {subLineVisible}
                         </span>
                       </p>
                     )}
                     {dateRangeVisible && (
-                      <p className="text-sm text-slate-500" style={bodyStyle}>
+                      <p className="text-sm opacity-70" style={bodyStyle}>
                         {dateRangeVisible}
                       </p>
                     )}
@@ -1202,13 +1207,13 @@ export default function BlockRenderer({
                 {showEntryDescription(block) &&
                   item.description &&
                   (block.list === false ? (
-                    <p className="mt-0.5 whitespace-pre-line text-sm leading-relaxed text-slate-600" style={bodyStyle}>
+                    <p className="mt-0.5 whitespace-pre-line text-sm leading-relaxed" style={bodyStyle}>
                       {item.description}
                     </p>
                   ) : (
                     descriptionLines.length > 0 && (
                       <ul
-                        className="mt-0.5 list-disc space-y-0.5 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400"
+                        className="mt-0.5 list-disc space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400"
                         style={bodyStyle}
                       >
                         {descriptionLines.map((line, li) => (

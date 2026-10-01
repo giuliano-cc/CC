@@ -32,7 +32,7 @@ const AUDIT_SAMPLES = [
   { type: BLOCK_TYPES.QUOTE, label: 'Quote', scale: 'P1', scaleNote: 'Same P1 fallback as a plain paragraph.' },
   { type: BLOCK_TYPES.FOOTER, label: 'Footer', scale: 'none', scaleNote: 'Fixed Tailwind "text-xs" — not wired to the scale at all.' },
   { type: BLOCK_TYPES.CONTACT_INFO, label: 'Contact Info', scale: 'P1', scaleNote: 'Body lines fall back to P1 (unless "Body size" is set on this block).' },
-  { type: BLOCK_TYPES.LEISURE, label: 'Leisure / Hobbies', scale: 'none', scaleNote: 'Hardcoded Tailwind "text-sm" — never reads P1, unlike every other body-text block.' },
+  { type: BLOCK_TYPES.LEISURE, label: 'Leisure / Hobbies', scale: 'P1', scaleNote: 'Falls back to Global Style\'s P1 size, same as every other body-text block.' },
   { type: BLOCK_TYPES.EXPERIENCE, label: 'Experience (entries)', scale: 'P1', scaleNote: 'Description/date lines fall back to P1; the entry title itself is a separate fixed-16px identity, not part of the scale.' },
   { type: BLOCK_TYPES.EDUCATION, label: 'Education (entries)', scale: 'P1', scaleNote: 'Same as Experience.' },
   { type: BLOCK_TYPES.SKILLS_CHART, label: 'Technical Skills (chart)', scale: 'none*', scaleNote: 'Title uses its own fixed sm/md/lg/xl baseline (not the editable H1–H3 scale) — only grouped with it visually in "Text styles used in this template".' },
@@ -47,7 +47,10 @@ const AUDIT_SAMPLES = [
 // picks there. This is a fact about CSS specificity, not a guess — it's
 // what actually makes Footer/Quote/CV Header ignore the page's text color
 // (see the findings list below the audit table).
-const HARDCODED_COLOR_CLASS = /\btext-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b/
+// (?<!:) excludes a variant-prefixed class like "marker:text-slate-400"
+// (colors only the bullet's ::marker pseudo-element, not the element's own
+// text) from being flagged as the element's own hardcoded color.
+const HARDCODED_COLOR_CLASS = /(?<!:)\btext-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b/
 
 function collectStyleInfo(root) {
   const rows = []
