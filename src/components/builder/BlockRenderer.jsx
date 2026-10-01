@@ -494,6 +494,11 @@ export default function BlockRenderer({
         <div
           className={`border-b border-slate-200 pb-3 ${headerSizePx ? '' : 'text-lg'} ${textStyleClasses(block)}`}
           style={{
+            // Same accent-color default as Heading and every section title
+            // (Experience/Education/Contact Info/chart titles) — Header is
+            // a title too, so it shouldn't be the one exception left on
+            // plain Text color.
+            color: block.color || globalStyle.primaryColor,
             fontFamily: resolveTitleFont(globalStyle),
             fontSize: headerSizePx ? `${headerSizePx}px` : undefined,
             ...textTransformStyle(block),
@@ -526,7 +531,9 @@ export default function BlockRenderer({
             <p
               className={`whitespace-pre-line font-bold leading-tight ${nameSizePx ? '' : 'text-lg'}`}
               style={{
-                color: block.color || undefined,
+                // Same accent-color default as Heading/Header/every
+                // section title — the name is this block's title line.
+                color: block.color || globalStyle.primaryColor,
                 fontFamily: resolveTitleFont(globalStyle),
                 fontSize: nameSizePx ? `${nameSizePx}px` : undefined,
               }}
