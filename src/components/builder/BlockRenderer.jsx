@@ -488,7 +488,7 @@ export default function BlockRenderer({
       return (
         <div
           className={`border-b border-slate-200 pb-3 text-lg ${textStyleClasses(block)}`}
-          style={textTransformStyle(block)}
+          style={{ fontFamily: resolveTitleFont(globalStyle), ...textTransformStyle(block) }}
         >
           {displayText(resolvedContent, block)}
         </div>
