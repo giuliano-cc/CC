@@ -26,7 +26,7 @@ import { alignToPage, alignToSelection, distribute } from '../utils/align'
 // is left unset); P2/P3 are available to reference or apply to a
 // specific block's own Body text size field, without a body-wide effect
 // of their own — only P1 has one, since nothing defaults to P2/P3.
-const DEFAULT_TYPOGRAPHY_SCALE = {
+export const DEFAULT_TYPOGRAPHY_SCALE = {
   h1: { sizePx: 48, bold: true, color: null, fontFamily: null },
   h2: { sizePx: 30, bold: true, color: null, fontFamily: null },
   h3: { sizePx: 24, bold: true, color: null, fontFamily: null },
@@ -35,7 +35,7 @@ const DEFAULT_TYPOGRAPHY_SCALE = {
   p3: { sizePx: 11, bold: false, color: null, fontFamily: null },
 }
 
-const DEFAULT_GLOBAL_STYLE = {
+export const DEFAULT_GLOBAL_STYLE = {
   primaryColor: '#2563eb',
   textColor: '#1e293b',
   pageBackground: '#ffffff',

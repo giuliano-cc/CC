@@ -10,6 +10,7 @@ import TemplatesPage from './pages/TemplatesPage'
 import DocumentsPage from './pages/DocumentsPage'
 import ContentLibraryPage from './pages/ContentLibraryPage'
 import TemplateBuilderPage from './pages/TemplateBuilderPage'
+import StyleAuditPage from './pages/StyleAuditPage'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/templates/:id" element={<TemplateBuilderPage />} />
+            <Route path="/debug-styles" element={<StyleAuditPage />} />
 
             <Route element={<DashboardLayout />}>
               <Route path="/templates" element={<TemplatesPage />} />
