@@ -33,8 +33,11 @@ const inputClasses =
 // (other than a `group` sub-field, e.g. the four contact fields folded
 // into "Contact") must appear in exactly one of these lists.
 const SECTIONS = [
-  { title: 'Identity', keys: ['name', 'title', 'usp', 'photo', 'signature'] },
-  { title: 'Profile & Quote', keys: ['profileSummary', 'quote', 'quoteAuthor'] },
+  { title: 'Identity', keys: ['name', 'title', 'usp', 'usp2', 'usp3', 'usp4', 'photo', 'signature'] },
+  {
+    title: 'Profile & Quote',
+    keys: ['profileSummary', 'profileSummary2', 'profileSummary3', 'profileSummary4', 'quote', 'quoteAuthor'],
+  },
   { title: 'Experience & Education', keys: ['experience', 'education'] },
   {
     title: 'Skills & Languages',
@@ -611,7 +614,7 @@ function SlotField({ slot, library, onChange, onBlur }) {
           placeholder={
             slot.key === 'qrValue'
               ? 'https://your-portfolio.com'
-              : slot.key === 'usp'
+              : slot.key === 'usp' || /^usp\d$/.test(slot.key)
                 ? 'What makes you different in one short line'
                 : slot.isList
                   ? 'Item 1\nItem 2\nItem 3'
@@ -707,11 +710,14 @@ function SectionTitleRow({ def, titles, languages, onChange, onBlur }) {
   )
 }
 
-// A collapsible group of SlotCards — open by default (nothing is hidden
-// on first load), collapsible from then on so a long library doesn't mean
-// endless scrolling once most sections are already filled in.
-function CollapsibleSection({ title, children }) {
-  const [isOpen, setIsOpen] = useState(true)
+// A collapsible group of SlotCards — collapsed by default so the whole
+// catalog doesn't render open-and-scrolling on first load; click a title to
+// expand just that section. `forceOpen` (set while a search is active)
+// overrides the collapsed state so matching sections stay visible without
+// needing a click.
+function CollapsibleSection({ title, children, forceOpen }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const open = forceOpen || isOpen
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white">
@@ -723,10 +729,10 @@ function CollapsibleSection({ title, children }) {
         <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
         <ChevronDown
           size={16}
-          className={`shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}
         />
       </button>
-      {isOpen && <div className="flex flex-col gap-4 border-t border-slate-100 p-4">{children}</div>}
+      {open && <div className="flex flex-col gap-4 border-t border-slate-100 p-4">{children}</div>}
     </section>
   )
 }
@@ -752,6 +758,20 @@ export default function ContentLibraryPage() {
   const importInputRef = useRef(null)
   const libraries = Object.fromEntries(languages.map((l) => [l.key, getLibrary(l.key)]))
   const titles = Object.fromEntries(languages.map((l) => [l.key, getTitleOverrides(l.key)]))
+
+  // Lets a long catalog be searched instead of scrolled: typing filters
+  // every section down to just the fields whose label matches, and expands
+  // those sections automatically (CollapsibleSection's `forceOpen`) so the
+  // results are visible without also having to click each one open.
+  const [searchQuery, setSearchQuery] = useState('')
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const isSearching = normalizedQuery.length > 0
+  const visibleSections = SECTIONS.map((section) => ({
+    ...section,
+    keys: isSearching
+      ? section.keys.filter((key) => CONTENT_SLOTS.find((s) => s.key === key)?.label.toLowerCase().includes(normalizedQuery))
+      : section.keys,
+  })).filter((section) => !isSearching || section.keys.length > 0)
 
   function handleChange(key, value, lang) {
     updateSlot(key, value, lang)
@@ -868,9 +888,19 @@ export default function ContentLibraryPage() {
         </div>
       </div>
 
+      <div className="relative mb-4 max-w-sm">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search for a field (e.g. &quot;profile&quot;, &quot;skills&quot;)..."
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+        />
+      </div>
+
       <div className="flex flex-col gap-4">
-        {SECTIONS.map((section) => (
-          <CollapsibleSection key={section.title} title={section.title}>
+        {visibleSections.map((section) => (
+          <CollapsibleSection key={section.title} title={section.title} forceOpen={isSearching}>
             {section.keys.map((key) => {
               const slot = CONTENT_SLOTS.find((s) => s.key === key)
               if (!slot) return null
@@ -887,22 +917,24 @@ export default function ContentLibraryPage() {
             })}
           </CollapsibleSection>
         ))}
-        <CollapsibleSection title="Section titles">
-          <p className="-mt-2 text-xs text-slate-400">
-            Customize the wording of any heading a CV shows (Experience, Education, Professional Profile, Quote,
-            ...) in either language. Leave a box empty to keep using the default shown as its placeholder.
-          </p>
-          {SECTION_TITLE_DEFS.map((def) => (
-            <SectionTitleRow
-              key={def.key}
-              def={def}
-              titles={titles}
-              languages={languages}
-              onChange={handleTitleChange}
-              onBlur={handleBlur}
-            />
-          ))}
-        </CollapsibleSection>
+        {!isSearching && (
+          <CollapsibleSection title="Section titles">
+            <p className="-mt-2 text-xs text-slate-400">
+              Customize the wording of any heading a CV shows (Experience, Education, Professional Profile, Quote,
+              ...) in either language. Leave a box empty to keep using the default shown as its placeholder.
+            </p>
+            {SECTION_TITLE_DEFS.map((def) => (
+              <SectionTitleRow
+                key={def.key}
+                def={def}
+                titles={titles}
+                languages={languages}
+                onChange={handleTitleChange}
+                onBlur={handleBlur}
+              />
+            ))}
+          </CollapsibleSection>
+        )}
       </div>
     </div>
   )

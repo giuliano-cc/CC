@@ -16,8 +16,18 @@ export const CONTENT_SLOTS = [
   { key: 'name', label: 'Full Name', multiline: false },
   { key: 'title', label: 'Title / Role', multiline: false },
   { key: 'usp', label: 'USP (shown in the header)', multiline: false },
+  // Up to 4 alternate versions of USP/Professional Profile, so a block can
+  // be bound to whichever one fits a given template/use case (a shorter
+  // header USP vs. a longer one, a profile tailored to a different role),
+  // without overwriting the main version.
+  { key: 'usp2', label: 'USP 2', multiline: false },
+  { key: 'usp3', label: 'USP 3', multiline: false },
+  { key: 'usp4', label: 'USP 4', multiline: false },
   { key: 'photo', label: 'Profile Photo', type: 'image' },
   { key: 'profileSummary', label: 'Professional Profile', multiline: true },
+  { key: 'profileSummary2', label: 'Professional Profile 2', multiline: true },
+  { key: 'profileSummary3', label: 'Professional Profile 3', multiline: true },
+  { key: 'profileSummary4', label: 'Professional Profile 4', multiline: true },
   // 'checklist' slots: each line has its own visibility checkbox, so an
   // item can be kept in the library without showing on the CV (see
   // utils/contentLists.js — library[key] stays the plain-text, checked-
