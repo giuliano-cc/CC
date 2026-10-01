@@ -822,8 +822,15 @@ function TitleVisibilityFields({ block, onChange }) {
 // Font size + line spacing for a block's body content (the entry list in
 // Experience/Education, the field list in Contact Info) — separate from
 // the block's own title size/color, which TitleSizeField controls.
+// No "Body text color" field here, deliberately — every other control in
+// this file that lets a block override its own text color (Text/Quote/
+// Heading's "Text color", Entry title color, ...) exists alongside a field
+// that already has NO working Global Style fallback of its own. Body text
+// here already inherits Global Style's Text color correctly once nothing
+// overrides it (see BlockRenderer.jsx) — adding a per-block color control
+// would recreate the exact "silently stuck on one color" bug this was all
+// fixed to get rid of, the moment someone opens this picker once.
 function BodyTextStyleFields({ block, onChange }) {
-  const { globalStyle } = useBuilder()
   return (
     <div className="flex flex-col gap-2">
       <Field label="Body font">
@@ -846,29 +853,43 @@ function BodyTextStyleFields({ block, onChange }) {
             className={inputClasses}
           />
         </Field>
-        <Field label="Body text color">
+        <Field label="Line spacing">
           <input
-            type="color"
-            value={block.bodyColor || globalStyle.textColor}
-            onChange={(e) => onChange({ bodyColor: e.target.value })}
-            className="h-9 w-full rounded-md border border-slate-200"
+            type="number"
+            min={1}
+            max={3}
+            step={0.05}
+            placeholder="1.6"
+            value={block.lineSpacing || ''}
+            onChange={(e) =>
+              onChange({ lineSpacing: e.target.value ? Number(e.target.value) : null })
+            }
+            className={inputClasses}
           />
         </Field>
       </div>
-      <Field label="Line spacing">
-        <input
-          type="number"
-          min={1}
-          max={3}
-          step={0.05}
-          placeholder="1.6"
-          value={block.lineSpacing || ''}
-          onChange={(e) =>
-            onChange({ lineSpacing: e.target.value ? Number(e.target.value) : null })
-          }
-          className={inputClasses}
-        />
-      </Field>
+      <div className="flex items-center gap-1.5">
+        <Field label="Letter spacing (px)">
+          <input
+            type="number"
+            step={0.1}
+            placeholder="0"
+            value={block.letterSpacing || ''}
+            onChange={(e) =>
+              onChange({ letterSpacing: e.target.value ? Number(e.target.value) : null })
+            }
+            className={inputClasses}
+          />
+        </Field>
+        <Field label="Background color">
+          <input
+            type="color"
+            value={block.bgColor || '#ffffff'}
+            onChange={(e) => onChange({ bgColor: e.target.value })}
+            className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
+          />
+        </Field>
+      </div>
     </div>
   )
 }

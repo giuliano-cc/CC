@@ -1058,7 +1058,8 @@ export default function BlockRenderer({
                 : globalStyle.typographyScale?.p1?.sizePx
                   ? `${globalStyle.typographyScale.p1.sizePx}px`
                   : undefined,
-              color: block.bodyColor || undefined,
+              letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : undefined,
+              backgroundColor: block.bgColor || undefined,
               lineHeight: block.lineSpacing || undefined,
               rowGap: block.lineSpacing && !isRowContact ? `${block.lineSpacing * 6}px` : undefined,
             }}
@@ -1158,7 +1159,8 @@ export default function BlockRenderer({
                 : globalStyle.typographyScale?.p1?.sizePx
                   ? `${globalStyle.typographyScale.p1.sizePx}px`
                   : undefined,
-              color: block.bodyColor || undefined,
+              letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : undefined,
+              backgroundColor: block.bgColor || undefined,
               lineHeight: block.lineSpacing || undefined,
             }
             // The title is always item.title, always bold — it never
