@@ -1019,15 +1019,29 @@ export default function BlockRenderer({
     }
 
     case BLOCK_TYPES.CONTACT_INFO: {
+      // Street and ZIP/City compose onto two separate lines (not one
+      // comma-joined line) — same two-line shape as a cover letter's
+      // recipient address — via a literal "\n", rendered with
+      // whitespace-pre-line below.
+      const composeAddress = (street, zip, city) =>
+        [street, [zip, city].filter((v) => v?.trim()).join(' ')].filter((v) => v?.trim()).join('\n')
       const fields = block.useLibraryContact
         ? [
-            { key: 'address', value: library.contactAddress, Icon: MapPin },
+            {
+              key: 'address',
+              value: composeAddress(library.contactStreet, library.contactZip, library.contactCity),
+              Icon: MapPin,
+            },
             { key: 'phone', value: library.contactPhone, Icon: Phone },
             { key: 'email', value: library.contactEmail, Icon: Mail },
             { key: 'website', value: library.contactWebsite, Icon: Globe },
           ]
         : [
-            { key: 'address', value: block.address, Icon: MapPin },
+            {
+              key: 'address',
+              value: composeAddress(block.addressStreet, block.addressZip, block.addressCity),
+              Icon: MapPin,
+            },
             { key: 'phone', value: block.phone, Icon: Phone },
             { key: 'email', value: block.email, Icon: Mail },
             { key: 'website', value: block.website, Icon: Globe },
@@ -1065,9 +1079,14 @@ export default function BlockRenderer({
             }}
           >
             {visible.map((f) => (
-              <span key={f.key} className="flex items-center gap-2">
-                {block.showIcons && <f.Icon size={14} className="shrink-0 opacity-60" />}
-                {f.value}
+              <span
+                key={f.key}
+                className={`flex gap-2 ${f.value.includes('\n') ? 'items-start' : 'items-center'}`}
+              >
+                {block.showIcons && (
+                  <f.Icon size={14} className={`shrink-0 opacity-60 ${f.value.includes('\n') ? 'mt-0.5' : ''}`} />
+                )}
+                <span className="whitespace-pre-line">{f.value}</span>
               </span>
             ))}
           </div>

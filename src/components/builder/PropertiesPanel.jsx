@@ -1651,7 +1651,6 @@ function SocialIconsProperties({ block, onChange }) {
 
 function ContactInfoProperties({ block, onChange }) {
   const fields = [
-    { key: 'address', label: 'Address' },
     { key: 'phone', label: 'Phone' },
     { key: 'email', label: 'Email' },
     { key: 'website', label: 'Website' },
@@ -1682,6 +1681,35 @@ function ContactInfoProperties({ block, onChange }) {
       </Field>
       {!block.useLibraryContact && (
         <div className="flex flex-col gap-3">
+          <Field label="Street & number">
+            <input
+              type="text"
+              value={block.addressStreet || ''}
+              onChange={(e) => onChange({ addressStreet: e.target.value })}
+              placeholder="Winzerhalde 109"
+              className={inputClasses}
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="ZIP / Postal code">
+              <input
+                type="text"
+                value={block.addressZip || ''}
+                onChange={(e) => onChange({ addressZip: e.target.value })}
+                placeholder="8049"
+                className={inputClasses}
+              />
+            </Field>
+            <Field label="City">
+              <input
+                type="text"
+                value={block.addressCity || ''}
+                onChange={(e) => onChange({ addressCity: e.target.value })}
+                placeholder="Zürich"
+                className={inputClasses}
+              />
+            </Field>
+          </div>
           {fields.map((f) => (
             <Field key={f.key} label={f.label}>
               <input

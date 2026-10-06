@@ -58,7 +58,13 @@ export const CONTENT_SLOTS = [
   // binding keeps working unchanged. The editor renders the four fields
   // instead of a raw textarea (see ContentLibraryPage's 'contactGroup' case).
   { key: 'contact', label: 'Contact', type: 'contactGroup' },
-  { key: 'contactAddress', label: 'Address', multiline: false, group: 'contact' },
+  // Street/ZIP/City as three separate fields (not one "Address" line) so
+  // the address can be composed on its own two lines — "Street number" /
+  // "ZIP City" — the same way a cover letter's recipient address already
+  // reads, instead of a single comma-joined line.
+  { key: 'contactStreet', label: 'Street & number', multiline: false, group: 'contact' },
+  { key: 'contactZip', label: 'ZIP / Postal code', multiline: false, group: 'contact' },
+  { key: 'contactCity', label: 'City', multiline: false, group: 'contact' },
   { key: 'contactPhone', label: 'Phone', multiline: false, group: 'contact' },
   { key: 'contactEmail', label: 'Email', multiline: false, group: 'contact' },
   { key: 'contactWebsite', label: 'Website', multiline: false, group: 'contact' },
@@ -293,21 +299,26 @@ export function ContentLibraryProvider({ children }) {
   }
 
   // Keeps each language's composed 'contact' text in sync with its own
-  // four structured fields, so existing contactsSlot/contentSlot bindings
+  // structured fields, so existing contactsSlot/contentSlot bindings
   // (which read 'contact' as one newline-joined string) keep working
-  // unchanged. Only touches a language once at least one of its
-  // structured fields has something in it, so a legacy freeform 'contact'
-  // value typed before this feature isn't wiped. Runs on every content
-  // change but bails out (same object reference, no re-render) once
-  // nothing is actually out of sync, so it can't loop on itself.
+  // unchanged. The street and ZIP/City lines compose as two separate
+  // lines (not comma-joined), so anything reading 'contact' line-by-line
+  // (CV Header's contact row, "Fill with my content") shows the address
+  // the same two-line way a cover letter's recipient address already does.
+  // Only touches a language once at least one of its structured fields has
+  // something in it, so a legacy freeform 'contact' value typed before
+  // this feature isn't wiped. Runs on every content change but bails out
+  // (same object reference, no re-render) once nothing is actually out of
+  // sync, so it can't loop on itself.
   useEffect(() => {
     setState((prev) => {
       let changed = false
       const nextContent = { ...prev.content }
       CONTENT_LANGUAGES.forEach(({ key: lang }) => {
         const lib = prev.content[lang]
-        const parts = [lib.contactAddress, lib.contactPhone, lib.contactEmail, lib.contactWebsite].filter((v) =>
-          v?.trim(),
+        const zipCity = [lib.contactZip, lib.contactCity].filter((v) => v?.trim()).join(' ')
+        const parts = [lib.contactStreet, zipCity, lib.contactPhone, lib.contactEmail, lib.contactWebsite].filter(
+          (v) => v?.trim(),
         )
         if (parts.length === 0) return
         const composed = parts.join('\n')

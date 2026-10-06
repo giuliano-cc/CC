@@ -191,26 +191,59 @@ function SocialLinksField({ value, onChange }) {
 }
 
 function ContactGroupField({ library, onChange }) {
-  const fields = [
-    { key: 'contactAddress', label: 'Address', placeholder: '123 Main St, City' },
+  const otherFields = [
     { key: 'contactPhone', label: 'Phone', placeholder: '+00 000 000 0000' },
     { key: 'contactEmail', label: 'Email', placeholder: 'you@example.com' },
     { key: 'contactWebsite', label: 'Website', placeholder: 'yourwebsite.com' },
   ]
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {fields.map((field) => (
-        <label key={field.key} className="flex flex-col gap-1">
-          <span className="text-xs text-slate-500">{field.label}</span>
+    <div className="flex flex-col gap-2">
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-slate-500">Street & number</span>
+        <input
+          type="text"
+          value={library.contactStreet}
+          onChange={(e) => onChange('contactStreet', e.target.value)}
+          placeholder="Winzerhalde 109"
+          className={inputClasses}
+        />
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">ZIP / Postal code</span>
           <input
             type="text"
-            value={library[field.key]}
-            onChange={(e) => onChange(field.key, e.target.value)}
-            placeholder={field.placeholder}
+            value={library.contactZip}
+            onChange={(e) => onChange('contactZip', e.target.value)}
+            placeholder="8049"
             className={inputClasses}
           />
         </label>
-      ))}
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">City</span>
+          <input
+            type="text"
+            value={library.contactCity}
+            onChange={(e) => onChange('contactCity', e.target.value)}
+            placeholder="Zürich"
+            className={inputClasses}
+          />
+        </label>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {otherFields.map((field) => (
+          <label key={field.key} className="flex flex-col gap-1">
+            <span className="text-xs text-slate-500">{field.label}</span>
+            <input
+              type="text"
+              value={library[field.key]}
+              onChange={(e) => onChange(field.key, e.target.value)}
+              placeholder={field.placeholder}
+              className={inputClasses}
+            />
+          </label>
+        ))}
+      </div>
     </div>
   )
 }
