@@ -90,11 +90,53 @@ const STRUCTURED_LIST_KEYS = CONTENT_SLOTS.filter((s) =>
 // reading `library.photo`/`library.signature` unchanged.
 const IMAGE_SLOT_KEYS = CONTENT_SLOTS.filter((s) => s.type === 'image').map((s) => s.key)
 
-const DEFAULT_SHARED = Object.fromEntries(IMAGE_SLOT_KEYS.map((key) => [key, '']))
+// Same idea, for plain-text slots whose VALUE doesn't vary by language
+// either: a person's own name, their street/ZIP/city/phone/email/website
+// and the social links they list, plus 'contact' itself (the plain-text
+// line composed from the structured fields below, in sync with them — see
+// the effect further down). Translating "Jane Doe" or a street address
+// into German makes no sense, so these are kept once instead of needing
+// to be typed twice and kept in sync by hand the way a wording field does.
+const TEXT_SHARED_KEYS = [
+  'name',
+  'contact',
+  'contactStreet',
+  'contactZip',
+  'contactCity',
+  'contactPhone',
+  'contactEmail',
+  'contactWebsite',
+  'socialLinks',
+]
+
+// 'checklist'/'languages'/'entries' slots named here are shared the same
+// way — their items are names/terms, not sentences, so they read the same
+// regardless of the document's language (e.g. a Technical Skills tag like
+// "React" or "AWS" isn't translated). Each one's own "*Items" JSON
+// companion (see STRUCTURED_LIST_KEYS) is shared right along with it, so
+// the checked/unchecked state and levels stay in sync too, not just the
+// plain-text value.
+const SHARED_STRUCTURED_LIST_KEYS = ['skills']
+
+// Exported so ContentLibraryPage.jsx can render these slots once instead
+// of in an English/German pair, the same way it already does for photo/
+// signature — see SlotCard's single-column branch there.
+export const SHARED_SLOT_KEYS = [
+  ...IMAGE_SLOT_KEYS,
+  ...TEXT_SHARED_KEYS,
+  ...SHARED_STRUCTURED_LIST_KEYS,
+  ...SHARED_STRUCTURED_LIST_KEYS.map((key) => `${key}Items`),
+]
+
+const DEFAULT_SHARED = Object.fromEntries(SHARED_SLOT_KEYS.map((key) => [key, '']))
 
 const DEFAULT_LANGUAGE_LIBRARY = {
-  ...Object.fromEntries(CONTENT_SLOTS.filter((slot) => slot.type !== 'image').map((slot) => [slot.key, ''])),
-  ...Object.fromEntries(STRUCTURED_LIST_KEYS.map((key) => [`${key}Items`, ''])),
+  ...Object.fromEntries(
+    CONTENT_SLOTS.filter((slot) => !SHARED_SLOT_KEYS.includes(slot.key)).map((slot) => [slot.key, '']),
+  ),
+  ...Object.fromEntries(
+    STRUCTURED_LIST_KEYS.filter((key) => !SHARED_SLOT_KEYS.includes(key)).map((key) => [`${key}Items`, '']),
+  ),
 }
 
 // A custom per-language override for a section heading (see
@@ -112,12 +154,15 @@ function isValidLanguage(lang) {
 }
 
 // Picks whichever of the given per-language maps has something in each
-// image slot (English first, then German) — used both to migrate a
-// library saved before photo/signature were shared, and to fold a
-// bilingual import's own images into the shared store.
+// shared slot (English first, then German) — used both to migrate a
+// library saved before a given slot (image or text) became shared, and to
+// fold a bilingual import's own values into the shared store. Harmless to
+// run even once a slot has long been shared: nothing writes that key into
+// a per-language map any more (see updateSlot/DEFAULT_LANGUAGE_LIBRARY),
+// so it simply returns '' for it from then on.
 function extractShared(...maps) {
   return Object.fromEntries(
-    IMAGE_SLOT_KEYS.map((key) => [key, maps.map((m) => m?.[key]).find((v) => v?.trim()) || '']),
+    SHARED_SLOT_KEYS.map((key) => [key, maps.map((m) => m?.[key]).find((v) => v?.trim()) || '']),
   )
 }
 
@@ -144,14 +189,19 @@ function blankState() {
 // (each optional) — shared usage between loadInitialState (localStorage)
 // and importLibrary (a backup file), which hit the same legacy shapes but
 // nested differently (see the comments at each call site below).
-// `sharedMap` missing (not just empty) means it pre-dates the shared
-// image store entirely, so it's derived from whichever language already
-// had that image. `titlesMap` missing means it pre-dates section title
-// overrides entirely, so every heading just starts at its built-in
-// default (see utils/sectionTitles.js) until customized.
+// `sharedMap` missing entirely (never been saved) means every shared slot
+// is derived from whichever language already had it. A `sharedMap` that
+// exists but pre-dates a *newer* shared slot (e.g. a library saved back
+// when only photo/signature were shared, before name/contact/social links
+// joined them) still needs that newer slot's value migrated the same way —
+// so `extractShared` always runs first and `sharedMap`'s own values (for
+// whichever keys it already has) are layered on top, winning where both
+// exist. `titlesMap` missing means it pre-dates section title overrides
+// entirely, so every heading just starts at its built-in default (see
+// utils/sectionTitles.js) until customized.
 function buildState(enMap, deMap, sharedMap, titlesMap) {
   return {
-    shared: sharedMap ? { ...DEFAULT_SHARED, ...sharedMap } : { ...DEFAULT_SHARED, ...extractShared(enMap, deMap) },
+    shared: { ...DEFAULT_SHARED, ...extractShared(enMap, deMap), ...sharedMap },
     content: {
       en: { ...DEFAULT_LANGUAGE_LIBRARY, ...enMap },
       de: { ...DEFAULT_LANGUAGE_LIBRARY, ...deMap },
@@ -252,12 +302,12 @@ export function ContentLibraryProvider({ children }) {
     return { ...content[safeLang], ...shared }
   }
 
-  // `lang` only matters for a non-image slot — an image slot always
+  // `lang` only matters for a non-shared slot — a shared slot always
   // writes to the shared store regardless of which language is passed,
-  // so every existing imageSlot caller (which never passed one) keeps
-  // working unchanged.
+  // so every existing caller for one of these keys (which never passed a
+  // language, same as an imageSlot caller before) keeps working unchanged.
   function updateSlot(key, value, lang) {
-    if (IMAGE_SLOT_KEYS.includes(key)) {
+    if (SHARED_SLOT_KEYS.includes(key)) {
       setState((prev) => ({ ...prev, shared: { ...prev.shared, [key]: value } }))
       return
     }
@@ -287,8 +337,9 @@ export function ContentLibraryProvider({ children }) {
   // Overwrites every wording field (and section title override) of
   // `toLang` with `fromLang`'s own — a starting point for translating
   // (copy English into German, then edit the copy in place) instead of
-  // retyping everything from a blank language. Shared image slots aren't
-  // touched (there's only one copy of those to begin with).
+  // retyping everything from a blank language. Shared slots (photo/
+  // signature, name, contact details, social links) aren't touched —
+  // there's only one copy of those to begin with.
   function copyLanguageContent(fromLang, toLang) {
     if (!isValidLanguage(fromLang) || !isValidLanguage(toLang) || fromLang === toLang) return
     setState((prev) => ({
@@ -298,38 +349,36 @@ export function ContentLibraryProvider({ children }) {
     }))
   }
 
-  // Keeps each language's composed 'contact' text in sync with its own
-  // structured fields, so existing contactsSlot/contentSlot bindings
+  // Keeps the shared, composed 'contact' text in sync with its own
+  // structured fields (street/ZIP/city/phone/email/website — all shared
+  // across languages, like the rest of this effect's inputs, since none of
+  // them are wording), so existing contactsSlot/contentSlot bindings
   // (which read 'contact' as one newline-joined string) keep working
   // unchanged. The street and ZIP/City lines compose as two separate
   // lines (not comma-joined), so anything reading 'contact' line-by-line
   // (CV Header's contact row, "Fill with my content") shows the address
   // the same two-line way a cover letter's recipient address already does.
-  // Only touches a language once at least one of its structured fields has
+  // Only touches 'contact' once at least one structured field has
   // something in it, so a legacy freeform 'contact' value typed before
-  // this feature isn't wiped. Runs on every content change but bails out
-  // (same object reference, no re-render) once nothing is actually out of
-  // sync, so it can't loop on itself.
+  // this feature isn't wiped. Runs on every shared-state change but bails
+  // out (same object reference, no re-render) once nothing is actually out
+  // of sync, so it can't loop on itself.
   useEffect(() => {
     setState((prev) => {
-      let changed = false
-      const nextContent = { ...prev.content }
-      CONTENT_LANGUAGES.forEach(({ key: lang }) => {
-        const lib = prev.content[lang]
-        const zipCity = [lib.contactZip, lib.contactCity].filter((v) => v?.trim()).join(' ')
-        const parts = [lib.contactStreet, zipCity, lib.contactPhone, lib.contactEmail, lib.contactWebsite].filter(
-          (v) => v?.trim(),
-        )
-        if (parts.length === 0) return
-        const composed = parts.join('\n')
-        if (composed !== lib.contact) {
-          nextContent[lang] = { ...lib, contact: composed }
-          changed = true
-        }
-      })
-      return changed ? { ...prev, content: nextContent } : prev
+      const zipCity = [prev.shared.contactZip, prev.shared.contactCity].filter((v) => v?.trim()).join(' ')
+      const parts = [
+        prev.shared.contactStreet,
+        zipCity,
+        prev.shared.contactPhone,
+        prev.shared.contactEmail,
+        prev.shared.contactWebsite,
+      ].filter((v) => v?.trim())
+      if (parts.length === 0) return prev
+      const composed = parts.join('\n')
+      if (composed === prev.shared.contact) return prev
+      return { ...prev, shared: { ...prev.shared, contact: composed } }
     })
-  }, [content])
+  }, [shared])
 
   // Backup: both languages' content plus the shared images and section
   // title overrides, as a downloadable JSON file (not just one language —

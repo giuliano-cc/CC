@@ -1051,6 +1051,18 @@ export default function BlockRenderer({
       const alignItems = block.align === 'center' ? 'items-center' : block.align === 'right' ? 'items-end' : 'items-start'
       const justify =
         block.align === 'center' ? 'justify-center' : block.align === 'right' ? 'justify-end' : 'justify-start'
+      // Two mechanisms used to govern the same vertical rhythm here:
+      // `lineHeight` spaces wrapped lines within one field (the address'
+      // own "Street" / "ZIP City" lines), while `rowGap` spaces one field
+      // from the next (address from phone, phone from email). Deriving
+      // both from the same font size + line-height multiplier keeps that
+      // "line step" visually identical everywhere instead of a field-to-
+      // field gap landing at a fixed, unrelated value (previously
+      // Tailwind's own "gap-1.5" default) while same-field wrapped lines
+      // used the font's own line-height.
+      const contactFontSizePx = block.bodyFontSize || globalStyle.typographyScale?.p1?.sizePx || 14
+      const contactLineHeight = block.lineSpacing || 1.5
+      const contactRowGapPx = (contactLineHeight - 1) * contactFontSizePx
       return (
         <div className={`flex flex-col gap-1.5 ${isRowContact ? '' : alignItems}`}>
           {block.title && block.showTitle !== false && (
@@ -1067,15 +1079,11 @@ export default function BlockRenderer({
             }`}
             style={{
               fontFamily: block.bodyFontFamily || resolveBodyFont(globalStyle),
-              fontSize: block.bodyFontSize
-                ? `${block.bodyFontSize}px`
-                : globalStyle.typographyScale?.p1?.sizePx
-                  ? `${globalStyle.typographyScale.p1.sizePx}px`
-                  : undefined,
+              fontSize: `${contactFontSizePx}px`,
               letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : undefined,
               backgroundColor: block.bgColor || undefined,
-              lineHeight: block.lineSpacing || undefined,
-              rowGap: block.lineSpacing && !isRowContact ? `${block.lineSpacing * 6}px` : undefined,
+              lineHeight: contactLineHeight,
+              rowGap: isRowContact ? undefined : `${contactRowGapPx}px`,
             }}
           >
             {visible.map((f) => (

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { ArrowLeft, ChevronDown, Copy, Crop, Download, Trash2, Upload, User } from 'lucide-react'
-import { CONTENT_SLOTS, useContentLibrary } from '../context/ContentLibraryContext'
+import { CONTENT_SLOTS, SHARED_SLOT_KEYS, useContentLibrary } from '../context/ContentLibraryContext'
 import ImageCropModal from '../components/builder/ImageCropModal'
 import { resizeImageFile } from '../utils/imageResize'
 import { SECTION_TITLE_DEFS } from '../utils/sectionTitles'
@@ -660,8 +660,9 @@ function SlotField({ slot, library, onChange, onBlur }) {
   )
 }
 
-// One CONTENT_SLOTS card. A photo/signature ('image' type) is shared
-// across languages (see ContentLibraryContext.jsx) so it's uploaded once;
+// One CONTENT_SLOTS card. A slot whose value never varies by language
+// (see SHARED_SLOT_KEYS in ContentLibraryContext.jsx — photo/signature,
+// name, contact details, social links) is entered once instead of twice;
 // everything else renders side by side, one column per language, instead
 // of behind a single toggle — so writing the German version next to the
 // English one (or copying a date/number that doesn't need translating)
@@ -678,6 +679,21 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
           value={libraries[languages[0].key][slot.key]}
           onChange={(v) => onChange(slot.key, v)}
           variant={slot.key === 'signature' ? 'signature' : 'photo'}
+        />
+      </div>
+    )
+  }
+
+  if (SHARED_SLOT_KEYS.includes(slot.key)) {
+    return (
+      <div className={cardClasses}>
+        <label className="text-sm font-semibold text-slate-800">{slot.label}</label>
+        <p className="-mt-1 text-xs text-slate-400">Shared across languages — the same for every document.</p>
+        <SlotField
+          slot={slot}
+          library={libraries[languages[0].key]}
+          onChange={(key, value) => onChange(key, value, languages[0].key)}
+          onBlur={onBlur}
         />
       </div>
     )
