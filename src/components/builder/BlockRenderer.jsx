@@ -1019,12 +1019,18 @@ export default function BlockRenderer({
     }
 
     case BLOCK_TYPES.CONTACT_INFO: {
-      // Street and ZIP/City compose onto two separate lines (not one
-      // comma-joined line) — same two-line shape as a cover letter's
-      // recipient address — via a literal "\n", rendered with
-      // whitespace-pre-line below.
+      const isRowContact = block.layout === 'row'
+      // In "Stacked" layout, street and ZIP/City compose onto two separate
+      // lines (not one comma-joined line) — same two-line shape as a cover
+      // letter's recipient address — via a literal "\n", rendered with
+      // whitespace-pre-line below. In "Row" layout every field already
+      // sits inline next to the others (flex-wrap), so a line break inside
+      // the address would look broken there — street and ZIP/City join on
+      // the same line with a comma instead, same as the other fields.
       const composeAddress = (street, zip, city) =>
-        [street, [zip, city].filter((v) => v?.trim()).join(' ')].filter((v) => v?.trim()).join('\n')
+        [street, [zip, city].filter((v) => v?.trim()).join(' ')]
+          .filter((v) => v?.trim())
+          .join(isRowContact ? ', ' : '\n')
       const fields = block.useLibraryContact
         ? [
             {
@@ -1047,7 +1053,6 @@ export default function BlockRenderer({
             { key: 'website', value: block.website, Icon: Globe },
           ]
       const visible = fields.filter((f) => f.value?.trim())
-      const isRowContact = block.layout === 'row'
       const alignItems = block.align === 'center' ? 'items-center' : block.align === 'right' ? 'items-end' : 'items-start'
       const justify =
         block.align === 'center' ? 'justify-center' : block.align === 'right' ? 'justify-end' : 'justify-start'
