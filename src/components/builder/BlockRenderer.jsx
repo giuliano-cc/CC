@@ -952,9 +952,17 @@ export default function BlockRenderer({
       // they read as ornamental punctuation rather than more text — off
       // by default (see Quote's defaultProps), since not every quote style
       // wants them.
+      // `lineHeight: 0` here used to mean the glyph painted without
+      // reserving any real vertical space in the paragraph's line box, so
+      // at this oversized font-size it visually poked out above/below the
+      // block's own (fixed-height, clipped) box — the block never grew to
+      // contain it. A normal line-height makes the browser grow the line
+      // box to actually contain the big glyph, so it only clips if the
+      // whole block is too short for the paragraph it now contains —
+      // exactly like any other block that outgrows its own height.
       const quoteMarkStyle = {
         fontSize: '3.2em',
-        lineHeight: 0,
+        lineHeight: 1,
         verticalAlign: '-0.3em',
         color: globalStyle.primaryColor,
         opacity: 0.45,

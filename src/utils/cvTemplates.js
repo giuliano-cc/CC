@@ -169,8 +169,9 @@ function coverLetterBlocks(prefix) {
     },
     {
       id: `${prefix}-cl-date`,
-      type: 'text',
-      content: 'Month Day, Year',
+      type: 'date',
+      date: null,
+      format: 'long',
       align: 'left',
       page: 2,
     },
