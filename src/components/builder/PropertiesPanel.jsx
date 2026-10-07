@@ -2977,15 +2977,16 @@ function BlockPropertiesPanel({ block, onChange }) {
             Show oversized “ ” quotation marks
           </label>
           {block.showQuoteMarks && (
-            <Field label="Marker size">
-              <select
-                value={block.quoteMarkSize || 'L'}
-                onChange={(e) => onChange({ quoteMarkSize: e.target.value })}
+            <Field label="Marker size (em)">
+              <input
+                type="number"
+                min={1}
+                max={6}
+                step={0.1}
+                value={typeof block.quoteMarkSize === 'number' ? block.quoteMarkSize : 1.6}
+                onChange={(e) => onChange({ quoteMarkSize: Number(e.target.value) })}
                 className={inputClasses}
-              >
-                <option value="L">L</option>
-                <option value="XL">XL</option>
-              </select>
+              />
             </Field>
           )}
           <label className="flex items-center gap-1.5 text-xs text-slate-600">

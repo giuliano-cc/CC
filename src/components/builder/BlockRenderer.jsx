@@ -55,12 +55,6 @@ function EntryLayoutCycleButton({ block, onUpdateBlock }) {
   )
 }
 
-// Quote block's oversized marks (see the QUOTE case): 'L' is the
-// original size, 'XL' the later "double it" size — both kept as named
-// options rather than a free-form size input, since this is purely
-// decorative and two deliberate sizes cover the actual request.
-export const QUOTE_MARK_SIZES = { L: '1.6em', XL: '3.2em' }
-
 function alignClass(align) {
   return align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
 }
@@ -970,8 +964,24 @@ export default function BlockRenderer({
       // the paragraph's line-height at all, and `fontStyle: 'normal'`
       // keeps it upright regardless of the block's own italic setting,
       // since it's ornamental punctuation, not part of the quoted text.
+      // A plain numeric size (em, relative to the block's own font-size)
+      // instead of named presets — simpler to reason about, and lets
+      // someone dial in exactly how big they want it instead of picking
+      // from two fixed steps. `block.quoteMarkSize` may still hold the
+      // older 'L'/'XL' preset strings from before this changed; mapped
+      // to their old numeric values so an existing document's marks
+      // don't jump to a different size.
+      const legacyMarkSizes = { L: 1.6, XL: 3.2 }
+      const markSizeEm =
+        typeof block.quoteMarkSize === 'number' ? block.quoteMarkSize : legacyMarkSizes[block.quoteMarkSize] ?? 1.6
+      // The gap above/below the quote is sized off the *body* text's own
+      // font size, not the mark's own (much bigger) one — a negative
+      // margin pulling each mark about half a body line closer to the
+      // quote, however big the mark itself is drawn.
+      const bodyFontSizePx = block.fontSize || globalStyle.typographyScale?.p1?.sizePx || 14
+      const markGapPx = Math.round(bodyFontSizePx * 0.75)
       const quoteMarkStyle = {
-        fontSize: QUOTE_MARK_SIZES[block.quoteMarkSize] || QUOTE_MARK_SIZES.L,
+        fontSize: `${markSizeEm}em`,
         lineHeight: 1,
         fontStyle: 'normal',
         color: globalStyle.primaryColor,
@@ -990,13 +1000,13 @@ export default function BlockRenderer({
           }}
         >
           {block.showQuoteMarks && (
-            <div aria-hidden="true" style={quoteMarkStyle} className="text-left">
+            <div aria-hidden="true" style={{ ...quoteMarkStyle, marginBottom: `-${markGapPx}px` }} className="text-left">
               “
             </div>
           )}
           <p>{displayText(resolvedContent, block)}</p>
           {block.showQuoteMarks && (
-            <div aria-hidden="true" style={quoteMarkStyle} className="text-right">
+            <div aria-hidden="true" style={{ ...quoteMarkStyle, marginTop: `-${markGapPx}px` }} className="text-right">
               ”
             </div>
           )}
