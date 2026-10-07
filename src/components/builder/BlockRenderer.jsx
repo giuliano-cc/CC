@@ -917,8 +917,9 @@ export default function BlockRenderer({
       // by default (see Quote's defaultProps), since not every quote style
       // wants them.
       const quoteMarkStyle = {
-        fontSize: '1.6em',
+        fontSize: '3.2em',
         lineHeight: 0,
+        verticalAlign: '-0.3em',
         color: globalStyle.primaryColor,
         opacity: 0.45,
       }

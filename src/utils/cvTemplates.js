@@ -179,6 +179,7 @@ function coverLetterBlocks(prefix) {
       type: 'text',
       content: 'Hiring Manager\nCompany Name',
       align: 'left',
+      contentSlot: 'coverLetterRecipients',
       page: 2,
     },
     {
