@@ -304,6 +304,8 @@ export const BLOCK_DEFINITIONS = [
       author: '',
       authorSlot: null,
       showQuoteMarks: false,
+      quoteMarkSize: 'L',
+      showBorder: true,
     },
   },
   {

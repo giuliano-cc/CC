@@ -2530,15 +2530,16 @@ function BlockPropertiesPanel({ block, onChange }) {
   const { getLibrary } = useContentLibrary()
   const library = getLibrary(globalStyle.contentLanguage)
 
-  // The oversized quote marks make the paragraph's first/last line
-  // taller — on a block sized to fit the plain text, that extra height
-  // has nowhere to go and clips against the block's own (fixed-height,
-  // overflow-hidden) box. Keying this on block.showQuoteMarks means it
-  // runs both right after the checkbox below is checked, and whenever
-  // this panel opens on a block that already had it on (a document saved
-  // before this effect existed, or just reselecting the block) — either
-  // way, nothing more than seeing the block selected here is needed; it
-  // only ever grows the block, never shrinks it.
+  // The oversized quote marks each add their own extra line above/below
+  // the quote — on a block sized to fit just the plain text, that extra
+  // height has nowhere to go and clips against the block's own
+  // (fixed-height, overflow-hidden) box. Keying this on
+  // showQuoteMarks/quoteMarkSize means it runs right after either is
+  // changed below, and whenever this panel opens on a block that already
+  // had marks on (a document saved before this effect existed, or just
+  // reselecting the block) — either way, nothing more than seeing the
+  // block selected here is needed; it only ever grows the block, never
+  // shrinks it (so switching from XL back to L doesn't auto-shrink it).
   useEffect(() => {
     if (block.type !== BLOCK_TYPES.QUOTE || !block.showQuoteMarks) return
     const raf = requestAnimationFrame(() => {
@@ -2548,7 +2549,7 @@ function BlockPropertiesPanel({ block, onChange }) {
       }
     })
     return () => cancelAnimationFrame(raf)
-  }, [block.id, block.showQuoteMarks])
+  }, [block.id, block.showQuoteMarks, block.quoteMarkSize])
 
   if (block.type === BLOCK_TYPES.CV_HEADER) {
     return (
@@ -2974,6 +2975,26 @@ function BlockPropertiesPanel({ block, onChange }) {
               onChange={(e) => onChange({ showQuoteMarks: e.target.checked })}
             />
             Show oversized “ ” quotation marks
+          </label>
+          {block.showQuoteMarks && (
+            <Field label="Marker size">
+              <select
+                value={block.quoteMarkSize || 'L'}
+                onChange={(e) => onChange({ quoteMarkSize: e.target.value })}
+                className={inputClasses}
+              >
+                <option value="L">L</option>
+                <option value="XL">XL</option>
+              </select>
+            </Field>
+          )}
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={block.showBorder !== false}
+              onChange={(e) => onChange({ showBorder: e.target.checked })}
+            />
+            Show vertical bar
           </label>
         </>
       )}

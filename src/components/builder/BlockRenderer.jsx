@@ -55,6 +55,12 @@ function EntryLayoutCycleButton({ block, onUpdateBlock }) {
   )
 }
 
+// Quote block's oversized marks (see the QUOTE case): 'L' is the
+// original size, 'XL' the later "double it" size — both kept as named
+// options rather than a free-form size input, since this is purely
+// decorative and two deliberate sizes cover the actual request.
+export const QUOTE_MARK_SIZES = { L: '1.6em', XL: '3.2em' }
+
 function alignClass(align) {
   return align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
 }
@@ -965,17 +971,21 @@ export default function BlockRenderer({
       // keeps it upright regardless of the block's own italic setting,
       // since it's ornamental punctuation, not part of the quoted text.
       const quoteMarkStyle = {
-        fontSize: '3.2em',
+        fontSize: QUOTE_MARK_SIZES[block.quoteMarkSize] || QUOTE_MARK_SIZES.L,
         lineHeight: 1,
         fontStyle: 'normal',
         color: globalStyle.primaryColor,
         opacity: 0.45,
       }
+      // `showBorder` (default true) toggles just the border-related
+      // classes/color — `pl-3` stays either way, so hiding the bar
+      // doesn't also yank the text back out to the block's own edge.
+      const showBorder = block.showBorder !== false
       return (
         <blockquote
-          className={`border-l-4 pl-3 text-sm ${textStyleClasses(block)}`}
+          className={`${showBorder ? 'border-l-4' : ''} pl-3 text-sm ${textStyleClasses(block)}`}
           style={{
-            borderColor: globalStyle.primaryColor,
+            borderColor: showBorder ? globalStyle.primaryColor : undefined,
             ...typographyStyle(block, resolveBodyFont(globalStyle), globalStyle.typographyScale?.p1?.sizePx),
           }}
         >
