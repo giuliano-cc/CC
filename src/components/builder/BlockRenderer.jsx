@@ -960,10 +960,18 @@ export default function BlockRenderer({
       // box to actually contain the big glyph, so it only clips if the
       // whole block is too short for the paragraph it now contains —
       // exactly like any other block that outgrows its own height.
+      // `fontStyle: 'normal'` overrides the block's own italic (Quote
+      // defaults to italic body text) specifically for these marks: an
+      // italic glyph's slant makes it paint outside its own layout box
+      // (most fonts give italic characters a right-leaning overhang) —
+      // invisible to getBoundingClientRect, which only reports the
+      // (unslanted) layout box, but still clipped on screen by the
+      // block's overflow-hidden. Upright marks don't have that overhang.
       const quoteMarkStyle = {
         fontSize: '3.2em',
         lineHeight: 1,
         verticalAlign: '-0.3em',
+        fontStyle: 'normal',
         color: globalStyle.primaryColor,
         opacity: 0.45,
       }
