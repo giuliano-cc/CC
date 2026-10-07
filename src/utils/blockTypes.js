@@ -882,7 +882,14 @@ export const NESTABLE_BLOCK_DEFINITIONS = BLOCK_DEFINITIONS.filter(
 // 'entries'-bound Text block structurally), so it needs to be reachable
 // from this palette directly.
 const CONTENT_LIBRARY_PALETTE_SKIP_TYPES = new Set(['image', 'social', 'contactGroup', 'languages'])
-const CONTENT_LIBRARY_PALETTE_SKIP_KEYS = new Set(['skills', 'hobbies', 'qrValue', 'experience', 'education'])
+// 'quote': the Content Library's "Quote" field already has a dedicated
+// way in — drag in the Quote block itself, then bind its own "Content
+// from library" picker to this slot, which renders it properly (as a
+// blockquote with its author line and optional oversized marks) instead
+// of as a plain Text block. Without this, the palette showed "Quote"
+// twice: the real Quote block, and this field's own generic Text-block
+// entry right next to it.
+const CONTENT_LIBRARY_PALETTE_SKIP_KEYS = new Set(['skills', 'hobbies', 'qrValue', 'experience', 'education', 'quote'])
 export const CONTENT_LIBRARY_PALETTE_ITEMS = CONTENT_SLOTS.filter(
   (slot) =>
     !slot.group &&
