@@ -2276,21 +2276,36 @@ function MultiSelectPanel({ count }) {
   )
 }
 
+// Measures a block's own rendered content (see FreeBlock.jsx's
+// data-block-content wrapper) by briefly letting the node size itself
+// (`max-content`, overflow visible) instead of staying pinned to its
+// current box, then reverting before the next paint — not just reading
+// scrollHeight/scrollWidth, which a wrapper already bigger than its
+// content would just echo back unchanged. `axis` picks which dimension(s)
+// are actually measured (see fitToContent below for what each one means);
+// returns `null` if the block isn't on the page (no matching node).
+function measureNaturalSize(blockId, axis = 'both') {
+  const node = document.querySelector(`[data-block-content="${blockId}"]`)
+  if (!node) return null
+  const prevWidth = node.style.width
+  const prevHeight = node.style.height
+  const prevOverflow = node.style.overflow
+  if (axis !== 'height') node.style.width = 'max-content'
+  if (axis !== 'width') node.style.height = 'max-content'
+  node.style.overflow = 'visible'
+  const rect = node.getBoundingClientRect()
+  const naturalWidth = rect.width
+  const naturalHeight = rect.height
+  node.style.width = prevWidth
+  node.style.height = prevHeight
+  node.style.overflow = prevOverflow
+  return { naturalWidth, naturalHeight }
+}
+
 function PositionSizeFields({ block, onChange }) {
   const { sendToBack, bringToFront } = useBuilder()
   if (typeof block.x !== 'number') return null
 
-  // Measures the block's own rendered content (see FreeBlock.jsx's
-  // data-block-content wrapper) and sets the block's width AND height to
-  // match exactly on all four sides — not just growing height to fit
-  // overflow, which is all `scrollHeight` alone can tell you: a wrapper
-  // sized bigger than its content reports its own (larger) box back as
-  // scrollHeight/scrollWidth, since a shorter/narrower child doesn't make
-  // an already-bigger box "overflow" in the other direction. Measuring the
-  // content's true natural size means briefly letting the node size itself
-  // (`max-content`, overflow visible) instead of staying pinned to the
-  // block's current box, then reverting before the next paint — so this
-  // also correctly *shrinks* an oversized block, not just grows one.
   // `axis` picks which dimension(s) actually change:
   //  - 'height': keeps the current width (so text reflows exactly as
   //    already shown) and measures how tall that makes it — for a
@@ -2303,22 +2318,13 @@ function PositionSizeFields({ block, onChange }) {
   //    wrap the text exactly on all four sides.
   // Both edges stay anchored at the block's own x/y — nothing here moves
   // the block, only its width/height, so which corner it grows/shrinks
-  // from is whatever the block's own top-left position already is.
+  // from is whatever the block's own top-left position already is. Unlike
+  // measureNaturalSize alone, this also *shrinks* an oversized block, not
+  // just grows one.
   function fitToContent(axis = 'both') {
-    const node = document.querySelector(`[data-block-content="${block.id}"]`)
-    if (!node) return
-    const prevWidth = node.style.width
-    const prevHeight = node.style.height
-    const prevOverflow = node.style.overflow
-    if (axis !== 'height') node.style.width = 'max-content'
-    if (axis !== 'width') node.style.height = 'max-content'
-    node.style.overflow = 'visible'
-    const rect = node.getBoundingClientRect()
-    const naturalWidth = rect.width
-    const naturalHeight = rect.height
-    node.style.width = prevWidth
-    node.style.height = prevHeight
-    node.style.overflow = prevOverflow
+    const measured = measureNaturalSize(block.id, axis)
+    if (!measured) return
+    const { naturalWidth, naturalHeight } = measured
     const patch = {}
     if (axis !== 'height' && naturalWidth) {
       patch.width = Math.min(SHEET_WIDTH, Math.max(20, Math.ceil(naturalWidth)))
@@ -2945,7 +2951,29 @@ function BlockPropertiesPanel({ block, onChange }) {
             <input
               type="checkbox"
               checked={!!block.showQuoteMarks}
-              onChange={(e) => onChange({ showQuoteMarks: e.target.checked })}
+              onChange={(e) => {
+                const checked = e.target.checked
+                onChange({ showQuoteMarks: checked })
+                if (!checked) return
+                // The oversized marks make the paragraph's first/last
+                // line taller than before — on a block someone already
+                // sized to fit the plain text, that extra height has
+                // nowhere to go and clips against the block's own
+                // (fixed-height, overflow-hidden) box. Grow the block to
+                // match as soon as the marks render, so turning this on
+                // never clips a document that looked fine a moment ago.
+                // Two rAFs: one for React to apply the state update, one
+                // for the browser to actually paint it, so the
+                // measurement below sees the marks already in the DOM.
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => {
+                    const measured = measureNaturalSize(block.id, 'height')
+                    if (measured?.naturalHeight && measured.naturalHeight > block.height) {
+                      onChange({ height: Math.min(SHEET_HEIGHT, Math.ceil(measured.naturalHeight)) })
+                    }
+                  })
+                })
+              }}
             />
             Show oversized “ ” quotation marks
           </label>
