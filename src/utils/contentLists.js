@@ -226,3 +226,42 @@ export function composeEntriesText(items) {
     })
     .join('\n\n')
 }
+
+// Cover Letter Recipients: a saved list of "who this letter goes to" (a
+// contact person at a company, with their address), so sending the same
+// CV/cover letter template to a different company means picking a
+// different saved recipient instead of retyping their details by hand —
+// `label` is just this entry's own name in the picker (e.g. "Acme Corp"),
+// defaulting to the company name wherever it's shown blank.
+export function emptyRecipient() {
+  return {
+    id: `recipient-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    label: '',
+    contactPerson: '',
+    company: '',
+    street: '',
+    zip: '',
+    city: '',
+  }
+}
+
+export function parseRecipients(itemsJson) {
+  try {
+    const parsed = JSON.parse(itemsJson)
+    if (Array.isArray(parsed)) return parsed
+  } catch {
+    // not valid JSON yet (empty) — fall through
+  }
+  return []
+}
+
+// Composes one recipient's block onto separate lines — contact person,
+// company, then the street / "ZIP City" address pair — the same two-line
+// address shape Contact Info already uses, skipping any field left empty.
+export function composeRecipientText(recipient) {
+  if (!recipient) return ''
+  const zipCity = [recipient.zip, recipient.city].filter((v) => v?.trim()).join(' ')
+  return [recipient.contactPerson, recipient.company, recipient.street, zipCity]
+    .filter((v) => v?.trim())
+    .join('\n')
+}

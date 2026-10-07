@@ -12,10 +12,12 @@ import {
   composeEntriesText,
   composeLanguagesText,
   emptyEntry,
+  emptyRecipient,
   LANGUAGE_LEVELS,
   parseChecklist,
   parseEntries,
   parseLanguages,
+  parseRecipients,
   SKILL_LEVELS,
   sortEntriesByDate,
 } from '../utils/contentLists'
@@ -49,7 +51,7 @@ const SECTIONS = [
   },
   { title: 'Contact & Links', keys: ['contact', 'socialLinks', 'qrValue'] },
   { title: 'Additional', keys: ['references', 'additionalInfo', 'hobbies'] },
-  { title: 'Cover Letter', keys: ['coverLetterBody'] },
+  { title: 'Cover Letter', keys: ['coverLetterBody', 'coverLetterRecipients'] },
 ]
 
 // Shared by any 'image' Content Library slot (Profile Photo, Signature):
@@ -244,6 +246,106 @@ function ContactGroupField({ library, onChange }) {
           </label>
         ))}
       </div>
+    </div>
+  )
+}
+
+// A saved list of cover letter recipients (contact person, company,
+// address) — a cover letter's recipient block (PropertiesPanel.jsx) picks
+// one of these by name instead of its address being retyped by hand every
+// time the same template goes to a different company.
+function RecipientsField({ itemsJson, onUpdate }) {
+  const items = parseRecipients(itemsJson)
+
+  function updateItem(index, patch) {
+    onUpdate(items.map((item, i) => (i === index ? { ...item, ...patch } : item)))
+  }
+
+  function addItem() {
+    onUpdate([...items, emptyRecipient()])
+  }
+
+  function removeItem(index) {
+    onUpdate(items.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((item, i) => (
+        <div key={item.id} className="flex flex-col gap-2 rounded-md border border-slate-200 p-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={item.label}
+              onChange={(e) => updateItem(i, { label: e.target.value })}
+              placeholder="Name for this recipient (e.g. Acme Corp)"
+              className={`${inputClasses} font-medium`}
+            />
+            <button
+              type="button"
+              onClick={() => removeItem(i)}
+              className="shrink-0 rounded-md px-2 py-1.5 text-xs text-red-500 hover:bg-red-50"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500">Contact Person</span>
+              <input
+                type="text"
+                value={item.contactPerson}
+                onChange={(e) => updateItem(i, { contactPerson: e.target.value })}
+                placeholder="Hiring Manager"
+                className={inputClasses}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500">Company</span>
+              <input
+                type="text"
+                value={item.company}
+                onChange={(e) => updateItem(i, { company: e.target.value })}
+                placeholder="Company Name"
+                className={inputClasses}
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-slate-500">Street & number</span>
+            <input
+              type="text"
+              value={item.street}
+              onChange={(e) => updateItem(i, { street: e.target.value })}
+              placeholder="Street & number"
+              className={inputClasses}
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500">ZIP / Postal code</span>
+              <input
+                type="text"
+                value={item.zip}
+                onChange={(e) => updateItem(i, { zip: e.target.value })}
+                className={inputClasses}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500">City</span>
+              <input
+                type="text"
+                value={item.city}
+                onChange={(e) => updateItem(i, { city: e.target.value })}
+                className={inputClasses}
+              />
+            </label>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={addItem} className="self-start text-xs font-medium text-primary hover:underline">
+        + Add recipient
+      </button>
     </div>
   )
 }
@@ -587,6 +689,16 @@ function SlotField({ slot, library, onChange, onBlur }) {
       )}
 
       {slot.type === 'contactGroup' && <ContactGroupField library={library} onChange={onChange} />}
+
+      {slot.type === 'recipients' && (
+        <RecipientsField
+          itemsJson={library[`${slot.key}Items`]}
+          onUpdate={(items) => {
+            onChange(`${slot.key}Items`, JSON.stringify(items))
+            toast.success('Content saved', { id: 'content-library-save' })
+          }}
+        />
+      )}
 
       {slot.type === 'checklist' && (
         <ChecklistField

@@ -7,7 +7,7 @@ import {
 } from '../../utils/blockTypes'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
-import { formatEntryDate, languageLevelText, parseChecklist, parseEntries, parseLanguages, skillLevelText, sortEntriesByDate } from '../../utils/contentLists'
+import { composeRecipientText, formatEntryDate, languageLevelText, parseChecklist, parseEntries, parseLanguages, parseRecipients, skillLevelText, sortEntriesByDate } from '../../utils/contentLists'
 import { translateSectionTitle } from '../../utils/sectionTitles'
 import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
@@ -666,6 +666,21 @@ export default function BlockRenderer({
             )
           : []
       const entriesItems = block.sortByDate !== false ? sortEntriesByDate(entriesRawItems) : entriesRawItems
+      // A Text block bound to a "recipients" slot (Cover Letter
+      // Recipients) shows just the one recipient picked in
+      // PropertiesPanel.jsx's "Which recipient" field (defaulting to the
+      // first saved one), composed onto its own lines — same idea as the
+      // "entries" case above, but showing a single picked item instead of
+      // every one of them.
+      const recipientContent =
+        boundSlot?.type === 'recipients'
+          ? (() => {
+              const recipients = parseRecipients(library[`${boundSlot.key}Items`])
+              const recipient = recipients.find((r) => r.id === block.recipientId) || recipients[0]
+              return composeRecipientText(recipient)
+            })()
+          : null
+      const textContent = recipientContent !== null ? recipientContent : resolvedContent
       const body = boundSlot?.type === 'entries' ? (
         <div className={`group/entries relative flex flex-col gap-3 ${alignClass(block.align)}`}>
           <EntryLayoutCycleButton block={block} onUpdateBlock={onUpdateBlock} />
@@ -779,7 +794,7 @@ export default function BlockRenderer({
               className={`${block.ordered ? 'list-decimal' : 'list-disc'} space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400 ${alignClass(block.align)}`}
               style={typographyStyle(block, bodyFont, globalStyle.typographyScale?.p1?.sizePx)}
             >
-              {resolvedContent.split('\n').filter(Boolean).map((line, i) => (
+              {textContent.split('\n').filter(Boolean).map((line, i) => (
                 <li key={i} className={textStyleClasses({ ...block, align: undefined })}>
                   {displayText(line, block)}
                 </li>
@@ -792,7 +807,7 @@ export default function BlockRenderer({
           className={`whitespace-pre-line text-sm leading-relaxed ${textStyleClasses(block)}`}
           style={typographyStyle(block, bodyFont, globalStyle.typographyScale?.p1?.sizePx)}
         >
-          {displayText(resolvedContent, block)}
+          {displayText(textContent, block)}
         </p>
       )
 

@@ -72,6 +72,12 @@ export const CONTENT_SLOTS = [
   { key: 'qrValue', label: 'QR Code Link', multiline: false },
   { key: 'hobbies', label: 'Leisure / Hobbies', type: 'checklist' },
   { key: 'coverLetterBody', label: 'Cover Letter Body', multiline: true },
+  // A saved list of recipients (contact person, company, address) — see
+  // utils/contentLists.js's parseRecipients/composeRecipientText — a
+  // cover letter's recipient block picks one by id (PropertiesPanel.jsx's
+  // "Which recipient" field) instead of the address being retyped by hand
+  // every time the same template goes to a different company.
+  { key: 'coverLetterRecipients', label: 'Cover Letter Recipients', type: 'recipients' },
   { key: 'signature', label: 'Signature', type: 'image' },
 ]
 
@@ -79,7 +85,7 @@ export const CONTENT_SLOTS = [
 // full editable row list, including unchecked/hidden items) alongside
 // the plain-text one already covered by CONTENT_SLOTS above.
 const STRUCTURED_LIST_KEYS = CONTENT_SLOTS.filter((s) =>
-  ['checklist', 'languages', 'entries'].includes(s.type),
+  ['checklist', 'languages', 'entries', 'recipients'].includes(s.type),
 ).map((s) => s.key)
 
 // 'image' slots (Profile Photo, Signature) are a scan/photo of the same
@@ -115,8 +121,10 @@ const TEXT_SHARED_KEYS = [
 // "React" or "AWS" isn't translated). Each one's own "*Items" JSON
 // companion (see STRUCTURED_LIST_KEYS) is shared right along with it, so
 // the checked/unchecked state and levels stay in sync too, not just the
-// plain-text value.
-const SHARED_STRUCTURED_LIST_KEYS = ['skills']
+// plain-text value. Cover Letter Recipients is shared for the same reason
+// as the rest of TEXT_SHARED_KEYS above — a company's name and address
+// don't change by document language either.
+const SHARED_STRUCTURED_LIST_KEYS = ['skills', 'coverLetterRecipients']
 
 // Exported so ContentLibraryPage.jsx can render these slots once instead
 // of in an English/German pair, the same way it already does for photo/

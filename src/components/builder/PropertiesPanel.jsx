@@ -25,7 +25,7 @@ import {
   sectionTitleSizeField,
   TEXT_TRANSFORM_OPTIONS,
 } from '../../utils/blockTypes'
-import { emptyEntry, parseChecklist, parseEntries } from '../../utils/contentLists'
+import { emptyEntry, parseChecklist, parseEntries, parseRecipients } from '../../utils/contentLists'
 import { splitTextToFit } from '../../utils/textFlow'
 import { resizeImageFile } from '../../utils/imageResize'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
@@ -2689,6 +2689,30 @@ function BlockPropertiesPanel({ block, onChange }) {
       </h3>
 
       {canBindContent && <ContentSlotBinder block={block} onChange={onChange} />}
+
+      {CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.type === 'recipients' &&
+        (() => {
+          const recipients = parseRecipients(library[`${block.contentSlot}Items`])
+          return (
+            <Field label="Which recipient">
+              <select
+                value={block.recipientId || recipients[0]?.id || ''}
+                onChange={(e) => onChange({ recipientId: e.target.value || null })}
+                className={inputClasses}
+              >
+                {recipients.length === 0 && <option value="">— no recipients saved yet —</option>}
+                {recipients.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label || r.company || '(untitled recipient)'}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-400">
+                Add or edit recipients in <LibraryLink>the catalog</LibraryLink>.
+              </p>
+            </Field>
+          )
+        })()}
 
       {block.type === BLOCK_TYPES.TEXT && (
         <>
