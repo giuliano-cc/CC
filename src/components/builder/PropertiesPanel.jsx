@@ -1791,6 +1791,14 @@ function LeisureProperties({ block, onChange }) {
           />
         </Field>
       )}
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={block.list !== false}
+          onChange={(e) => onChange({ list: e.target.checked })}
+        />
+        Bulleted list (unchecked: comma-separated on one line)
+      </label>
       <Field label="Alignment">
         <select
           value={block.align}
@@ -2891,6 +2899,14 @@ function BlockPropertiesPanel({ block, onChange }) {
               />
             </Field>
           )}
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={!!block.showQuoteMarks}
+              onChange={(e) => onChange({ showQuoteMarks: e.target.checked })}
+            />
+            Show oversized “ ” quotation marks
+          </label>
         </>
       )}
 

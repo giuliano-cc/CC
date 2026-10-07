@@ -912,6 +912,16 @@ export default function BlockRenderer({
 
     case BLOCK_TYPES.QUOTE: {
       const resolvedAuthor = block.authorSlot ? library[block.authorSlot] || '' : block.author
+      // Decorative open/close quotation marks, oversized and dimmed so
+      // they read as ornamental punctuation rather than more text — off
+      // by default (see Quote's defaultProps), since not every quote style
+      // wants them.
+      const quoteMarkStyle = {
+        fontSize: '1.6em',
+        lineHeight: 0,
+        color: globalStyle.primaryColor,
+        opacity: 0.45,
+      }
       return (
         <blockquote
           className={`border-l-4 pl-3 text-sm ${textStyleClasses(block)}`}
@@ -920,7 +930,19 @@ export default function BlockRenderer({
             ...typographyStyle(block, resolveBodyFont(globalStyle), globalStyle.typographyScale?.p1?.sizePx),
           }}
         >
-          <p>{displayText(resolvedContent, block)}</p>
+          <p>
+            {block.showQuoteMarks && (
+              <span aria-hidden="true" style={{ ...quoteMarkStyle, marginRight: '0.1em' }}>
+                “
+              </span>
+            )}
+            {displayText(resolvedContent, block)}
+            {block.showQuoteMarks && (
+              <span aria-hidden="true" style={{ ...quoteMarkStyle, marginLeft: '0.1em' }}>
+                ”
+              </span>
+            )}
+          </p>
           {resolvedAuthor && (
             <footer className="mt-1.5 text-xs not-italic" style={{ color: globalStyle.primaryColor }}>
               — {resolvedAuthor}
@@ -1138,19 +1160,33 @@ export default function BlockRenderer({
               {titleTextTransformValue(translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides), block, 'title')}
             </p>
           )}
-          <ul
-            className="list-disc space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400"
-            style={{
-              fontFamily: resolveBodyFont(globalStyle),
-              fontSize: globalStyle.typographyScale?.p1?.sizePx
-                ? `${globalStyle.typographyScale.p1.sizePx}px`
-                : undefined,
-            }}
-          >
-            {items.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
+          {block.list === false ? (
+            <p
+              className="text-sm leading-relaxed"
+              style={{
+                fontFamily: resolveBodyFont(globalStyle),
+                fontSize: globalStyle.typographyScale?.p1?.sizePx
+                  ? `${globalStyle.typographyScale.p1.sizePx}px`
+                  : undefined,
+              }}
+            >
+              {items.join(', ')}
+            </p>
+          ) : (
+            <ul
+              className="list-disc space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400"
+              style={{
+                fontFamily: resolveBodyFont(globalStyle),
+                fontSize: globalStyle.typographyScale?.p1?.sizePx
+                  ? `${globalStyle.typographyScale.p1.sizePx}px`
+                  : undefined,
+              }}
+            >
+              {items.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )
     }

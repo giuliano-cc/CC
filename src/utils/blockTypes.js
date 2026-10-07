@@ -300,6 +300,7 @@ export const BLOCK_DEFINITIONS = [
       contentSlot: null,
       author: '',
       authorSlot: null,
+      showQuoteMarks: false,
     },
   },
   {
@@ -535,6 +536,7 @@ export const BLOCK_DEFINITIONS = [
       fontFamily: null,
       fontSize: null,
       items: ['Photography', 'Hiking', 'Reading'],
+      list: true,
       useLibraryHobbies: false,
       align: 'left',
     },
