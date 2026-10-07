@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
   AlignHorizontalDistributeCenter,
@@ -2530,6 +2530,26 @@ function BlockPropertiesPanel({ block, onChange }) {
   const { getLibrary } = useContentLibrary()
   const library = getLibrary(globalStyle.contentLanguage)
 
+  // The oversized quote marks make the paragraph's first/last line
+  // taller — on a block sized to fit the plain text, that extra height
+  // has nowhere to go and clips against the block's own (fixed-height,
+  // overflow-hidden) box. Keying this on block.showQuoteMarks means it
+  // runs both right after the checkbox below is checked, and whenever
+  // this panel opens on a block that already had it on (a document saved
+  // before this effect existed, or just reselecting the block) — either
+  // way, nothing more than seeing the block selected here is needed; it
+  // only ever grows the block, never shrinks it.
+  useEffect(() => {
+    if (block.type !== BLOCK_TYPES.QUOTE || !block.showQuoteMarks) return
+    const raf = requestAnimationFrame(() => {
+      const measured = measureNaturalSize(block.id, 'height')
+      if (measured?.naturalHeight && measured.naturalHeight > block.height) {
+        onChange({ height: Math.min(SHEET_HEIGHT, Math.ceil(measured.naturalHeight)) })
+      }
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [block.id, block.showQuoteMarks])
+
   if (block.type === BLOCK_TYPES.CV_HEADER) {
     return (
       <div className="flex flex-col gap-4">
@@ -2951,29 +2971,7 @@ function BlockPropertiesPanel({ block, onChange }) {
             <input
               type="checkbox"
               checked={!!block.showQuoteMarks}
-              onChange={(e) => {
-                const checked = e.target.checked
-                onChange({ showQuoteMarks: checked })
-                if (!checked) return
-                // The oversized marks make the paragraph's first/last
-                // line taller than before — on a block someone already
-                // sized to fit the plain text, that extra height has
-                // nowhere to go and clips against the block's own
-                // (fixed-height, overflow-hidden) box. Grow the block to
-                // match as soon as the marks render, so turning this on
-                // never clips a document that looked fine a moment ago.
-                // Two rAFs: one for React to apply the state update, one
-                // for the browser to actually paint it, so the
-                // measurement below sees the marks already in the DOM.
-                requestAnimationFrame(() => {
-                  requestAnimationFrame(() => {
-                    const measured = measureNaturalSize(block.id, 'height')
-                    if (measured?.naturalHeight && measured.naturalHeight > block.height) {
-                      onChange({ height: Math.min(SHEET_HEIGHT, Math.ceil(measured.naturalHeight)) })
-                    }
-                  })
-                })
-              }}
+              onChange={(e) => onChange({ showQuoteMarks: e.target.checked })}
             />
             Show oversized “ ” quotation marks
           </label>
