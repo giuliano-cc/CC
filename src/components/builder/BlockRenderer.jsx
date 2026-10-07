@@ -952,25 +952,21 @@ export default function BlockRenderer({
       // they read as ornamental punctuation rather than more text — off
       // by default (see Quote's defaultProps), since not every quote style
       // wants them.
-      // `lineHeight: 0` here used to mean the glyph painted without
-      // reserving any real vertical space in the paragraph's line box, so
-      // at this oversized font-size it visually poked out above/below the
-      // block's own (fixed-height, clipped) box — the block never grew to
-      // contain it. A normal line-height makes the browser grow the line
-      // box to actually contain the big glyph, so it only clips if the
-      // whole block is too short for the paragraph it now contains —
-      // exactly like any other block that outgrows its own height.
-      // `fontStyle: 'normal'` overrides the block's own italic (Quote
-      // defaults to italic body text) specifically for these marks: an
-      // italic glyph's slant makes it paint outside its own layout box
-      // (most fonts give italic characters a right-leaning overhang) —
-      // invisible to getBoundingClientRect, which only reports the
-      // (unslanted) layout box, but still clipped on screen by the
-      // block's overflow-hidden. Upright marks don't have that overhang.
+      // Each mark is its OWN line, above/below the quote — not inlined
+      // into the first/last line of text. Inlining them (the previous
+      // approach) made just that one line's line-box grow to the mark's
+      // oversized height, breaking the even line-to-line spacing every
+      // other line in the paragraph has; it also never fully escaped
+      // clipping against the block's own fixed-height, overflow-hidden
+      // box (an italic glyph in particular paints past its own layout box
+      // — invisible to a bounding-rect check, but still visibly clipped).
+      // A mark on its own block-level line has no such interaction with
+      // the paragraph's line-height at all, and `fontStyle: 'normal'`
+      // keeps it upright regardless of the block's own italic setting,
+      // since it's ornamental punctuation, not part of the quoted text.
       const quoteMarkStyle = {
         fontSize: '3.2em',
         lineHeight: 1,
-        verticalAlign: '-0.3em',
         fontStyle: 'normal',
         color: globalStyle.primaryColor,
         opacity: 0.45,
@@ -983,19 +979,17 @@ export default function BlockRenderer({
             ...typographyStyle(block, resolveBodyFont(globalStyle), globalStyle.typographyScale?.p1?.sizePx),
           }}
         >
-          <p>
-            {block.showQuoteMarks && (
-              <span aria-hidden="true" style={{ ...quoteMarkStyle, marginRight: '0.1em' }}>
-                “
-              </span>
-            )}
-            {displayText(resolvedContent, block)}
-            {block.showQuoteMarks && (
-              <span aria-hidden="true" style={{ ...quoteMarkStyle, marginLeft: '0.1em' }}>
-                ”
-              </span>
-            )}
-          </p>
+          {block.showQuoteMarks && (
+            <div aria-hidden="true" style={quoteMarkStyle} className="text-left">
+              “
+            </div>
+          )}
+          <p>{displayText(resolvedContent, block)}</p>
+          {block.showQuoteMarks && (
+            <div aria-hidden="true" style={quoteMarkStyle} className="text-right">
+              ”
+            </div>
+          )}
           {resolvedAuthor && (
             <footer className="mt-1.5 text-xs not-italic" style={{ color: globalStyle.primaryColor }}>
               — {resolvedAuthor}
