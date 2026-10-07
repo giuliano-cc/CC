@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Briefcase,
+  Calendar,
   Columns3,
   Contact,
   GraduationCap,
@@ -40,6 +41,7 @@ export const BLOCK_TYPES = {
   EXPERIENCE: 'experience_entries',
   EDUCATION: 'education_entries',
   SHAPE: 'shape',
+  DATE: 'date',
 }
 
 // Block types meant to fill their own box completely (a color fill, a
@@ -127,6 +129,7 @@ export const DEFAULT_BLOCK_SIZE = {
   [BLOCK_TYPES.EXPERIENCE]: { width: 400, height: 320 },
   [BLOCK_TYPES.EDUCATION]: { width: 400, height: 220 },
   [BLOCK_TYPES.SHAPE]: { width: 220, height: 140 },
+  [BLOCK_TYPES.DATE]: { width: 220, height: 50 },
 }
 
 // Interchangeable visual styles for the Skills Chart block — click the
@@ -552,6 +555,25 @@ export const BLOCK_DEFINITIONS = [
       borderWidth: 0,
       borderRadius: 0,
       opacity: 1,
+    },
+  },
+  {
+    type: BLOCK_TYPES.DATE,
+    label: 'Date',
+    icon: Calendar,
+    defaultProps: {
+      // null renders as today's date, re-evaluated on every render —
+      // the "Update to today" button in PropertiesPanel just resets it
+      // back to null (see DateProperties), rather than writing a value
+      // that's only correct until the next day.
+      date: null,
+      format: 'long',
+      align: 'left',
+      bold: false,
+      italic: false,
+      color: null,
+      fontFamily: null,
+      fontSize: null,
     },
   },
 ]

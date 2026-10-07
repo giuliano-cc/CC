@@ -265,3 +265,50 @@ export function composeRecipientText(recipient) {
     .filter((v) => v?.trim())
     .join('\n')
 }
+
+// Today's date as a native <input type="date"> value (local time, not
+// UTC — toISOString() would roll over to the next/previous day near
+// midnight depending on the viewer's timezone).
+export function todayISODate() {
+  const d = new Date()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${month}-${day}`
+}
+
+// Cycled by the Date block's hover button, same gesture as the Technical
+// Skills/Languages charts cycling their chartStyle.
+export const DATE_FORMATS = ['long', 'short', 'numeric', 'dmy', 'iso']
+
+export const DATE_FORMAT_LABELS = {
+  long: 'Long (October 7, 2026)',
+  short: 'Short (Oct 7, 2026)',
+  numeric: 'Numeric (10/07/2026)',
+  dmy: 'Day.Month.Year (07.10.2026)',
+  iso: 'ISO (2026-10-07)',
+}
+
+// `value` is a native <input type="date"> value ("YYYY-MM-DD"). Parsed as
+// local midnight (not UTC, like formatEntryDate's month-only values don't
+// need to worry about) so the displayed day never shifts a day off in a
+// timezone west of UTC.
+export function formatFullDate(value, format = 'long', locale = 'en-US') {
+  if (!value) return ''
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!iso) return value
+  const [, year, month, day] = iso
+  const d = new Date(Number(year), Number(month) - 1, Number(day))
+  if (Number.isNaN(d.getTime())) return value
+  switch (format) {
+    case 'short':
+      return d.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' })
+    case 'numeric':
+      return `${month}/${day}/${year}`
+    case 'dmy':
+      return `${day}.${month}.${year}`
+    case 'iso':
+      return `${year}-${month}-${day}`
+    default:
+      return d.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })
+  }
+}

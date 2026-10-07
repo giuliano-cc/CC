@@ -25,7 +25,7 @@ import {
   sectionTitleSizeField,
   TEXT_TRANSFORM_OPTIONS,
 } from '../../utils/blockTypes'
-import { emptyEntry, parseChecklist, parseEntries, parseRecipients } from '../../utils/contentLists'
+import { DATE_FORMAT_LABELS, DATE_FORMATS, emptyEntry, parseChecklist, parseEntries, parseRecipients, todayISODate } from '../../utils/contentLists'
 import { splitTextToFit } from '../../utils/textFlow'
 import { resizeImageFile } from '../../utils/imageResize'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
@@ -659,6 +659,7 @@ const BLOCK_LABELS = {
   [BLOCK_TYPES.EXPERIENCE]: 'Experience',
   [BLOCK_TYPES.EDUCATION]: 'Education',
   [BLOCK_TYPES.SHAPE]: 'Shape',
+  [BLOCK_TYPES.DATE]: 'Date',
 }
 
 // Generic "pick a Content Library slot" select, used for fields that bind
@@ -2684,11 +2685,13 @@ function BlockPropertiesPanel({ block, onChange }) {
   const isHeading = block.type === BLOCK_TYPES.HEADING
   const isText = block.type === BLOCK_TYPES.TEXT
   const isImage = block.type === BLOCK_TYPES.IMAGE
-  const hasTypography = [BLOCK_TYPES.HEADING, BLOCK_TYPES.TEXT, BLOCK_TYPES.QUOTE].includes(
+  const hasTypography = [BLOCK_TYPES.HEADING, BLOCK_TYPES.TEXT, BLOCK_TYPES.QUOTE, BLOCK_TYPES.DATE].includes(
     block.type,
   )
   const canBindContent =
-    hasTypography || block.type === BLOCK_TYPES.HEADER || block.type === BLOCK_TYPES.FOOTER
+    (hasTypography && block.type !== BLOCK_TYPES.DATE) ||
+    block.type === BLOCK_TYPES.HEADER ||
+    block.type === BLOCK_TYPES.FOOTER
 
   return (
     <div className="flex flex-col gap-4">
@@ -2721,6 +2724,45 @@ function BlockPropertiesPanel({ block, onChange }) {
             </Field>
           )
         })()}
+
+      {block.type === BLOCK_TYPES.DATE && (
+        <>
+          <Field label="Date">
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                value={block.date || todayISODate()}
+                onChange={(e) => onChange({ date: e.target.value || null })}
+                className={inputClasses}
+              />
+              <button
+                type="button"
+                onClick={() => onChange({ date: null })}
+                className="shrink-0 whitespace-nowrap rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                title="Reset to always show today's date, updated automatically"
+              >
+                Today
+              </button>
+            </div>
+          </Field>
+          <Field label="Format">
+            <select
+              value={block.format || 'long'}
+              onChange={(e) => onChange({ format: e.target.value })}
+              className={inputClasses}
+            >
+              {DATE_FORMATS.map((f) => (
+                <option key={f} value={f}>
+                  {DATE_FORMAT_LABELS[f]}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-400">
+              You can also click the block itself to cycle through formats.
+            </p>
+          </Field>
+        </>
+      )}
 
       {block.type === BLOCK_TYPES.TEXT && (
         <>
@@ -2858,7 +2900,7 @@ function BlockPropertiesPanel({ block, onChange }) {
           </>
         )}
 
-      {showContent && !block.contentSlot && (
+      {showContent && !block.contentSlot && block.type !== BLOCK_TYPES.DATE && (
         <Field label="Text">
           <textarea
             rows={3}
