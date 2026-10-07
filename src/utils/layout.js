@@ -79,6 +79,27 @@ export function goldenRatioLinesY(margins) {
   return { top: margins.top + (height - a), bottom: margins.top + a }
 }
 
+// Same idea as the golden ratio guide above, but split at the ISO 216
+// ("A4") ratio (1:√2) instead of the golden ratio — the ratio the page
+// itself already is (794×1123 ≈ 1:1.41421), so this guide marks where an
+// A4 sheet would fold/cut in half into two same-ratio A5 halves. Same
+// shape as goldenRatioLinesX/Y (two lines per axis, confined to the
+// margins, always the exact mathematical split) so both guides share
+// the same rendering and snapping code paths in Canvas.jsx/FreeBlock.jsx.
+const SQRT2 = Math.sqrt(2)
+
+export function a4RatioLinesX(margins) {
+  const width = SHEET_WIDTH - margins.left - margins.right
+  const a = width / SQRT2
+  return { sx: margins.left + (width - a), dx: margins.left + a }
+}
+
+export function a4RatioLinesY(margins) {
+  const height = SHEET_HEIGHT - margins.top - margins.bottom
+  const a = height / SQRT2
+  return { top: margins.top + (height - a), bottom: margins.top + a }
+}
+
 // A symmetric pair of lines duplicated from each exact golden ratio line
 // above, one on each side of it at the user-chosen distance — not a
 // replacement for the exact line, two additional ones to snap a block's

@@ -2,6 +2,8 @@ import { useRef } from 'react'
 import { Trash2 } from 'lucide-react'
 import { BLOCK_TYPES, EDGE_TO_EDGE_TYPES } from '../../utils/blockTypes'
 import {
+  a4RatioLinesX,
+  a4RatioLinesY,
   clamp,
   goldenRatioLinesX,
   goldenRatioLinesY,
@@ -133,6 +135,7 @@ export default function FreeBlock({
   gridOffsets = { x: 0, y: 0 },
   snapToGoldenRatio = false,
   goldenOffsets = { sx: 0, dx: 0, top: 0, bottom: 0 },
+  snapToA4Ratio = false,
   snapToStructureGrid = false,
   structureGrid = { columns: 1, rows: 1, gutter: 24 },
   zoom = 1,
@@ -251,6 +254,12 @@ export default function FreeBlock({
           goldenRatioOffsetLinesY(margins, goldenOffsets),
         ).forEach((v) => yTargets.push(v, v - block.height, v - block.height / 2))
       }
+      if (snapToA4Ratio) {
+        // Same idea as the golden ratio guide above, but with no offset
+        // duplicate lines of its own.
+        Object.values(a4RatioLinesX(margins)).forEach((v) => xTargets.push(v, v - block.width, v - block.width / 2))
+        Object.values(a4RatioLinesY(margins)).forEach((v) => yTargets.push(v, v - block.height, v - block.height / 2))
+      }
       if (snapToStructureGrid) {
         // Column/row edges are true reference lines like the golden
         // ratio's, so a block can align its left/right/top/bottom edge or
@@ -328,12 +337,14 @@ export default function FreeBlock({
     const goldenY = snapToGoldenRatio
       ? goldenSnapTargets(goldenRatioLinesY(margins), goldenRatioOffsetLinesY(margins, goldenOffsets))
       : []
+    const a4X = snapToA4Ratio ? Object.values(a4RatioLinesX(margins)) : []
+    const a4Y = snapToA4Ratio ? Object.values(a4RatioLinesY(margins)) : []
     const columnX = snapToStructureGrid ? structureColumnLines(margins, structureGrid.columns, structureGrid.gutter) : []
     const rowY = snapToStructureGrid ? structureRowLines(margins, structureGrid.rows, structureGrid.gutter) : []
 
     if (handle.x === 1) {
       width = clamp(state.origWidth + dx, MIN_WIDTH, SHEET_WIDTH - state.origX)
-      const targets = [...rightEdgeTargets, ...goldenX, ...columnX]
+      const targets = [...rightEdgeTargets, ...goldenX, ...a4X, ...columnX]
       if (margins.right > 0) targets.push(SHEET_WIDTH - margins.right)
       if (snapToGrid) targets.push(nearestGridLine(x + width, gridOffsets.x))
       width = snapTo(x + width, targets) - x
@@ -342,7 +353,7 @@ export default function FreeBlock({
       const clampedDx = clamp(dx, -state.origX, maxDx)
       width = state.origWidth - clampedDx
       x = state.origX + clampedDx
-      const targets = [...leftEdgeTargets, ...goldenX, ...columnX]
+      const targets = [...leftEdgeTargets, ...goldenX, ...a4X, ...columnX]
       if (margins.left > 0) targets.push(margins.left)
       if (snapToGrid) targets.push(nearestGridLine(x, gridOffsets.x))
       const snappedX = snapTo(x, targets)
@@ -352,7 +363,7 @@ export default function FreeBlock({
 
     if (handle.y === 1) {
       height = clamp(state.origHeight + dy, MIN_HEIGHT, SHEET_HEIGHT - state.origY)
-      const targets = [...bottomEdgeTargets, ...goldenY, ...rowY]
+      const targets = [...bottomEdgeTargets, ...goldenY, ...a4Y, ...rowY]
       if (margins.bottom > 0) targets.push(SHEET_HEIGHT - margins.bottom)
       if (snapToGrid) targets.push(nearestGridLine(y + height, gridOffsets.y))
       height = snapTo(y + height, targets) - y
@@ -361,7 +372,7 @@ export default function FreeBlock({
       const clampedDy = clamp(dy, -state.origY, maxDy)
       height = state.origHeight - clampedDy
       y = state.origY + clampedDy
-      const targets = [...topEdgeTargets, ...goldenY, ...rowY]
+      const targets = [...topEdgeTargets, ...goldenY, ...a4Y, ...rowY]
       if (margins.top > 0) targets.push(margins.top)
       if (snapToGrid) targets.push(nearestGridLine(y, gridOffsets.y))
       const snappedY = snapTo(y, targets)

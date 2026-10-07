@@ -1,8 +1,23 @@
 import { useDroppable } from '@dnd-kit/core'
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Copy, Eye, EyeOff, Grid3x3, LayoutTemplate, Minus, Plus, Ratio, X } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Eye,
+  EyeOff,
+  Grid3x3,
+  LayoutTemplate,
+  Minus,
+  Plus,
+  Proportions,
+  Ratio,
+  X,
+} from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import {
+  a4RatioLinesX,
+  a4RatioLinesY,
   goldenRatioLinesX,
   goldenRatioLinesY,
   goldenRatioOffsetLinesX,
@@ -40,6 +55,7 @@ function Page({
   showGrid,
   showGoldenRatio,
   goldenOffsets,
+  showA4Ratio,
   showStructureGrid,
   structureGrid,
   preview,
@@ -177,6 +193,29 @@ function Page({
             />
           ))}
 
+      {/* A4 ratio guide (1:√2 — the ratio the page itself already is):
+          same shape as the golden ratio guide above, entirely inside the
+          margins on both axes, its own blue so all the guides stay
+          visually distinct when several are on at once. */}
+      {!preview &&
+        showA4Ratio &&
+        Object.values(a4RatioLinesX(margins)).map((x, i) => (
+          <div
+            key={`a4-v-${i}`}
+            style={{ left: x, top: margins.top, bottom: margins.bottom }}
+            className="pdf-ignore pointer-events-none absolute z-10 w-px border-l border-dashed border-sky-500"
+          />
+        ))}
+      {!preview &&
+        showA4Ratio &&
+        Object.values(a4RatioLinesY(margins)).map((y, i) => (
+          <div
+            key={`a4-h-${i}`}
+            style={{ top: y, left: margins.left, right: margins.right }}
+            className="pdf-ignore pointer-events-none absolute z-10 h-px border-t border-dashed border-sky-500"
+          />
+        ))}
+
       {/* Column × row "structure grid" (see utils/layout.js) — a
           separate teal color from the grid/margin/golden-ratio guides so
           all four stay visually distinct when several are on at once.
@@ -222,6 +261,7 @@ function Page({
           gridOffsets={gridOffsets}
           snapToGoldenRatio={showGoldenRatio}
           goldenOffsets={goldenOffsets}
+          snapToA4Ratio={showA4Ratio}
           snapToStructureGrid={showStructureGrid}
           structureGrid={structureGrid}
           zoom={zoom}
@@ -264,6 +304,7 @@ export default function Canvas() {
   const structureGrid = resolveStructureGrid(globalStyle)
   const [showGrid, setShowGrid] = useState(false)
   const [showGoldenRatio, setShowGoldenRatio] = useState(false)
+  const [showA4Ratio, setShowA4Ratio] = useState(false)
   const [showStructureGrid, setShowStructureGrid] = useState(false)
   const [preview, setPreview] = useState(false)
   const [zoom, setZoom] = useState(1)
@@ -325,6 +366,19 @@ export default function Canvas() {
         </button>
         <button
           type="button"
+          onClick={() => setShowA4Ratio((v) => !v)}
+          disabled={preview}
+          title={showA4Ratio ? 'Hide A4 ratio guide (1:1.414)' : 'Show A4 ratio guide (1:1.414)'}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-30 ${
+            showA4Ratio
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-slate-200 bg-white text-slate-500 hover:border-primary hover:text-primary'
+          }`}
+        >
+          <Proportions size={16} />
+        </button>
+        <button
+          type="button"
           onClick={() => setShowStructureGrid((v) => !v)}
           disabled={preview}
           title={showStructureGrid ? 'Hide column & row grid' : 'Show column & row grid'}
@@ -378,6 +432,7 @@ export default function Canvas() {
                 showGrid={showGrid}
                 showGoldenRatio={showGoldenRatio}
                 goldenOffsets={goldenOffsets}
+                showA4Ratio={showA4Ratio}
                 showStructureGrid={showStructureGrid}
                 structureGrid={structureGrid}
                 preview={preview}
