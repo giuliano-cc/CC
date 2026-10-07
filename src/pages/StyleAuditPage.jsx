@@ -195,7 +195,7 @@ export default function StyleAuditPage() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-500">Primary color</label>
+          <label className="text-xs font-medium text-slate-500">Accent color</label>
           <input
             type="color"
             value={globalStyle.primaryColor}

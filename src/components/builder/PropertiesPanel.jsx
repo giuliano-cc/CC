@@ -190,7 +190,7 @@ function GlobalStylePanel() {
         Month names are always in English — pick Numeric for a document in
         another language, so the date doesn't mix languages.
       </p>
-      <Field label="Primary color">
+      <Field label="Accent color">
         <input
           type="color"
           value={globalStyle.primaryColor}
@@ -519,14 +519,14 @@ function GlobalStylePanel() {
                       value={row.color || inheritedColor}
                       onChange={(e) => applyTypographyChange(row, { color: e.target.value })}
                       className="h-7 w-7 shrink-0 cursor-pointer rounded-md border border-slate-300"
-                      title={row.color ? 'Color (custom — click × to inherit again)' : 'Color (inherited from Primary color)'}
+                      title={row.color ? 'Color (custom — click × to inherit again)' : 'Color (inherited from Accent color)'}
                     />
                     {row.color && (
                       <button
                         type="button"
                         onClick={() => applyTypographyChange(row, { color: null })}
                         className="shrink-0 rounded-md px-1.5 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                        title="Reset to inherit the global Primary/Text color"
+                        title="Reset to inherit the global Accent/Text color"
                       >
                         ✕
                       </button>
@@ -1388,7 +1388,7 @@ function SkillsChartProperties({ block, onChange }) {
               type="button"
               onClick={() => onChange({ color: null })}
               className="shrink-0 rounded-md px-1.5 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              title="Reset to inherit the global Primary color"
+              title="Reset to inherit the global Accent color"
             >
               ✕
             </button>
@@ -1497,7 +1497,7 @@ function LanguagesChartProperties({ block, onChange }) {
               type="button"
               onClick={() => onChange({ color: null })}
               className="shrink-0 rounded-md px-1.5 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              title="Reset to inherit the global Primary color"
+              title="Reset to inherit the global Accent color"
             >
               ✕
             </button>

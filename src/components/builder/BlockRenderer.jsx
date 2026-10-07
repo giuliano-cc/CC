@@ -593,7 +593,7 @@ export default function BlockRenderer({
       // (accent) color, not the plain body text color it'd otherwise
       // inherit — every built-in template's headings are deliberately
       // accent-colored section titles, so this is what actually lets the
-      // Global Style panel's "Primary color" affect them. An explicit
+      // Global Style panel's "Accent color" affect them. An explicit
       // block.color (a one-off override on a specific heading) still wins.
       const style = {
         ...typographyStyle(block, scale?.fontFamily || resolveTitleFont(globalStyle)),
@@ -1137,7 +1137,7 @@ export default function BlockRenderer({
                 {block.showIcons && (
                   <f.Icon size={14} className={`shrink-0 opacity-60 ${f.value.includes('\n') ? 'mt-0.5' : ''}`} />
                 )}
-                <span className="whitespace-pre-line">{f.value}</span>
+                <span className={`whitespace-pre-line ${alignClass(block.align)}`}>{f.value}</span>
               </span>
             ))}
           </div>
