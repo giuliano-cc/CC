@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { ArrowLeft, Loader2, Printer, Redo2, RotateCcw, Save, Undo2, Wand2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  Loader2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Printer,
+  Redo2,
+  RotateCcw,
+  Save,
+  Undo2,
+  Wand2,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import { BuilderProvider, useBuilder } from '../context/BuilderContext'
 import { useContentLibrary } from '../context/ContentLibraryContext'
@@ -51,6 +62,10 @@ function BuilderContent({ initialTitle }) {
   const [title, setTitle] = useState(initialTitle)
   const [isSaving, setIsSaving] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
+  // Hides the Blocks palette and Properties panel together, for a quick
+  // look at just the pages without either side panel in the way — not
+  // persisted, since it's a momentary view toggle, not a layout preference.
+  const [showSidePanels, setShowSidePanels] = useState(true)
 
   const debouncedBlocks = useDebouncedValue(blocks, 800)
   const hasRenderedOnce = useRef(false)
@@ -333,6 +348,15 @@ function BuilderContent({ initialTitle }) {
               >
                 <Redo2 size={16} />
               </button>
+              <button
+                type="button"
+                onClick={() => setShowSidePanels((v) => !v)}
+                aria-label={showSidePanels ? 'Hide side panels' : 'Show side panels'}
+                title={showSidePanels ? 'Hide blocks/properties panels — see just the pages' : 'Show blocks/properties panels'}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100"
+              >
+                {showSidePanels ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+              </button>
             </div>
           </div>
 
@@ -383,9 +407,9 @@ function BuilderContent({ initialTitle }) {
         </header>
 
         <div className="flex flex-1 overflow-hidden">
-          <BlockPalette />
+          {showSidePanels && <BlockPalette />}
           <Canvas />
-          <PropertiesPanel />
+          {showSidePanels && <PropertiesPanel />}
         </div>
       </div>
 
