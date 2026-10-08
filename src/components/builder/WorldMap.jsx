@@ -51,9 +51,9 @@ function labelSubtitle(item) {
   return (item.description || '').split('\n')[0].trim()
 }
 
-function measureLabelWidth(item, bodyFont, titleSize, subtitleSize) {
+function measureLabelWidth(item, titleFont, bodyFont, titleSize, subtitleSize, titleBold) {
   return Math.max(
-    measureTextWidth(item.title, titleSize, bodyFont, true),
+    measureTextWidth(item.title, titleSize, titleFont, titleBold !== false),
     measureTextWidth(labelSubtitle(item), subtitleSize, bodyFont, false),
   )
 }
@@ -61,15 +61,15 @@ function measureLabelWidth(item, bodyFont, titleSize, subtitleSize) {
 // SVG font sizes live in viewBox units, not pixels — a fixed "4.8" reads
 // huge when the crop is tight (few units across the whole render width)
 // and tiny when it's wide (many units across that same width). Scales
-// the page's own real title/body sizes (so the label text matches the
-// rest of the document, as if it were plain HTML) into whatever number
-// of viewBox units currently render at that many pixels, using the
-// crop's own natural width (before any label-driven overflow) as the
-// conversion rate — that rate only shifts with how much of the world is
-// in view, not with the text itself.
-function computeLabelMetrics(cropWidthUnits, viewportWidthPx, bodyFontSizePx) {
+// the block's own configured title/body sizes (so the label text
+// matches whatever the Properties panel set, as if it were plain HTML)
+// into whatever number of viewBox units currently render at that many
+// pixels, using the crop's own natural width (before any label-driven
+// overflow) as the conversion rate — that rate only shifts with how
+// much of the world is in view, not with the text itself.
+function computeLabelMetrics(cropWidthUnits, viewportWidthPx, titleFontSizePx, bodyFontSizePx) {
   const unitsPerPx = viewportWidthPx > 0 ? cropWidthUnits / viewportWidthPx : 0.6
-  const titleSize = 16 * unitsPerPx
+  const titleSize = (titleFontSizePx || 16) * unitsPerPx
   const subtitleSize = (bodyFontSizePx || 14) * unitsPerPx
   // One tier/column step: both text lines plus a little breathing room,
   // so consecutive labels never collide regardless of how big the
@@ -96,16 +96,18 @@ function computeLabelMetrics(cropWidthUnits, viewportWidthPx, bodyFontSizePx) {
 // exactly restores that floor — the text still reads at a single
 // coherent size, just a little smaller than the rest of the page,
 // rather than silently overflowing into the map.
-function computeSidesMetrics(cropWidthUnits, viewportWidthPx, bodyFontSizePx, markers, bodyFont) {
-  const titlePx = 16
+function computeSidesMetrics(cropWidthUnits, viewportWidthPx, titleFontSizePx, bodyFontSizePx, markers, titleFont, bodyFont, titleBold) {
+  const titlePx = titleFontSizePx || 16
   const subtitlePx = bodyFontSizePx || 14
   if (!(viewportWidthPx > 0)) {
-    const metrics = computeLabelMetrics(cropWidthUnits, viewportWidthPx, bodyFontSizePx)
-    const sideLabelMargin = Math.max(...markers.map((m) => measureLabelWidth(m.item, bodyFont, metrics.titleSize, metrics.subtitleSize)), metrics.titleSize * 3) + metrics.subtitleSize
+    const metrics = computeLabelMetrics(cropWidthUnits, viewportWidthPx, titleFontSizePx, bodyFontSizePx)
+    const sideLabelMargin =
+      Math.max(...markers.map((m) => measureLabelWidth(m.item, titleFont, bodyFont, metrics.titleSize, metrics.subtitleSize, titleBold)), metrics.titleSize * 3) +
+      metrics.subtitleSize
     return { ...metrics, sideLabelMargin }
   }
   const maxLabelPx = Math.max(
-    ...markers.map((m) => Math.max(measureTextWidth(m.item.title, titlePx, bodyFont, true), measureTextWidth(labelSubtitle(m.item), subtitlePx, bodyFont, false))),
+    ...markers.map((m) => Math.max(measureTextWidth(m.item.title, titlePx, titleFont, titleBold !== false), measureTextWidth(labelSubtitle(m.item), subtitlePx, bodyFont, false))),
     titlePx * 3,
   )
   const marginPxAtFullSize = maxLabelPx + subtitlePx
@@ -157,6 +159,9 @@ export default function WorldMap({
   bodyFont,
   titleFont,
   textColor,
+  titleColor,
+  titleFontSizePx,
+  titleBold,
   targetAspect,
   viewportWidthPx,
   bodyFontSizePx,
@@ -207,6 +212,10 @@ export default function WorldMap({
         worldDots={worldDots}
         accentColor={accentColor}
         bodyFont={bodyFont}
+        titleFont={titleFont}
+        titleColor={titleColor}
+        titleFontSizePx={titleFontSizePx}
+        titleBold={titleBold}
         direction={leaderDirection}
         targetAspect={targetAspect}
         viewportWidthPx={viewportWidthPx}
@@ -222,6 +231,9 @@ export default function WorldMap({
       bodyFont={bodyFont}
       titleFont={titleFont}
       textColor={textColor}
+      titleColor={titleColor}
+      titleFontSizePx={titleFontSizePx}
+      titleBold={titleBold}
     />
   )
 }
@@ -264,7 +276,7 @@ function layoutNumberLabels(markers, viewWidth, viewHeight) {
   return labels
 }
 
-function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, textColor }) {
+function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, textColor, titleColor, titleFontSizePx, titleBold }) {
   const bounds = computeMapBounds(markers)
   const viewWidth = bounds.maxX - bounds.minX
   const viewHeight = bounds.maxY - bounds.minY
@@ -278,14 +290,12 @@ function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, tex
         {visibleDots.map(({ x, y }, i) => (
           <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
         ))}
-        {/* Same radius as the basemap's own dots — a marker calls out
-            its location by color alone, not by being drawn bigger. */}
         {markers.map(({ item, index, x, y }) => (
-          <circle key={item.id || index} cx={x} cy={y} r={0.45} fill={accentColor} />
+          <circle key={item.id || index} cx={x} cy={y} r={1.4} fill={accentColor} />
         ))}
         {labels.map(({ marker, labelX, labelY }) => (
           <g key={marker.item.id || marker.index}>
-            <line x1={marker.x} y1={marker.y} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.35} />
+            <line x1={marker.x} y1={marker.y} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
             <text x={labelX} y={labelY} fontSize={4.2} fontWeight={700} fill={accentColor} textAnchor="middle" dominantBaseline="middle">
               {marker.index + 1}
             </text>
@@ -296,14 +306,22 @@ function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, tex
         {markers.map(({ item, index }) => (
           <div key={item.id || index} className="flex gap-2">
             {/* Only the number carries the accent color — title and
-                description follow the page's own text styling, same as
-                any other entries list, so the legend reads as part of
-                the document rather than a separately-styled widget. */}
+                description follow the block's own configurable text
+                styling (Properties panel), same as any other entries
+                list, so the legend reads as part of the document
+                rather than a separately-styled widget. */}
             <span className="shrink-0 text-xs font-bold" style={{ color: accentColor, fontFamily: bodyFont }}>
               {index + 1}
             </span>
             <div className="flex flex-col gap-0.5">
-              <span className="text-base font-bold" style={{ color: textColor, fontFamily: titleFont }}>
+              <span
+                style={{
+                  color: titleColor || accentColor,
+                  fontFamily: titleFont,
+                  fontSize: titleFontSizePx ? `${titleFontSizePx}px` : undefined,
+                  fontWeight: titleBold === false ? 400 : 700,
+                }}
+              >
                 {item.title}
               </span>
               {labelSubtitle(item) && (
@@ -336,11 +354,11 @@ function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, tex
 // every other one stepping evenly between. Since no two labels ever
 // share a tier, there's no need to check for overlap — the picture is
 // legible by construction, not by accident.
-function assignTiers(row, bodyFont, metrics) {
+function assignTiers(row, titleFont, bodyFont, metrics, titleBold) {
   const sorted = [...row].sort((a, b) => a.x - b.x)
   const n = sorted.length
   return sorted.map((m, i) => {
-    const width = measureLabelWidth(m.item, bodyFont, metrics.titleSize, metrics.subtitleSize)
+    const width = measureLabelWidth(m.item, titleFont, bodyFont, metrics.titleSize, metrics.subtitleSize, titleBold)
     return { ...m, labelX: m.x, left: m.x, right: m.x + metrics.dashLen + 2 + width, tier: n - 1 - i }
   })
 }
@@ -363,10 +381,10 @@ function splitBalanced(markers, axisKey) {
 // that final width, not just the markers' own tight crop) can be
 // solved by computing this twice: once with a first guess, once more
 // with the width that guess actually produced.
-function computeTopBottomLayout(markers, bounds, bodyFont, metrics) {
+function computeTopBottomLayout(markers, bounds, titleFont, bodyFont, metrics, titleBold) {
   const [topRaw, bottomRaw] = splitBalanced(markers, 'y')
-  const top = assignTiers(topRaw, bodyFont, metrics)
-  const bottom = assignTiers(bottomRaw, bodyFont, metrics)
+  const top = assignTiers(topRaw, titleFont, bodyFont, metrics, titleBold)
+  const bottom = assignTiers(bottomRaw, titleFont, bodyFont, metrics, titleBold)
   const allLaid = [...top, ...bottom]
   const labelMinX = Math.min(...allLaid.map((m) => m.labelX))
   const labelMaxX = Math.max(...allLaid.map((m) => m.labelX + (m.right - m.left)))
@@ -375,7 +393,20 @@ function computeTopBottomLayout(markers, bounds, bodyFont, metrics) {
   return { top, bottom, topTiers: top.length, bottomTiers: bottom.length, minX, maxX, viewWidth: maxX - minX }
 }
 
-function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sides', targetAspect, viewportWidthPx, bodyFontSizePx }) {
+function LeaderMap({
+  markers,
+  worldDots,
+  accentColor,
+  bodyFont,
+  titleFont,
+  titleColor,
+  titleFontSizePx,
+  titleBold,
+  direction = 'sides',
+  targetAspect,
+  viewportWidthPx,
+  bodyFontSizePx,
+}) {
   const bounds = computeMapBounds(markers)
 
   if (direction === 'topBottom') {
@@ -387,11 +418,11 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
     // of long titles on a very tight crop). One extra pass, re-scaling
     // against the width the first guess actually produced, settles on
     // the real match to the page's own type scale.
-    let metrics = computeLabelMetrics(bounds.maxX - bounds.minX, viewportWidthPx, bodyFontSizePx)
-    let layout = computeTopBottomLayout(markers, bounds, bodyFont, metrics)
+    let metrics = computeLabelMetrics(bounds.maxX - bounds.minX, viewportWidthPx, titleFontSizePx, bodyFontSizePx)
+    let layout = computeTopBottomLayout(markers, bounds, titleFont, bodyFont, metrics, titleBold)
     if (viewportWidthPx > 0) {
-      metrics = computeLabelMetrics(layout.viewWidth, viewportWidthPx, bodyFontSizePx)
-      layout = computeTopBottomLayout(markers, bounds, bodyFont, metrics)
+      metrics = computeLabelMetrics(layout.viewWidth, viewportWidthPx, titleFontSizePx, bodyFontSizePx)
+      layout = computeTopBottomLayout(markers, bounds, titleFont, bodyFont, metrics, titleBold)
     }
     const { top, bottom, topTiers, bottomTiers, minX, viewWidth } = layout
     const baseMargin = metrics.step * 0.6
@@ -444,10 +475,10 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
             x={textX}
             y={titleY}
             fontSize={metrics.titleSize}
-            fontWeight={700}
-            fill={accentColor}
+            fontWeight={titleBold === false ? 400 : 700}
+            fill={titleColor || accentColor}
             textAnchor="start"
-            fontFamily={bodyFont}
+            fontFamily={titleFont}
           >
             {item.title}
           </text>
@@ -491,7 +522,7 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
   // The side margin needs to fit the widest label actually present —
   // a fixed guess clips long titles like "MIND - Milan Innovation
   // District Masterplan" against the block's own edge.
-  const metrics = computeSidesMetrics(bounds.maxX - bounds.minX, viewportWidthPx, bodyFontSizePx, markers, bodyFont)
+  const metrics = computeSidesMetrics(bounds.maxX - bounds.minX, viewportWidthPx, titleFontSizePx, bodyFontSizePx, markers, titleFont, bodyFont, titleBold)
   const sideLabelMargin = metrics.sideLabelMargin
 
   // Same reasoning, on the vertical axis: each label needs a minimum
@@ -533,10 +564,10 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
           x={labelX}
           y={labelY - metrics.subtitleSize * 0.55}
           fontSize={metrics.titleSize}
-          fontWeight={700}
-          fill={accentColor}
+          fontWeight={titleBold === false ? 400 : 700}
+          fill={titleColor || accentColor}
           textAnchor={anchor}
-          fontFamily={bodyFont}
+          fontFamily={titleFont}
         >
           {item.title}
         </text>

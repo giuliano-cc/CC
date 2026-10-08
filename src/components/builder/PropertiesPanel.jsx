@@ -1455,6 +1455,13 @@ function MapProperties({ block, onChange }) {
           </select>
         </Field>
       )}
+      {/* Styles the project title/description text on the map itself
+          (numbered legend or leader-line labels) — same two field groups
+          Experience/Education use for their own entry title + body text,
+          so this map's text can match the rest of the document instead
+          of always inheriting Global Style with no way to override it. */}
+      <EntryTitleStyleFields block={block} onChange={onChange} />
+      <BodyTextStyleFields block={block} onChange={onChange} />
     </div>
   )
 }

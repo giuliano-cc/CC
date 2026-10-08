@@ -1491,12 +1491,15 @@ export default function BlockRenderer({
             accentColor={globalStyle.primaryColor}
             legendStyle={block.legendStyle || 'numbered'}
             leaderDirection={block.leaderDirection || 'sides'}
-            bodyFont={resolveBodyFont(globalStyle)}
-            titleFont={resolveTitleFont(globalStyle)}
+            bodyFont={block.bodyFontFamily || resolveBodyFont(globalStyle)}
+            titleFont={block.entryTitleFontFamily || resolveTitleFont(globalStyle)}
             textColor={globalStyle.textColor}
+            titleColor={block.entryTitleColor || null}
+            titleFontSizePx={block.entryTitleFontSize || 16}
+            titleBold={block.entryTitleBold}
             targetAspect={mapContentWidth / mapContentHeight}
             viewportWidthPx={mapContentWidth}
-            bodyFontSizePx={globalStyle.typographyScale?.p1?.sizePx}
+            bodyFontSizePx={block.bodyFontSize || globalStyle.typographyScale?.p1?.sizePx}
           />
         </div>
       )
