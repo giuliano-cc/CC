@@ -524,14 +524,17 @@ function LeaderMap({
 
   // Labels sit inside the map's own width (inset from its edges) rather
   // than in a separate reserved margin — the crop stays exactly the
-  // numbered style's width either way, leader line and all drawn
-  // straight over the basemap, same as the reference callout style.
+  // numbered style's width either way. The leader is orthogonal (a
+  // straight vertical run from the marker to the label's own row, then
+  // a straight horizontal run into the label), not a single diagonal
+  // line — same right-angle construction as topBottom's rail-and-dash.
   function renderLabel({ item, x, y, labelY }, side) {
     const labelX = side === 'left' ? bounds.minX + inset : bounds.maxX - inset
     const anchor = side === 'left' ? 'start' : 'end'
     return (
       <g key={item.id}>
-        <line x1={x} y1={y} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
+        <line x1={x} y1={y} x2={x} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
+        <line x1={x} y1={labelY} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
         <circle cx={x} cy={y} r={1.1} fill={accentColor} />
         <text
           x={labelX}
