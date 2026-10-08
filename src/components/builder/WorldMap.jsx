@@ -247,35 +247,25 @@ function NumberedMap({ markers, worldDots, accentColor }) {
 // version needed.
 const TOP_BOTTOM_LABEL_MARGIN = 20
 const TIER_HEIGHT = 14
-const LABEL_GAP = 6
-const TIER_JOG = 9
 // Space reserved between the leader line's end and the text start — a
 // short dash (like the reference layout's "— Dublin") rather than the
 // line running straight into the letters.
 const DASH_LEN = 6
 
-// Assigns each label (sorted by its marker's x) to the lowest
-// horizontal "tier" (row of labels, stacked further from the map the
-// higher the tier) whose last-placed label doesn't overlap it — the
-// same greedy interval-coloring used for calendar/timeline labels.
-// This lets labels that are close together in x spread out vertically
-// instead of fighting for room on one shared horizontal line, so the
-// map's own crop never has to grow just to fit a long row of text.
-// Labels read left-to-right starting at the marker's own x (a dash,
-// then the text), so the span each tier has to keep clear of its
-// neighbors runs from that x to x + text width, not centered on it.
+// Assigns each label a tier purely by its marker's rank along x — not
+// by where it happens to fit — so the whole row reads as one
+// deterministic staircase instead of whatever order a collision search
+// landed on: the leftmost marker's label sits in the tier farthest
+// from the map, the rightmost sits right next to it (tier 0), with
+// every other one stepping evenly between. Since no two labels ever
+// share a tier, there's no need to check for overlap — the picture is
+// legible by construction, not by accident.
 function assignTiers(row, bodyFont) {
-  const tierRightEdge = []
-  return row.map((m) => {
+  const sorted = [...row].sort((a, b) => a.x - b.x)
+  const n = sorted.length
+  return sorted.map((m, i) => {
     const width = measureLabelWidth(m.item, bodyFont)
-    const left = m.x
-    const right = m.x + DASH_LEN + 2 + width
-    let tier = 0
-    while (tierRightEdge[tier] !== undefined && left < tierRightEdge[tier] + LABEL_GAP) {
-      tier += 1
-    }
-    tierRightEdge[tier] = right
-    return { ...m, labelX: m.x, left, right, tier }
+    return { ...m, labelX: m.x, left: m.x, right: m.x + DASH_LEN + 2 + width, tier: n - 1 - i }
   })
 }
 
@@ -296,32 +286,19 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
 
   if (direction === 'topBottom') {
     const [topRaw, bottomRaw] = splitBalanced(markers, 'y')
-    const top = assignTiers([...topRaw].sort((a, b) => a.x - b.x), bodyFont)
-    const bottom = assignTiers([...bottomRaw].sort((a, b) => a.x - b.x), bodyFont)
-    const topTiers = Math.max(0, ...top.map((m) => m.tier), -1) + 1
-    const bottomTiers = Math.max(0, ...bottom.map((m) => m.tier), -1) + 1
-
-    // Nudges each label a little sideways from its marker's own x,
-    // further the higher its tier — this is what turns the leader line
-    // from a straight vertical (several of which, stacked close
-    // together, read as one blurred line) into a distinct diagonal
-    // fanning out from the cluster, angled like a real callout line
-    // instead of overlapping its neighbors.
-    function jog(group) {
-      return group.map((m) => ({ ...m, labelX: m.x + m.tier * TIER_JOG }))
-    }
-    const topJogged = jog(top)
-    const bottomJogged = jog(bottom)
+    const top = assignTiers(topRaw, bodyFont)
+    const bottom = assignTiers(bottomRaw, bodyFont)
+    const topTiers = top.length
+    const bottomTiers = bottom.length
 
     // The view only grows beyond the markers' own tight crop when a
     // label actually overflows it (e.g. a wide title centered on a
-    // marker near the crop's edge, or the tier jog pushing it further
-    // out) — never to fit an entire row on one line, since tiering
-    // already spreads same-row labels vertically instead of needing
-    // more horizontal room. Whatever width IS needed, the map's own
-    // geography is zoomed to fill it too, rather than leaving the
-    // extra room blank down the sides.
-    const allLaid = [...topJogged, ...bottomJogged]
+    // marker near the crop's edge) — never to fit an entire row on one
+    // line, since tiering already spreads same-row labels vertically
+    // instead of needing more horizontal room. Whatever width IS
+    // needed, the map's own geography is zoomed to fill it too, rather
+    // than leaving the extra room blank down the sides.
+    const allLaid = [...top, ...bottom]
     const labelMinX = Math.min(...allLaid.map((m) => m.labelX))
     const labelMaxX = Math.max(...allLaid.map((m) => m.labelX + (m.right - m.left)))
     const neededWidth = labelMaxX - labelMinX
@@ -337,11 +314,10 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
         ({ x, y }) => x >= effectiveBounds.minX && x <= effectiveBounds.maxX && y >= effectiveBounds.minY && y <= effectiveBounds.maxY,
       )
 
-    // Clean single leader line (straight when the label sits directly
-    // above/below its own marker, gently diagonal when jogged clear of a
-    // neighbor) ending in a short dash before the text — "— Dublin",
-    // left-aligned, title then address below it — reading like a real
-    // map callout instead of a centered floating label.
+    // Straight leader line from the marker up/down to its own tier,
+    // ending in a short dash before the text — "— Dublin", left-aligned,
+    // title then address below it — reading like a real map callout
+    // instead of a centered floating label.
     function renderLabel({ item, x, y, labelX, tier }, pos) {
       const nearOffset = TOP_BOTTOM_LABEL_MARGIN + tier * TIER_HEIGHT
       const rail = pos === 'top' ? effectiveBounds.minY - nearOffset : effectiveBounds.maxY + nearOffset
@@ -373,8 +349,8 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
         {visibleDots.map(({ x, y }, i) => (
           <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
         ))}
-        {topJogged.map((m) => renderLabel(m, 'top'))}
-        {bottomJogged.map((m) => renderLabel(m, 'bottom'))}
+        {top.map((m) => renderLabel(m, 'top'))}
+        {bottom.map((m) => renderLabel(m, 'bottom'))}
       </svg>
     )
   }
