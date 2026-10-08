@@ -51,6 +51,27 @@ function measureLabelWidth(item, bodyFont) {
   )
 }
 
+// Zooms the geographic crop out (uniformly on both axes, re-centered on
+// itself) so its own width grows to at least `minWidth` — used so the
+// dot grid itself fills whatever width the labels end up needing,
+// instead of staying small inside a wider viewBox and leaving blank
+// space down the sides.
+function zoomBoundsToWidth(bounds, minWidth) {
+  const cropWidth = bounds.maxX - bounds.minX
+  if (minWidth <= cropWidth || cropWidth <= 0) return bounds
+  const scale = minWidth / cropWidth
+  const cx = (bounds.minX + bounds.maxX) / 2
+  const cy = (bounds.minY + bounds.maxY) / 2
+  const halfW = (cropWidth * scale) / 2
+  const halfH = ((bounds.maxY - bounds.minY) * scale) / 2
+  return {
+    minX: Math.max(0, cx - halfW),
+    maxX: Math.min(MAP_WIDTH, cx + halfW),
+    minY: Math.max(0, cy - halfH),
+    maxY: Math.min(MAP_HEIGHT, cy + halfH),
+  }
+}
+
 // Crops the basemap to the region the markers actually sit in, with
 // some breathing room around them — otherwise a handful of locations
 // clustered in one region (the common case: most CVs don't have
@@ -227,6 +248,7 @@ function NumberedMap({ markers, worldDots, accentColor }) {
 const TOP_BOTTOM_LABEL_MARGIN = 20
 const TIER_HEIGHT = 14
 const LABEL_GAP = 6
+const TIER_JOG = 9
 
 // Assigns each label (sorted by its marker's x) to the lowest
 // horizontal "tier" (row of labels, stacked further from the map the
@@ -272,28 +294,55 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
     const topTiers = Math.max(0, ...top.map((m) => m.tier), -1) + 1
     const bottomTiers = Math.max(0, ...bottom.map((m) => m.tier), -1) + 1
 
+    // Nudges each label a little sideways from its marker's own x,
+    // further the higher its tier — this is what turns the leader line
+    // from a straight vertical (several of which, stacked close
+    // together, read as one blurred line) into a distinct diagonal
+    // fanning out from the cluster, angled like a real callout line
+    // instead of overlapping its neighbors.
+    function jog(group, tierCount) {
+      return group.map((m) => ({ ...m, labelX: m.x + (m.tier - (tierCount - 1) / 2) * TIER_JOG }))
+    }
+    const topJogged = jog(top, topTiers)
+    const bottomJogged = jog(bottom, bottomTiers)
+
     // The view only grows beyond the markers' own tight crop when a
     // label actually overflows it (e.g. a wide title centered on a
-    // marker near the crop's edge) — never to fit an entire row on one
-    // line, since tiering already spreads same-row labels vertically
-    // instead of needing more horizontal room.
-    const allLaid = [...top, ...bottom]
-    const minX = Math.min(bounds.minX, ...allLaid.map((m) => m.left))
-    const maxX = Math.max(bounds.maxX, ...allLaid.map((m) => m.right))
+    // marker near the crop's edge, or the tier jog pushing it further
+    // out) — never to fit an entire row on one line, since tiering
+    // already spreads same-row labels vertically instead of needing
+    // more horizontal room. Whatever width IS needed, the map's own
+    // geography is zoomed to fill it too, rather than leaving the
+    // extra room blank down the sides.
+    const allLaid = [...topJogged, ...bottomJogged]
+    const labelMinX = Math.min(...allLaid.map((m) => m.labelX - (m.right - m.left) / 2))
+    const labelMaxX = Math.max(...allLaid.map((m) => m.labelX + (m.right - m.left) / 2))
+    const neededWidth = labelMaxX - labelMinX
+    const effectiveBounds = zoomBoundsToWidth(bounds, neededWidth)
+    const minX = Math.min(effectiveBounds.minX, labelMinX)
+    const maxX = Math.max(effectiveBounds.maxX, labelMaxX)
     const topMargin = TOP_BOTTOM_LABEL_MARGIN + topTiers * TIER_HEIGHT
     const bottomMargin = TOP_BOTTOM_LABEL_MARGIN + bottomTiers * TIER_HEIGHT
 
     const visibleDots = worldDots
       .map(([lng, lat]) => project(lng, lat))
-      .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
+      .filter(
+        ({ x, y }) => x >= effectiveBounds.minX && x <= effectiveBounds.maxX && y >= effectiveBounds.minY && y <= effectiveBounds.maxY,
+      )
 
     function renderLabel({ item, x, y, labelX, tier }, pos) {
       const nearOffset = TOP_BOTTOM_LABEL_MARGIN + tier * TIER_HEIGHT
-      const rail = pos === 'top' ? bounds.minY - nearOffset : bounds.maxY + nearOffset
+      const rail = pos === 'top' ? effectiveBounds.minY - nearOffset : effectiveBounds.maxY + nearOffset
       const labelY = pos === 'top' ? rail - 8 : rail + 8
+      // Diagonal segment from the marker to an elbow partway toward the
+      // label's rail, then a straight segment into the label itself —
+      // the same angled-leader shape as the sides direction already
+      // uses, instead of one straight vertical line.
+      const elbowY = y + (rail - y) * 0.55
       return (
         <g key={item.id}>
-          <line x1={x} y1={y} x2={labelX} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
+          <line x1={x} y1={y} x2={labelX} y2={elbowY} stroke="#94a3b8" strokeWidth={0.4} />
+          <line x1={labelX} y1={elbowY} x2={labelX} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
           <circle cx={x} cy={y} r={1.1} fill={accentColor} />
           <text x={labelX} y={labelY} fontSize={4.8} fontWeight={700} fill={accentColor} textAnchor="middle" fontFamily={bodyFont}>
             {item.title}
@@ -315,14 +364,16 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
       )
     }
 
-    const viewBox = `${minX} ${bounds.minY - topMargin} ${maxX - minX} ${bounds.maxY - bounds.minY + topMargin + bottomMargin}`
+    const viewBox = `${minX} ${effectiveBounds.minY - topMargin} ${maxX - minX} ${
+      effectiveBounds.maxY - effectiveBounds.minY + topMargin + bottomMargin
+    }`
     return (
       <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
         {visibleDots.map(({ x, y }, i) => (
           <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
         ))}
-        {top.map((m) => renderLabel(m, 'top'))}
-        {bottom.map((m) => renderLabel(m, 'bottom'))}
+        {topJogged.map((m) => renderLabel(m, 'top'))}
+        {bottomJogged.map((m) => renderLabel(m, 'bottom'))}
       </svg>
     )
   }
