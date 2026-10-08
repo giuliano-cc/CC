@@ -79,25 +79,46 @@ export function goldenRatioLinesY(margins) {
   return { top: margins.top + (height - a), bottom: margins.top + a }
 }
 
-// Same idea as the golden ratio guide above, but split at the ISO 216
-// ("A4") ratio (1:√2) instead of the golden ratio — the ratio the page
-// itself already is (794×1123 ≈ 1:1.41421), so this guide marks where an
-// A4 sheet would fold/cut in half into two same-ratio A5 halves. Same
-// shape as goldenRatioLinesX/Y (two lines per axis, confined to the
-// margins, always the exact mathematical split) so both guides share
-// the same rendering and snapping code paths in Canvas.jsx/FreeBlock.jsx.
-const SQRT2 = Math.sqrt(2)
+// The classic compass-and-straightedge construction behind the ISO 216
+// ("A4") ratio (1:√2): a square on the margin box's own width, its
+// diagonal (length = width×√2 by Pythagoras), and that diagonal swung
+// down (an arc centered on the square's top-right corner) until it lies
+// flat — landing exactly width×√2 below the square's top edge. That
+// landing line is the A4 ratio itself, demonstrated rather than just
+// stated: for a true A4 margin box the landing line falls exactly on
+// its bottom edge, since the page's own height already is width×√2.
+// Anchored at the margin box's own top-left corner (not centered), same
+// as the square/column-row guides already are.
+export function a4ConstructionGeometry(margins) {
+  const left = margins.left
+  const top = margins.top
+  const side = SHEET_WIDTH - margins.left - margins.right
+  const diagonal = side * Math.SQRT2
+  return {
+    square: { x: left, y: top, size: side },
+    // Diagonal from the square's bottom-left corner to its top-right —
+    // the straight line whose length is being "projected" downward.
+    diagonal: { x1: left, y1: top + side, x2: left + side, y2: top },
+    // The arc's center (the square's top-right corner) and its landing
+    // point, straight down from that center at radius = diagonal.
+    arcCenter: { x: left + side, y: top },
+    landingPoint: { x: left + side, y: top + diagonal },
+  }
+}
 
+// The construction's two meaningful reference lines, in the same
+// {label: position} shape goldenRatioLinesX/Y use — for FreeBlock.jsx's
+// snapping (a block can align to the square's own right edge, or to
+// where the diagonal lands) without needing to know about the arc/
+// diagonal geometry above.
 export function a4RatioLinesX(margins) {
-  const width = SHEET_WIDTH - margins.left - margins.right
-  const a = width / SQRT2
-  return { sx: margins.left + (width - a), dx: margins.left + a }
+  const { square } = a4ConstructionGeometry(margins)
+  return { edge: square.x + square.size }
 }
 
 export function a4RatioLinesY(margins) {
-  const height = SHEET_HEIGHT - margins.top - margins.bottom
-  const a = height / SQRT2
-  return { top: margins.top + (height - a), bottom: margins.top + a }
+  const { square, landingPoint } = a4ConstructionGeometry(margins)
+  return { edge: square.y + square.size, landing: landingPoint.y }
 }
 
 // A symmetric pair of lines duplicated from each exact golden ratio line

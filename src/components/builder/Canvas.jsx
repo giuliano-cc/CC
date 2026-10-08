@@ -16,8 +16,7 @@ import {
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import {
-  a4RatioLinesX,
-  a4RatioLinesY,
+  a4ConstructionGeometry,
   goldenRatioLinesX,
   goldenRatioLinesY,
   goldenRatioOffsetLinesX,
@@ -193,28 +192,59 @@ function Page({
             />
           ))}
 
-      {/* A4 ratio guide (1:√2 — the ratio the page itself already is):
-          same shape as the golden ratio guide above, entirely inside the
-          margins on both axes, its own blue so all the guides stay
-          visually distinct when several are on at once. */}
+      {/* A4 ratio guide: the classic square + diagonal + swung-arc
+          construction behind the 1:√2 ratio (the ratio the page itself
+          already is), not just a split line like the golden ratio guide
+          above — an SVG overlay, since CSS borders can't draw the arc.
+          Clipped to the page by the page's own overflow-hidden, same as
+          every other guide here. */}
       {!preview &&
         showA4Ratio &&
-        Object.values(a4RatioLinesX(margins)).map((x, i) => (
-          <div
-            key={`a4-v-${i}`}
-            style={{ left: x, top: margins.top, bottom: margins.bottom }}
-            className="pdf-ignore pointer-events-none absolute z-10 w-px border-l border-dashed border-sky-500"
-          />
-        ))}
-      {!preview &&
-        showA4Ratio &&
-        Object.values(a4RatioLinesY(margins)).map((y, i) => (
-          <div
-            key={`a4-h-${i}`}
-            style={{ top: y, left: margins.left, right: margins.right }}
-            className="pdf-ignore pointer-events-none absolute z-10 h-px border-t border-dashed border-sky-500"
-          />
-        ))}
+        (() => {
+          const { square, diagonal, arcCenter, landingPoint } = a4ConstructionGeometry(margins)
+          return (
+            <svg
+              className="pdf-ignore pointer-events-none absolute inset-0 z-10"
+              width={SHEET_WIDTH}
+              height={SHEET_HEIGHT}
+              viewBox={`0 0 ${SHEET_WIDTH} ${SHEET_HEIGHT}`}
+            >
+              <rect
+                x={square.x}
+                y={square.y}
+                width={square.size}
+                height={square.size}
+                fill="none"
+                stroke="rgb(14 165 233)"
+                strokeWidth="1"
+              />
+              <line
+                x1={diagonal.x1}
+                y1={diagonal.y1}
+                x2={diagonal.x2}
+                y2={diagonal.y2}
+                stroke="rgb(14 165 233)"
+                strokeWidth="1.5"
+              />
+              <path
+                d={`M ${diagonal.x1} ${diagonal.y1} A ${square.size * Math.SQRT2} ${square.size * Math.SQRT2} 0 0 1 ${landingPoint.x} ${landingPoint.y}`}
+                fill="none"
+                stroke="rgb(14 165 233)"
+                strokeWidth="1"
+                strokeDasharray="4 3"
+              />
+              <line
+                x1={arcCenter.x}
+                y1={arcCenter.y}
+                x2={landingPoint.x}
+                y2={landingPoint.y}
+                stroke="rgb(14 165 233)"
+                strokeWidth="1"
+                strokeDasharray="2 2"
+              />
+            </svg>
+          )
+        })()}
 
       {/* Column × row "structure grid" (see utils/layout.js) — a
           separate teal color from the grid/margin/golden-ratio guides so
