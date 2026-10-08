@@ -424,10 +424,12 @@ function LeaderMap({
       .map(([lng, lat]) => project(lng, lat))
       .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
 
-    // Straight leader line from the marker up/down to its own tier,
-    // ending in a short dash before the text — "— Dublin", left-aligned,
-    // title then address below it — reading like a real map callout
-    // instead of a centered floating label.
+    // Orthogonal leader line from the marker to its own tier — a
+    // straight vertical run up/down from the marker to the tier's own
+    // rail, then a straight horizontal run into the text — same
+    // right-angle construction as the 'sides' style's leaders, not a
+    // single diagonal line crossing straight from the marker to the
+    // label.
     function renderLabel({ item, x, y, labelX, tier }, pos) {
       const step = pos === 'top' ? topStep : bottomStep
       const nearOffset = baseMargin + tier * step
@@ -438,8 +440,8 @@ function LeaderMap({
       const locY = pos === 'top' ? rail - pad : titleY + metrics.subtitleSize * 1.15
       return (
         <g key={item.id}>
-          <line x1={x} y1={y} x2={labelX} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
-          <line x1={labelX} y1={rail} x2={labelX + metrics.dashLen} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
+          <line x1={x} y1={y} x2={x} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
+          <line x1={x} y1={rail} x2={labelX + metrics.dashLen} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
           <circle cx={x} cy={y} r={1.1} fill={accentColor} />
           <text
             x={textX}
