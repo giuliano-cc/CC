@@ -80,6 +80,50 @@ function computeLabelMetrics(cropWidthUnits, viewportWidthPx, bodyFontSizePx) {
   return { titleSize, subtitleSize, step, dashLen }
 }
 
+// The `sides` direction's margins are almost entirely text — unlike
+// topBottom (where label overflow is a modest addition on top of a
+// geography-driven crop width). Because the SVG always renders at
+// `viewportWidthPx / naturalWidthUnits` px per unit by construction, a
+// label sized as `targetPx * (naturalWidthUnits/viewportWidthPx)`
+// units renders at EXACTLY targetPx, no matter what naturalWidthUnits
+// turns out to be — so the margin (in px) must itself be derived from
+// that same final size, or the two drift apart. Solving
+// `naturalWidth = crop + 2*margin(naturalWidth)` directly (closed
+// form, not an iterative re-guess) keeps them consistent in one step.
+// When a title is so long that giving it the full page-matching size
+// on both sides would leave the map crop under a floor fraction of the
+// width, every target size shrinks by the one scale factor that
+// exactly restores that floor — the text still reads at a single
+// coherent size, just a little smaller than the rest of the page,
+// rather than silently overflowing into the map.
+function computeSidesMetrics(cropWidthUnits, viewportWidthPx, bodyFontSizePx, markers, bodyFont) {
+  const titlePx = 16
+  const subtitlePx = bodyFontSizePx || 14
+  if (!(viewportWidthPx > 0)) {
+    const metrics = computeLabelMetrics(cropWidthUnits, viewportWidthPx, bodyFontSizePx)
+    const sideLabelMargin = Math.max(...markers.map((m) => measureLabelWidth(m.item, bodyFont, metrics.titleSize, metrics.subtitleSize)), metrics.titleSize * 3) + metrics.subtitleSize
+    return { ...metrics, sideLabelMargin }
+  }
+  const maxLabelPx = Math.max(
+    ...markers.map((m) => Math.max(measureTextWidth(m.item.title, titlePx, bodyFont, true), measureTextWidth(labelSubtitle(m.item), subtitlePx, bodyFont, false))),
+    titlePx * 3,
+  )
+  const marginPxAtFullSize = maxLabelPx + subtitlePx
+  // Leaves at least 15% of the width for the map crop itself.
+  const minCropFraction = 0.15
+  const scale = Math.min(1, ((1 - minCropFraction) * viewportWidthPx) / (2 * marginPxAtFullSize))
+  const marginPx = marginPxAtFullSize * scale
+  const denom = 1 - (2 * marginPx) / viewportWidthPx
+  const naturalWidthUnits = cropWidthUnits / denom
+  const unitsPerPx = naturalWidthUnits / viewportWidthPx
+  const titleSize = titlePx * scale * unitsPerPx
+  const subtitleSize = subtitlePx * scale * unitsPerPx
+  const blockHeight = titleSize * 1.1 + subtitleSize * 1.25 + subtitleSize * 0.5
+  const step = blockHeight + subtitleSize * 0.7
+  const sideLabelMargin = (naturalWidthUnits - cropWidthUnits) / 2
+  return { titleSize, subtitleSize, step, sideLabelMargin }
+}
+
 // Crops the basemap to the region the markers actually sit in, with
 // some breathing room around them — otherwise a handful of locations
 // clustered in one region (the common case: most CVs don't have
@@ -313,30 +357,44 @@ function splitBalanced(markers, axisKey) {
   return [sorted.slice(0, half), sorted.slice(half)]
 }
 
+// Lays out the top/bottom tiers for a given set of label metrics,
+// returning the resulting view width along with everything needed to
+// render — split out so the real font-size scale (which depends on
+// that final width, not just the markers' own tight crop) can be
+// solved by computing this twice: once with a first guess, once more
+// with the width that guess actually produced.
+function computeTopBottomLayout(markers, bounds, bodyFont, metrics) {
+  const [topRaw, bottomRaw] = splitBalanced(markers, 'y')
+  const top = assignTiers(topRaw, bodyFont, metrics)
+  const bottom = assignTiers(bottomRaw, bodyFont, metrics)
+  const allLaid = [...top, ...bottom]
+  const labelMinX = Math.min(...allLaid.map((m) => m.labelX))
+  const labelMaxX = Math.max(...allLaid.map((m) => m.labelX + (m.right - m.left)))
+  const minX = Math.min(bounds.minX, labelMinX)
+  const maxX = Math.max(bounds.maxX, labelMaxX)
+  return { top, bottom, topTiers: top.length, bottomTiers: bottom.length, minX, maxX, viewWidth: maxX - minX }
+}
+
 function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sides', targetAspect, viewportWidthPx, bodyFontSizePx }) {
   const bounds = computeMapBounds(markers)
-  const metrics = computeLabelMetrics(bounds.maxX - bounds.minX, viewportWidthPx, bodyFontSizePx)
 
   if (direction === 'topBottom') {
-    const [topRaw, bottomRaw] = splitBalanced(markers, 'y')
-    const top = assignTiers(topRaw, bodyFont, metrics)
-    const bottom = assignTiers(bottomRaw, bodyFont, metrics)
-    const topTiers = top.length
-    const bottomTiers = bottom.length
+    // The real pixel size the label text ends up at depends on the
+    // FINAL view width (crop plus however much labels overflow it),
+    // not just the markers' own tight crop — guessing with the tight
+    // crop alone under-sizes the font whenever the label overflow
+    // that guess produced turns out to dominate the width (a handful
+    // of long titles on a very tight crop). One extra pass, re-scaling
+    // against the width the first guess actually produced, settles on
+    // the real match to the page's own type scale.
+    let metrics = computeLabelMetrics(bounds.maxX - bounds.minX, viewportWidthPx, bodyFontSizePx)
+    let layout = computeTopBottomLayout(markers, bounds, bodyFont, metrics)
+    if (viewportWidthPx > 0) {
+      metrics = computeLabelMetrics(layout.viewWidth, viewportWidthPx, bodyFontSizePx)
+      layout = computeTopBottomLayout(markers, bounds, bodyFont, metrics)
+    }
+    const { top, bottom, topTiers, bottomTiers, minX, viewWidth } = layout
     const baseMargin = metrics.step * 0.6
-
-    // The crop only widens on whichever side a label actually overflows
-    // it (a wide title hanging off a marker near the edge) — directly
-    // to that overflow point, not symmetrically out from the crop's own
-    // center. Zooming out symmetrically to "fill" a width some labels
-    // needed only on the right, say, would pad the left side with empty
-    // ocean that nothing actually needed.
-    const allLaid = [...top, ...bottom]
-    const labelMinX = Math.min(...allLaid.map((m) => m.labelX))
-    const labelMaxX = Math.max(...allLaid.map((m) => m.labelX + (m.right - m.left)))
-    const minX = Math.min(bounds.minX, labelMinX)
-    const maxX = Math.max(bounds.maxX, labelMaxX)
-    const viewWidth = maxX - minX
     const cropHeight = bounds.maxY - bounds.minY
 
     // The block can be resized to any height, independent of what the
@@ -433,9 +491,8 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
   // The side margin needs to fit the widest label actually present —
   // a fixed guess clips long titles like "MIND - Milan Innovation
   // District Masterplan" against the block's own edge.
-  const sideLabelMargin =
-    Math.max(...markers.map((m) => measureLabelWidth(m.item, bodyFont, metrics.titleSize, metrics.subtitleSize)), metrics.titleSize * 3) +
-    metrics.subtitleSize
+  const metrics = computeSidesMetrics(bounds.maxX - bounds.minX, viewportWidthPx, bodyFontSizePx, markers, bodyFont)
+  const sideLabelMargin = metrics.sideLabelMargin
 
   // Same reasoning, on the vertical axis: each label needs a minimum
   // height (it's two lines of text) to not overlap its neighbors,
