@@ -1495,6 +1495,8 @@ export default function BlockRenderer({
             titleFont={resolveTitleFont(globalStyle)}
             textColor={globalStyle.textColor}
             targetAspect={mapContentWidth / mapContentHeight}
+            viewportWidthPx={mapContentWidth}
+            bodyFontSizePx={globalStyle.typographyScale?.p1?.sizePx}
           />
         </div>
       )

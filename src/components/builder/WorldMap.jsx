@@ -51,32 +51,33 @@ function labelSubtitle(item) {
   return (item.description || '').split('\n')[0].trim()
 }
 
-function measureLabelWidth(item, bodyFont) {
+function measureLabelWidth(item, bodyFont, titleSize, subtitleSize) {
   return Math.max(
-    measureTextWidth(item.title, 4.8, bodyFont, true),
-    measureTextWidth(labelSubtitle(item), 3.6, bodyFont, false),
+    measureTextWidth(item.title, titleSize, bodyFont, true),
+    measureTextWidth(labelSubtitle(item), subtitleSize, bodyFont, false),
   )
 }
 
-// Zooms the geographic crop out (uniformly on both axes, re-centered on
-// itself) so its own width grows to at least `minWidth` — used so the
-// dot grid itself fills whatever width the labels end up needing,
-// instead of staying small inside a wider viewBox and leaving blank
-// space down the sides.
-function zoomBoundsToWidth(bounds, minWidth) {
-  const cropWidth = bounds.maxX - bounds.minX
-  if (minWidth <= cropWidth || cropWidth <= 0) return bounds
-  const scale = minWidth / cropWidth
-  const cx = (bounds.minX + bounds.maxX) / 2
-  const cy = (bounds.minY + bounds.maxY) / 2
-  const halfW = (cropWidth * scale) / 2
-  const halfH = ((bounds.maxY - bounds.minY) * scale) / 2
-  return {
-    minX: Math.max(0, cx - halfW),
-    maxX: Math.min(MAP_WIDTH, cx + halfW),
-    minY: Math.max(0, cy - halfH),
-    maxY: Math.min(MAP_HEIGHT, cy + halfH),
-  }
+// SVG font sizes live in viewBox units, not pixels — a fixed "4.8" reads
+// huge when the crop is tight (few units across the whole render width)
+// and tiny when it's wide (many units across that same width). Scales
+// the page's own real title/body sizes (so the label text matches the
+// rest of the document, as if it were plain HTML) into whatever number
+// of viewBox units currently render at that many pixels, using the
+// crop's own natural width (before any label-driven overflow) as the
+// conversion rate — that rate only shifts with how much of the world is
+// in view, not with the text itself.
+function computeLabelMetrics(cropWidthUnits, viewportWidthPx, bodyFontSizePx) {
+  const unitsPerPx = viewportWidthPx > 0 ? cropWidthUnits / viewportWidthPx : 0.6
+  const titleSize = 16 * unitsPerPx
+  const subtitleSize = (bodyFontSizePx || 14) * unitsPerPx
+  // One tier/column step: both text lines plus a little breathing room,
+  // so consecutive labels never collide regardless of how big the
+  // scaled fonts turn out to be.
+  const blockHeight = titleSize * 1.1 + subtitleSize * 1.25 + subtitleSize * 0.5
+  const step = blockHeight + subtitleSize * 0.7
+  const dashLen = Math.max(4, subtitleSize * 1.2)
+  return { titleSize, subtitleSize, step, dashLen }
 }
 
 // Crops the basemap to the region the markers actually sit in, with
@@ -113,6 +114,8 @@ export default function WorldMap({
   titleFont,
   textColor,
   targetAspect,
+  viewportWidthPx,
+  bodyFontSizePx,
 }) {
   const [worldDots, setWorldDots] = useState(null)
   const [points, setPoints] = useState(null)
@@ -162,6 +165,8 @@ export default function WorldMap({
         bodyFont={bodyFont}
         direction={leaderDirection}
         targetAspect={targetAspect}
+        viewportWidthPx={viewportWidthPx}
+        bodyFontSizePx={bodyFontSizePx}
       />
     )
   }
@@ -274,19 +279,10 @@ function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, tex
 // leader line — `direction: 'sides'` splits left/right of the map's
 // own horizontal center (columns stacked top-to-bottom, the reference
 // layout's own grouping); `direction: 'topBottom'` splits above/below
-// its vertical center instead (rows stacked left-to-right). Font sizes
-// are fixed in viewBox units (not scaled to the crop), so the room
-// labels need is roughly constant regardless of how tightly the map
-// is cropped — a fixed margin on whichever side holds the labels,
-// added directly to the cropped viewBox rather than reserved inside
-// the map's own 0..360/0..180 range like the original fixed-world
-// version needed.
-const TOP_BOTTOM_LABEL_MARGIN = 20
-const TIER_HEIGHT = 14
-// Space reserved between the leader line's end and the text start — a
-// short dash (like the reference layout's "— Dublin") rather than the
-// line running straight into the letters.
-const DASH_LEN = 6
+// its vertical center instead (rows stacked left-to-right). The margin
+// reserved for labels is added directly to the cropped viewBox, rather
+// than reserved inside the map's own 0..360/0..180 range like the
+// original fixed-world version needed.
 
 // Assigns each label a tier purely by its marker's rank along x — not
 // by where it happens to fit — so the whole row reads as one
@@ -296,12 +292,12 @@ const DASH_LEN = 6
 // every other one stepping evenly between. Since no two labels ever
 // share a tier, there's no need to check for overlap — the picture is
 // legible by construction, not by accident.
-function assignTiers(row, bodyFont) {
+function assignTiers(row, bodyFont, metrics) {
   const sorted = [...row].sort((a, b) => a.x - b.x)
   const n = sorted.length
   return sorted.map((m, i) => {
-    const width = measureLabelWidth(m.item, bodyFont)
-    return { ...m, labelX: m.x, left: m.x, right: m.x + DASH_LEN + 2 + width, tier: n - 1 - i }
+    const width = measureLabelWidth(m.item, bodyFont, metrics.titleSize, metrics.subtitleSize)
+    return { ...m, labelX: m.x, left: m.x, right: m.x + metrics.dashLen + 2 + width, tier: n - 1 - i }
   })
 }
 
@@ -317,32 +313,31 @@ function splitBalanced(markers, axisKey) {
   return [sorted.slice(0, half), sorted.slice(half)]
 }
 
-function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sides', targetAspect }) {
+function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sides', targetAspect, viewportWidthPx, bodyFontSizePx }) {
   const bounds = computeMapBounds(markers)
+  const metrics = computeLabelMetrics(bounds.maxX - bounds.minX, viewportWidthPx, bodyFontSizePx)
 
   if (direction === 'topBottom') {
     const [topRaw, bottomRaw] = splitBalanced(markers, 'y')
-    const top = assignTiers(topRaw, bodyFont)
-    const bottom = assignTiers(bottomRaw, bodyFont)
+    const top = assignTiers(topRaw, bodyFont, metrics)
+    const bottom = assignTiers(bottomRaw, bodyFont, metrics)
     const topTiers = top.length
     const bottomTiers = bottom.length
+    const baseMargin = metrics.step * 0.6
 
-    // The view only grows beyond the markers' own tight crop when a
-    // label actually overflows it (e.g. a wide title centered on a
-    // marker near the crop's edge) — never to fit an entire row on one
-    // line, since tiering already spreads same-row labels vertically
-    // instead of needing more horizontal room. Whatever width IS
-    // needed, the map's own geography is zoomed to fill it too, rather
-    // than leaving the extra room blank down the sides.
+    // The crop only widens on whichever side a label actually overflows
+    // it (a wide title hanging off a marker near the edge) — directly
+    // to that overflow point, not symmetrically out from the crop's own
+    // center. Zooming out symmetrically to "fill" a width some labels
+    // needed only on the right, say, would pad the left side with empty
+    // ocean that nothing actually needed.
     const allLaid = [...top, ...bottom]
     const labelMinX = Math.min(...allLaid.map((m) => m.labelX))
     const labelMaxX = Math.max(...allLaid.map((m) => m.labelX + (m.right - m.left)))
-    const neededWidth = labelMaxX - labelMinX
-    const effectiveBounds = zoomBoundsToWidth(bounds, neededWidth)
-    const minX = Math.min(effectiveBounds.minX, labelMinX)
-    const maxX = Math.max(effectiveBounds.maxX, labelMaxX)
+    const minX = Math.min(bounds.minX, labelMinX)
+    const maxX = Math.max(bounds.maxX, labelMaxX)
     const viewWidth = maxX - minX
-    const cropHeight = effectiveBounds.maxY - effectiveBounds.minY
+    const cropHeight = bounds.maxY - bounds.minY
 
     // The block can be resized to any height, independent of what the
     // content actually needs — and when it's made taller than the
@@ -350,49 +345,64 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
     // further apart (so a tall block doesn't look like a small map
     // glued to the top with blank space below it), never into the map
     // itself growing past the tight crop it already has. Each tier's
-    // own height only grows beyond TIER_HEIGHT when there's a target
+    // own height only grows beyond metrics.step when there's a target
     // aspect ratio taller than what the natural layout would produce.
-    const naturalHeight = cropHeight + TOP_BOTTOM_LABEL_MARGIN * 2 + (topTiers + bottomTiers) * TIER_HEIGHT
+    const naturalHeight = cropHeight + baseMargin * 2 + (topTiers + bottomTiers) * metrics.step
     const naturalAspect = viewWidth / naturalHeight
-    let topTierHeight = TIER_HEIGHT
-    let bottomTierHeight = TIER_HEIGHT
+    let topStep = metrics.step
+    let bottomStep = metrics.step
     if (targetAspect > 0 && targetAspect < naturalAspect) {
       const requiredHeight = viewWidth / targetAspect
       const extraHeight = requiredHeight - naturalHeight
       const totalTiers = topTiers + bottomTiers || 1
-      if (topTiers > 0) topTierHeight = TIER_HEIGHT + (extraHeight * (topTiers / totalTiers)) / topTiers
-      if (bottomTiers > 0) bottomTierHeight = TIER_HEIGHT + (extraHeight * (bottomTiers / totalTiers)) / bottomTiers
+      if (topTiers > 0) topStep = metrics.step + (extraHeight * (topTiers / totalTiers)) / topTiers
+      if (bottomTiers > 0) bottomStep = metrics.step + (extraHeight * (bottomTiers / totalTiers)) / bottomTiers
     }
-    const topMargin = TOP_BOTTOM_LABEL_MARGIN + topTiers * topTierHeight
-    const bottomMargin = TOP_BOTTOM_LABEL_MARGIN + bottomTiers * bottomTierHeight
+    const topMargin = baseMargin + topTiers * topStep
+    const bottomMargin = baseMargin + bottomTiers * bottomStep
 
     const visibleDots = worldDots
       .map(([lng, lat]) => project(lng, lat))
-      .filter(
-        ({ x, y }) => x >= effectiveBounds.minX && x <= effectiveBounds.maxX && y >= effectiveBounds.minY && y <= effectiveBounds.maxY,
-      )
+      .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
 
     // Straight leader line from the marker up/down to its own tier,
     // ending in a short dash before the text — "— Dublin", left-aligned,
     // title then address below it — reading like a real map callout
     // instead of a centered floating label.
     function renderLabel({ item, x, y, labelX, tier }, pos) {
-      const tierHeight = pos === 'top' ? topTierHeight : bottomTierHeight
-      const nearOffset = TOP_BOTTOM_LABEL_MARGIN + tier * tierHeight
-      const rail = pos === 'top' ? effectiveBounds.minY - nearOffset : effectiveBounds.maxY + nearOffset
-      const textX = labelX + DASH_LEN + 2
-      const titleY = pos === 'top' ? rail - 9 : rail + 5
-      const locY = pos === 'top' ? rail - 3.5 : rail + 10.5
+      const step = pos === 'top' ? topStep : bottomStep
+      const nearOffset = baseMargin + tier * step
+      const rail = pos === 'top' ? bounds.minY - nearOffset : bounds.maxY + nearOffset
+      const textX = labelX + metrics.dashLen + 2
+      const pad = metrics.subtitleSize * 0.5
+      const titleY = pos === 'top' ? rail - pad - metrics.subtitleSize * 1.1 : rail + pad + metrics.titleSize * 0.85
+      const locY = pos === 'top' ? rail - pad : titleY + metrics.subtitleSize * 1.15
       return (
         <g key={item.id}>
           <line x1={x} y1={y} x2={labelX} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
-          <line x1={labelX} y1={rail} x2={labelX + DASH_LEN} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
+          <line x1={labelX} y1={rail} x2={labelX + metrics.dashLen} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
           <circle cx={x} cy={y} r={1.1} fill={accentColor} />
-          <text x={textX} y={titleY} fontSize={4.8} fontWeight={700} fill={accentColor} textAnchor="start" fontFamily={bodyFont}>
+          <text
+            x={textX}
+            y={titleY}
+            fontSize={metrics.titleSize}
+            fontWeight={700}
+            fill={accentColor}
+            textAnchor="start"
+            fontFamily={bodyFont}
+          >
             {item.title}
           </text>
           {labelSubtitle(item) && (
-            <text x={textX} y={locY} fontSize={3.6} fill="currentColor" opacity={0.6} textAnchor="start" fontFamily={bodyFont}>
+            <text
+              x={textX}
+              y={locY}
+              fontSize={metrics.subtitleSize}
+              fill="currentColor"
+              opacity={0.6}
+              textAnchor="start"
+              fontFamily={bodyFont}
+            >
               {labelSubtitle(item)}
             </text>
           )}
@@ -400,7 +410,7 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
       )
     }
 
-    const viewBox = `${minX} ${effectiveBounds.minY - topMargin} ${viewWidth} ${cropHeight + topMargin + bottomMargin}`
+    const viewBox = `${minX} ${bounds.minY - topMargin} ${viewWidth} ${cropHeight + topMargin + bottomMargin}`
     return (
       <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
         {visibleDots.map(({ x, y }, i) => (
@@ -423,16 +433,17 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
   // The side margin needs to fit the widest label actually present —
   // a fixed guess clips long titles like "MIND - Milan Innovation
   // District Masterplan" against the block's own edge.
-  const sideLabelMargin = Math.max(...markers.map((m) => measureLabelWidth(m.item, bodyFont)), 40) + 14
+  const sideLabelMargin =
+    Math.max(...markers.map((m) => measureLabelWidth(m.item, bodyFont, metrics.titleSize, metrics.subtitleSize)), metrics.titleSize * 3) +
+    metrics.subtitleSize
 
   // Same reasoning, on the vertical axis: each label needs a minimum
   // height (it's two lines of text) to not overlap its neighbors,
   // regardless of how tightly the markers themselves are cropped
   // vertically.
-  const MIN_SLOT_HEIGHT = 20
   const maxColumnCount = Math.max(left.length, right.length, 1)
   const cropHeight = bounds.maxY - bounds.minY
-  let viewHeight = Math.max(cropHeight, MIN_SLOT_HEIGHT * maxColumnCount)
+  let viewHeight = Math.max(cropHeight, metrics.step * maxColumnCount)
   // As with the topBottom direction, a block resized taller than this
   // natural minimum should spread the column's labels further apart —
   // not stretch the map crop itself — to fill the extra room.
@@ -461,11 +472,27 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
         <line x1={x} y1={y} x2={lineEndX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
         <line x1={lineEndX} y1={labelY} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
         <circle cx={x} cy={y} r={1.1} fill={accentColor} />
-        <text x={labelX} y={labelY - 2} fontSize={4.8} fontWeight={700} fill={accentColor} textAnchor={anchor} fontFamily={bodyFont}>
+        <text
+          x={labelX}
+          y={labelY - metrics.subtitleSize * 0.55}
+          fontSize={metrics.titleSize}
+          fontWeight={700}
+          fill={accentColor}
+          textAnchor={anchor}
+          fontFamily={bodyFont}
+        >
           {item.title}
         </text>
         {labelSubtitle(item) && (
-          <text x={labelX} y={labelY + 3} fontSize={3.6} fill="currentColor" opacity={0.6} textAnchor={anchor} fontFamily={bodyFont}>
+          <text
+            x={labelX}
+            y={labelY + metrics.subtitleSize * 0.85}
+            fontSize={metrics.subtitleSize}
+            fill="currentColor"
+            opacity={0.6}
+            textAnchor={anchor}
+            fontFamily={bodyFont}
+          >
             {labelSubtitle(item)}
           </text>
         )}
