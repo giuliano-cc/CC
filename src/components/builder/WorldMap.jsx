@@ -51,29 +51,6 @@ function measureLabelWidth(item, bodyFont) {
   )
 }
 
-// Zooms the geographic crop out (uniformly on both axes, re-centered
-// on itself) so its own width grows to at least `minWidth` — used when
-// the leader labels need more horizontal room than the markers'
-// natural crop provides, so that extra room comes from the map
-// actually showing more surrounding geography (growing to fill the
-// frame) rather than from blank padding stacked on either side of a
-// map that stays small.
-function zoomBoundsToWidth(bounds, minWidth) {
-  const cropWidth = bounds.maxX - bounds.minX
-  if (minWidth <= cropWidth) return bounds
-  const scale = minWidth / cropWidth
-  const cx = (bounds.minX + bounds.maxX) / 2
-  const cy = (bounds.minY + bounds.maxY) / 2
-  const halfW = (cropWidth * scale) / 2
-  const halfH = ((bounds.maxY - bounds.minY) * scale) / 2
-  return {
-    minX: Math.max(0, cx - halfW),
-    maxX: Math.min(MAP_WIDTH, cx + halfW),
-    minY: Math.max(0, cy - halfH),
-    maxY: Math.min(MAP_HEIGHT, cy + halfH),
-  }
-}
-
 // Crops the basemap to the region the markers actually sit in, with
 // some breathing room around them — otherwise a handful of locations
 // clustered in one region (the common case: most CVs don't have
@@ -155,27 +132,40 @@ export default function WorldMap({ items, accentColor, legendStyle = 'numbered',
 
 // Several markers often sit close enough together (not exactly the same
 // point, but close at the map's own scale) that their number labels
-// would otherwise land right on top of each other — groups markers
-// within a small distance of one another (relative to the visible
-// map's own size, so it scales with however tightly cropped the map
-// is) and gives each such group one combined label ("1,7") near their
-// shared position instead of several overlapping ones. The dots
-// themselves stay at their own true positions either way — only the
-// number labels merge.
-function clusterMarkers(markers, viewWidth, viewHeight) {
+// would otherwise land right on top of each other and on top of the
+// dots themselves. Instead of merging close markers into one combined
+// label ("1,7"), each marker keeps its own number — close ones are
+// fanned out in a small circle around their shared center (each still
+// connected by its own thin leader line back to its true dot), and
+// isolated ones get a short offset stub, matching the reference
+// callout-map style where every point gets its own number and line.
+function layoutNumberLabels(markers, viewWidth, viewHeight) {
   const threshold = Math.max(viewWidth, viewHeight) * 0.035
   const clusters = []
   for (const marker of markers) {
-    const existing = clusters.find((c) => Math.hypot(c.x - marker.x, c.y - marker.y) < threshold)
+    const existing = clusters.find((c) => Math.hypot(c.cx - marker.x, c.cy - marker.y) < threshold)
     if (existing) {
       existing.members.push(marker)
-      existing.x = existing.members.reduce((sum, m) => sum + m.x, 0) / existing.members.length
-      existing.y = existing.members.reduce((sum, m) => sum + m.y, 0) / existing.members.length
     } else {
-      clusters.push({ x: marker.x, y: marker.y, members: [marker] })
+      clusters.push({ cx: marker.x, cy: marker.y, members: [marker] })
     }
   }
-  return clusters
+  const radius = threshold * 1.4
+  const labels = []
+  for (const cluster of clusters) {
+    const n = cluster.members.length
+    const cx = cluster.members.reduce((sum, m) => sum + m.x, 0) / n
+    const cy = cluster.members.reduce((sum, m) => sum + m.y, 0) / n
+    cluster.members.forEach((m, i) => {
+      if (n === 1) {
+        labels.push({ marker: m, labelX: m.x + radius * 0.6, labelY: m.y - radius * 0.6 })
+      } else {
+        const angle = (i / n) * Math.PI * 2 - Math.PI / 2
+        labels.push({ marker: m, labelX: cx + Math.cos(angle) * radius, labelY: cy + Math.sin(angle) * radius })
+      }
+    })
+  }
+  return labels
 }
 
 function NumberedMap({ markers, worldDots, accentColor }) {
@@ -185,7 +175,7 @@ function NumberedMap({ markers, worldDots, accentColor }) {
   const visibleDots = worldDots
     .map(([lng, lat]) => project(lng, lat))
     .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
-  const clusters = clusterMarkers(markers, viewWidth, viewHeight)
+  const labels = layoutNumberLabels(markers, viewWidth, viewHeight)
   return (
     <div className="flex flex-col gap-3">
       <svg viewBox={`${bounds.minX} ${bounds.minY} ${viewWidth} ${viewHeight}`} className="w-full" style={{ display: 'block' }}>
@@ -195,10 +185,13 @@ function NumberedMap({ markers, worldDots, accentColor }) {
         {markers.map(({ item, index, x, y }) => (
           <circle key={item.id || index} cx={x} cy={y} r={1.4} fill={accentColor} />
         ))}
-        {clusters.map((cluster, ci) => (
-          <text key={ci} x={cluster.x + 2} y={cluster.y - 1.5} fontSize={4.2} fontWeight={700} fill={accentColor}>
-            {cluster.members.map((m) => m.index + 1).join(',')}
-          </text>
+        {labels.map(({ marker, labelX, labelY }) => (
+          <g key={marker.item.id || marker.index}>
+            <line x1={marker.x} y1={marker.y} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
+            <text x={labelX} y={labelY} fontSize={4.2} fontWeight={700} fill={accentColor} textAnchor="middle" dominantBaseline="middle">
+              {marker.index + 1}
+            </text>
+          </g>
         ))}
       </svg>
       <div className="grid grid-cols-2 gap-x-6 gap-y-3">
@@ -231,8 +224,31 @@ function NumberedMap({ markers, worldDots, accentColor }) {
 // added directly to the cropped viewBox rather than reserved inside
 // the map's own 0..360/0..180 range like the original fixed-world
 // version needed.
-const TOP_BOTTOM_LABEL_MARGIN = 28
+const TOP_BOTTOM_LABEL_MARGIN = 20
+const TIER_HEIGHT = 14
 const LABEL_GAP = 6
+
+// Assigns each label (sorted by its marker's x) to the lowest
+// horizontal "tier" (row of labels, stacked further from the map the
+// higher the tier) whose last-placed label doesn't overlap it — the
+// same greedy interval-coloring used for calendar/timeline labels.
+// This lets labels that are close together in x spread out vertically
+// instead of fighting for room on one shared horizontal line, so the
+// map's own crop never has to grow just to fit a long row of text.
+function assignTiers(row, bodyFont) {
+  const tierRightEdge = []
+  return row.map((m) => {
+    const width = measureLabelWidth(m.item, bodyFont)
+    const left = m.x - width / 2
+    const right = m.x + width / 2
+    let tier = 0
+    while (tierRightEdge[tier] !== undefined && left < tierRightEdge[tier] + LABEL_GAP) {
+      tier += 1
+    }
+    tierRightEdge[tier] = right
+    return { ...m, labelX: m.x, left, right, tier }
+  })
+}
 
 // Splits into two roughly equal-sized groups by count, not by which
 // side of the crop's own midpoint each marker falls on — several
@@ -251,48 +267,33 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
 
   if (direction === 'topBottom') {
     const [topRaw, bottomRaw] = splitBalanced(markers, 'y')
-    const top = [...topRaw].sort((a, b) => a.x - b.x)
-    const bottom = [...bottomRaw].sort((a, b) => a.x - b.x)
+    const top = assignTiers([...topRaw].sort((a, b) => a.x - b.x), bodyFont)
+    const bottom = assignTiers([...bottomRaw].sort((a, b) => a.x - b.x), bodyFont)
+    const topTiers = Math.max(0, ...top.map((m) => m.tier), -1) + 1
+    const bottomTiers = Math.max(0, ...bottom.map((m) => m.tier), -1) + 1
 
-    // Each row's labels need their own actual measured width (not a
-    // guessed fixed slot) to guarantee no overlap — "MIND - Milan
-    // Innovation District Masterplan" and "Doha" need very different
-    // amounts of room. When that measured need exceeds what the
-    // markers' own crop is wide, the map is zoomed out (not just
-    // padded) so the extra width comes from more visible geography.
-    function rowWidth(row) {
-      return row.reduce((sum, m) => sum + measureLabelWidth(m.item, bodyFont) + LABEL_GAP, 0)
-    }
-    const neededWidth = Math.max(rowWidth(top), rowWidth(bottom))
-    const cropWidth = bounds.maxX - bounds.minX
-    const effectiveBounds = zoomBoundsToWidth(bounds, neededWidth)
-    const effectiveCropWidth = effectiveBounds.maxX - effectiveBounds.minX
-    const viewWidth = Math.max(cropWidth, effectiveCropWidth, neededWidth)
-    const viewMinX = (effectiveBounds.minX + effectiveBounds.maxX) / 2 - viewWidth / 2
+    // The view only grows beyond the markers' own tight crop when a
+    // label actually overflows it (e.g. a wide title centered on a
+    // marker near the crop's edge) — never to fit an entire row on one
+    // line, since tiering already spreads same-row labels vertically
+    // instead of needing more horizontal room.
+    const allLaid = [...top, ...bottom]
+    const minX = Math.min(bounds.minX, ...allLaid.map((m) => m.left))
+    const maxX = Math.max(bounds.maxX, ...allLaid.map((m) => m.right))
+    const topMargin = TOP_BOTTOM_LABEL_MARGIN + topTiers * TIER_HEIGHT
+    const bottomMargin = TOP_BOTTOM_LABEL_MARGIN + bottomTiers * TIER_HEIGHT
 
     const visibleDots = worldDots
       .map(([lng, lat]) => project(lng, lat))
-      .filter(({ x, y }) => x >= effectiveBounds.minX && x <= effectiveBounds.maxX && y >= effectiveBounds.minY && y <= effectiveBounds.maxY)
+      .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
 
-    function layoutRow(row) {
-      if (row.length === 0) return []
-      const widths = row.map((m) => measureLabelWidth(m.item, bodyFont) + LABEL_GAP)
-      const total = widths.reduce((a, b) => a + b, 0)
-      let cursor = viewMinX + Math.max(0, (viewWidth - total) / 2)
-      return row.map((m, i) => {
-        const labelX = cursor + widths[i] / 2
-        cursor += widths[i]
-        return { ...m, labelX }
-      })
-    }
-
-    function renderLabel({ item, x, y, labelX }, pos) {
-      const labelY = pos === 'top' ? effectiveBounds.minY - TOP_BOTTOM_LABEL_MARGIN + 6 : effectiveBounds.maxY + TOP_BOTTOM_LABEL_MARGIN - 2
-      const lineEndY = pos === 'top' ? effectiveBounds.minY - TOP_BOTTOM_LABEL_MARGIN + 10 : effectiveBounds.maxY + TOP_BOTTOM_LABEL_MARGIN - 10
+    function renderLabel({ item, x, y, labelX, tier }, pos) {
+      const nearOffset = TOP_BOTTOM_LABEL_MARGIN + tier * TIER_HEIGHT
+      const rail = pos === 'top' ? bounds.minY - nearOffset : bounds.maxY + nearOffset
+      const labelY = pos === 'top' ? rail - 8 : rail + 8
       return (
         <g key={item.id}>
-          <line x1={x} y1={y} x2={labelX} y2={lineEndY} stroke="#94a3b8" strokeWidth={0.4} />
-          <line x1={labelX} y1={lineEndY} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
+          <line x1={x} y1={y} x2={labelX} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
           <circle cx={x} cy={y} r={1.1} fill={accentColor} />
           <text x={labelX} y={labelY} fontSize={4.8} fontWeight={700} fill={accentColor} textAnchor="middle" fontFamily={bodyFont}>
             {item.title}
@@ -314,18 +315,14 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
       )
     }
 
-    const topLaid = layoutRow(top)
-    const bottomLaid = layoutRow(bottom)
-    const viewBox = `${viewMinX} ${effectiveBounds.minY - TOP_BOTTOM_LABEL_MARGIN} ${viewWidth} ${
-      effectiveBounds.maxY - effectiveBounds.minY + TOP_BOTTOM_LABEL_MARGIN * 2
-    }`
+    const viewBox = `${minX} ${bounds.minY - topMargin} ${maxX - minX} ${bounds.maxY - bounds.minY + topMargin + bottomMargin}`
     return (
       <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
         {visibleDots.map(({ x, y }, i) => (
           <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
         ))}
-        {topLaid.map((m) => renderLabel(m, 'top'))}
-        {bottomLaid.map((m) => renderLabel(m, 'bottom'))}
+        {top.map((m) => renderLabel(m, 'top'))}
+        {bottom.map((m) => renderLabel(m, 'bottom'))}
       </svg>
     )
   }
