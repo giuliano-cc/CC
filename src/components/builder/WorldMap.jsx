@@ -44,10 +44,17 @@ function measureTextWidth(text, fontSizePx, fontFamily, bold) {
   }
 }
 
+// SVG <text> never wraps, so only the description's first line (its
+// summary, when it's written as a lead-in sentence plus bullet points)
+// is usable as a one-line subtitle under the title.
+function labelSubtitle(item) {
+  return (item.description || '').split('\n')[0].trim()
+}
+
 function measureLabelWidth(item, bodyFont) {
   return Math.max(
     measureTextWidth(item.title, 4.8, bodyFont, true),
-    measureTextWidth(item.location || '', 3.6, bodyFont, false),
+    measureTextWidth(labelSubtitle(item), 3.6, bodyFont, false),
   )
 }
 
@@ -225,7 +232,7 @@ function NumberedMap({ markers, worldDots, accentColor }) {
               <span className="text-sm font-bold" style={{ color: accentColor }}>
                 {item.title}
               </span>
-              {item.location && <span className="text-xs opacity-60">{item.location}</span>}
+              {labelSubtitle(item) && <span className="text-xs opacity-60">{labelSubtitle(item)}</span>}
             </div>
           </div>
         ))}
@@ -332,9 +339,9 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
           <text x={textX} y={titleY} fontSize={4.8} fontWeight={700} fill={accentColor} textAnchor="start" fontFamily={bodyFont}>
             {item.title}
           </text>
-          {item.location && (
+          {labelSubtitle(item) && (
             <text x={textX} y={locY} fontSize={3.6} fill="currentColor" opacity={0.6} textAnchor="start" fontFamily={bodyFont}>
-              {item.location}
+              {labelSubtitle(item)}
             </text>
           )}
         </g>
@@ -399,9 +406,9 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
         <text x={labelX} y={labelY - 2} fontSize={4.8} fontWeight={700} fill={accentColor} textAnchor={anchor} fontFamily={bodyFont}>
           {item.title}
         </text>
-        {item.location && (
+        {labelSubtitle(item) && (
           <text x={labelX} y={labelY + 3} fontSize={3.6} fill="currentColor" opacity={0.6} textAnchor={anchor} fontFamily={bodyFont}>
-            {item.location}
+            {labelSubtitle(item)}
           </text>
         )}
       </g>
