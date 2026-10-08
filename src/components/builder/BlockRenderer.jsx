@@ -1467,15 +1467,11 @@ export default function BlockRenderer({
         isLibraryItemShown(block, item.id, true),
       )
       const showTitle = block.title && block.showTitle !== false
-      // The block can be resized to any height independent of what the
-      // map actually needs — WorldMap uses this (the content area's own
-      // width/height, title and padding already subtracted) to spread
-      // labels into the extra room instead of leaving it blank or
-      // growing the map crop past its natural minimum size.
-      const titleSizePx = block.fontSize || HEADING_SIZE_PX[block.titleSize || 'md'] || HEADING_SIZE_PX.md
-      const titleAreaHeight = showTitle ? titleSizePx * 1.25 + (block.titleRule !== false ? 7 : 0) + 12 : 0
+      // The content area's own width (title and padding already
+      // subtracted) — WorldMap uses this for its font-size scale, so
+      // label text matches the block's configured size regardless of how
+      // tight or wide the map's own geographic crop is.
       const mapContentWidth = Math.max(20, (block.width || 0) - 16)
-      const mapContentHeight = Math.max(20, (block.height || 0) - 16 - titleAreaHeight)
       return (
         <div className="flex h-full flex-col gap-3">
           {showTitle && (
@@ -1503,7 +1499,6 @@ export default function BlockRenderer({
               titleColor={block.entryTitleColor || null}
               titleFontSizePx={block.entryTitleFontSize || 16}
               titleBold={block.entryTitleBold}
-              targetAspect={mapContentWidth / mapContentHeight}
               viewportWidthPx={mapContentWidth}
               bodyFontSizePx={block.bodyFontSize || globalStyle.typographyScale?.p1?.sizePx}
             />

@@ -116,7 +116,6 @@ export default function WorldMap({
   titleColor,
   titleFontSizePx,
   titleBold,
-  targetAspect,
   viewportWidthPx,
   bodyFontSizePx,
 }) {
@@ -172,7 +171,6 @@ export default function WorldMap({
         titleFontSizePx={titleFontSizePx}
         titleBold={titleBold}
         direction={leaderDirection}
-        targetAspect={targetAspect}
         viewportWidthPx={viewportWidthPx}
         bodyFontSizePx={bodyFontSizePx}
       />
@@ -363,7 +361,6 @@ function LeaderMap({
   titleFontSizePx,
   titleBold,
   direction = 'sides',
-  targetAspect,
   viewportWidthPx,
   bodyFontSizePx,
 }) {
@@ -382,24 +379,17 @@ function LeaderMap({
     const cropHeight = bounds.maxY - bounds.minY
 
     // The block can be resized to any height, independent of what the
-    // content actually needs — and when it's made taller than the
-    // natural minimum, the extra room should go into spacing the labels
-    // further apart (so a tall block doesn't look like a small map
-    // glued to the top with blank space below it), never into the map
-    // itself growing past the tight crop it already has. Each tier's
-    // own height only grows beyond metrics.step when there's a target
-    // aspect ratio taller than what the natural layout would produce.
-    const naturalHeight = cropHeight + baseMargin * 2 + (topTiers + bottomTiers) * metrics.step
-    const naturalAspect = viewWidth / naturalHeight
-    let topStep = metrics.step
-    let bottomStep = metrics.step
-    if (targetAspect > 0 && targetAspect < naturalAspect) {
-      const requiredHeight = viewWidth / targetAspect
-      const extraHeight = requiredHeight - naturalHeight
-      const totalTiers = topTiers + bottomTiers || 1
-      if (topTiers > 0) topStep = metrics.step + (extraHeight * (topTiers / totalTiers)) / topTiers
-      if (bottomTiers > 0) bottomStep = metrics.step + (extraHeight * (bottomTiers / totalTiers)) / bottomTiers
-    }
+    // content actually needs — but stretching each tier's own spacing to
+    // fill that extra room (as this used to) distorts badly whenever the
+    // top/bottom split is uneven: the smaller side's few tiers each
+    // absorb a huge share of the extra height, opening a large blank gap
+    // before a cramped cluster rather than anything resembling a
+    // centered map. The layout instead always stays at its natural,
+    // compact size — any extra height a resized block leaves over is
+    // just centered blank space around it (see the flex wrapper around
+    // this component in BlockRenderer.jsx), never a reason to stretch.
+    const topStep = metrics.step
+    const bottomStep = metrics.step
     const topMargin = baseMargin + topTiers * topStep
     const bottomMargin = baseMargin + bottomTiers * bottomStep
 
@@ -502,22 +492,15 @@ function LeaderMap({
     return { laid, top: laid[0].labelY, bottom: cursor - gap }
   }
 
-  let gap = metrics.step
-  let { laid: leftLaid, top: leftTop, bottom: leftBottom } = layoutColumn(left, gap)
-  let { laid: rightLaid, top: rightTop, bottom: rightBottom } = layoutColumn(right, gap)
-  const naturalTop = Math.min(bounds.minY, leftTop ?? Infinity, rightTop ?? Infinity)
-  const naturalBottom = Math.max(bounds.maxY, leftBottom ?? -Infinity, rightBottom ?? -Infinity)
-
-  // A block resized taller than this natural minimum should spread the
-  // column's labels further apart — not stretch the map crop itself —
-  // to fill the extra room.
-  if (targetAspect > 0 && targetAspect < viewWidthFixed / (naturalBottom - naturalTop)) {
-    const requiredHeight = viewWidthFixed / targetAspect
-    const maxCount = Math.max(left.length, right.length, 1)
-    gap = metrics.step + Math.max(0, (requiredHeight - (naturalBottom - naturalTop)) / maxCount)
-    ;({ laid: leftLaid, top: leftTop, bottom: leftBottom } = layoutColumn(left, gap))
-    ;({ laid: rightLaid, top: rightTop, bottom: rightBottom } = layoutColumn(right, gap))
-  }
+  // Stays at its natural, compact gap always — stretching it to fill a
+  // resized-taller block (as this used to) distorts badly whenever the
+  // left/right split is uneven, same reason topBottom no longer stretches
+  // its own tiers either: any leftover height is just centered blank
+  // space around the natural layout (see the flex wrapper in
+  // BlockRenderer.jsx), never a reason to spread labels further apart.
+  const gap = metrics.step
+  const { laid: leftLaid, top: leftTop, bottom: leftBottom } = layoutColumn(left, gap)
+  const { laid: rightLaid, top: rightTop, bottom: rightBottom } = layoutColumn(right, gap)
 
   const viewMinY = Math.min(bounds.minY, leftTop ?? Infinity, rightTop ?? Infinity)
   const viewHeight = Math.max(bounds.maxY, leftBottom ?? -Infinity, rightBottom ?? -Infinity) - viewMinY
