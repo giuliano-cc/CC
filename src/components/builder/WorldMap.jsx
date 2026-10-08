@@ -51,6 +51,33 @@ function labelSubtitle(item) {
   return (item.description || '').split('\n')[0].trim()
 }
 
+// Shortens text with a trailing "…" until it measures within maxWidth —
+// used only where a label's own width genuinely has nowhere left to
+// grow (the 'sides' style's two columns share the map's width between
+// them, unlike 'numbered'/'topBottom' where a label can freely claim as
+// much of the full width as it needs). Without this, a long title or a
+// full-sentence description routinely ran clear across the map into the
+// opposite column's text, overlapping it into illegibility. Binary
+// search over substring length rather than trimming one character at a
+// time — the same number of measureText calls whether the text is 20
+// characters or 200.
+function truncateToWidth(text, maxWidth, fontSizePx, fontFamily, bold) {
+  if (!text || maxWidth <= 0) return ''
+  if (measureTextWidth(text, fontSizePx, fontFamily, bold) <= maxWidth) return text
+  let lo = 0
+  let hi = text.length
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2)
+    const candidate = `${text.slice(0, mid).trimEnd()}…`
+    if (measureTextWidth(candidate, fontSizePx, fontFamily, bold) <= maxWidth) {
+      lo = mid
+    } else {
+      hi = mid - 1
+    }
+  }
+  return lo <= 0 ? '…' : `${text.slice(0, lo).trimEnd()}…`
+}
+
 function measureLabelWidth(item, titleFont, bodyFont, titleSize, subtitleSize, titleBold) {
   return Math.max(
     measureTextWidth(item.title, titleSize, titleFont, titleBold !== false),
@@ -470,6 +497,14 @@ function LeaderMap({
   const viewWidthFixed = bounds.maxX - bounds.minX
   const metrics = computeLabelMetrics(viewWidthFixed, viewportWidthPx, titleFontSizePx, bodyFontSizePx)
   const inset = metrics.subtitleSize * 0.8
+  // The two columns split the map's width between them — unlike
+  // 'numbered'/'topBottom', where a label can freely claim the full
+  // width, a long title or a full-sentence description here has nowhere
+  // left to grow into once it reaches the opposite column. Capped at
+  // half the map's width (minus the inset and a small gutter) so left
+  // and right labels can never run into each other regardless of how
+  // long the underlying text is.
+  const maxTextWidth = Math.max(0, viewWidthFixed / 2 - inset - metrics.subtitleSize * 0.6)
 
   // Each label anchors as close as possible to its own marker's true
   // y — sliding down only as far as it has to, to clear the previous
@@ -514,6 +549,9 @@ function LeaderMap({
   function renderLabel({ item, x, y, labelY }, side) {
     const labelX = side === 'left' ? bounds.minX + inset : bounds.maxX - inset
     const anchor = side === 'left' ? 'start' : 'end'
+    const titleBoldValue = titleBold !== false
+    const title = truncateToWidth(item.title, maxTextWidth, metrics.titleSize, titleFont, titleBoldValue)
+    const subtitle = truncateToWidth(labelSubtitle(item), maxTextWidth, metrics.subtitleSize, bodyFont, false)
     return (
       <g key={item.id}>
         <line x1={x} y1={y} x2={x} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
@@ -523,14 +561,14 @@ function LeaderMap({
           x={labelX}
           y={labelY - metrics.subtitleSize * 0.55}
           fontSize={metrics.titleSize}
-          fontWeight={titleBold === false ? 400 : 700}
+          fontWeight={titleBoldValue ? 700 : 400}
           fill={titleColor || textColor}
           textAnchor={anchor}
           fontFamily={titleFont}
         >
-          {item.title}
+          {title}
         </text>
-        {labelSubtitle(item) && (
+        {subtitle && (
           <text
             x={labelX}
             y={labelY + metrics.subtitleSize * 0.85}
@@ -540,7 +578,7 @@ function LeaderMap({
             textAnchor={anchor}
             fontFamily={bodyFont}
           >
-            {labelSubtitle(item)}
+            {subtitle}
           </text>
         )}
       </g>
