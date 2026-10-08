@@ -627,6 +627,7 @@ export const SECTION_TITLE_TYPES = [
   BLOCK_TYPES.EDUCATION,
   BLOCK_TYPES.SKILLS_CHART,
   BLOCK_TYPES.LANGUAGES_CHART,
+  BLOCK_TYPES.MAP,
 ]
 
 // Whether a block has an auto-generated section-heading title of its own
