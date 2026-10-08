@@ -249,6 +249,10 @@ const TOP_BOTTOM_LABEL_MARGIN = 20
 const TIER_HEIGHT = 14
 const LABEL_GAP = 6
 const TIER_JOG = 9
+// Space reserved between the leader line's end and the text start — a
+// short dash (like the reference layout's "— Dublin") rather than the
+// line running straight into the letters.
+const DASH_LEN = 6
 
 // Assigns each label (sorted by its marker's x) to the lowest
 // horizontal "tier" (row of labels, stacked further from the map the
@@ -257,12 +261,15 @@ const TIER_JOG = 9
 // This lets labels that are close together in x spread out vertically
 // instead of fighting for room on one shared horizontal line, so the
 // map's own crop never has to grow just to fit a long row of text.
+// Labels read left-to-right starting at the marker's own x (a dash,
+// then the text), so the span each tier has to keep clear of its
+// neighbors runs from that x to x + text width, not centered on it.
 function assignTiers(row, bodyFont) {
   const tierRightEdge = []
   return row.map((m) => {
     const width = measureLabelWidth(m.item, bodyFont)
-    const left = m.x - width / 2
-    const right = m.x + width / 2
+    const left = m.x
+    const right = m.x + DASH_LEN + 2 + width
     let tier = 0
     while (tierRightEdge[tier] !== undefined && left < tierRightEdge[tier] + LABEL_GAP) {
       tier += 1
@@ -300,11 +307,11 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
     // together, read as one blurred line) into a distinct diagonal
     // fanning out from the cluster, angled like a real callout line
     // instead of overlapping its neighbors.
-    function jog(group, tierCount) {
-      return group.map((m) => ({ ...m, labelX: m.x + (m.tier - (tierCount - 1) / 2) * TIER_JOG }))
+    function jog(group) {
+      return group.map((m) => ({ ...m, labelX: m.x + m.tier * TIER_JOG }))
     }
-    const topJogged = jog(top, topTiers)
-    const bottomJogged = jog(bottom, bottomTiers)
+    const topJogged = jog(top)
+    const bottomJogged = jog(bottom)
 
     // The view only grows beyond the markers' own tight crop when a
     // label actually overflows it (e.g. a wide title centered on a
@@ -315,8 +322,8 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
     // geography is zoomed to fill it too, rather than leaving the
     // extra room blank down the sides.
     const allLaid = [...topJogged, ...bottomJogged]
-    const labelMinX = Math.min(...allLaid.map((m) => m.labelX - (m.right - m.left) / 2))
-    const labelMaxX = Math.max(...allLaid.map((m) => m.labelX + (m.right - m.left) / 2))
+    const labelMinX = Math.min(...allLaid.map((m) => m.labelX))
+    const labelMaxX = Math.max(...allLaid.map((m) => m.labelX + (m.right - m.left)))
     const neededWidth = labelMaxX - labelMinX
     const effectiveBounds = zoomBoundsToWidth(bounds, neededWidth)
     const minX = Math.min(effectiveBounds.minX, labelMinX)
@@ -330,33 +337,27 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
         ({ x, y }) => x >= effectiveBounds.minX && x <= effectiveBounds.maxX && y >= effectiveBounds.minY && y <= effectiveBounds.maxY,
       )
 
+    // Clean single leader line (straight when the label sits directly
+    // above/below its own marker, gently diagonal when jogged clear of a
+    // neighbor) ending in a short dash before the text — "— Dublin",
+    // left-aligned, title then address below it — reading like a real
+    // map callout instead of a centered floating label.
     function renderLabel({ item, x, y, labelX, tier }, pos) {
       const nearOffset = TOP_BOTTOM_LABEL_MARGIN + tier * TIER_HEIGHT
       const rail = pos === 'top' ? effectiveBounds.minY - nearOffset : effectiveBounds.maxY + nearOffset
-      const labelY = pos === 'top' ? rail - 8 : rail + 8
-      // Diagonal segment from the marker to an elbow partway toward the
-      // label's rail, then a straight segment into the label itself —
-      // the same angled-leader shape as the sides direction already
-      // uses, instead of one straight vertical line.
-      const elbowY = y + (rail - y) * 0.55
+      const textX = labelX + DASH_LEN + 2
+      const titleY = pos === 'top' ? rail - 9 : rail + 5
+      const locY = pos === 'top' ? rail - 3.5 : rail + 10.5
       return (
         <g key={item.id}>
-          <line x1={x} y1={y} x2={labelX} y2={elbowY} stroke="#94a3b8" strokeWidth={0.4} />
-          <line x1={labelX} y1={elbowY} x2={labelX} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
+          <line x1={x} y1={y} x2={labelX} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
+          <line x1={labelX} y1={rail} x2={labelX + DASH_LEN} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
           <circle cx={x} cy={y} r={1.1} fill={accentColor} />
-          <text x={labelX} y={labelY} fontSize={4.8} fontWeight={700} fill={accentColor} textAnchor="middle" fontFamily={bodyFont}>
+          <text x={textX} y={titleY} fontSize={4.8} fontWeight={700} fill={accentColor} textAnchor="start" fontFamily={bodyFont}>
             {item.title}
           </text>
           {item.location && (
-            <text
-              x={labelX}
-              y={labelY + (pos === 'top' ? -5 : 5)}
-              fontSize={3.6}
-              fill="currentColor"
-              opacity={0.6}
-              textAnchor="middle"
-              fontFamily={bodyFont}
-            >
+            <text x={textX} y={locY} fontSize={3.6} fill="currentColor" opacity={0.6} textAnchor="start" fontFamily={bodyFont}>
               {item.location}
             </text>
           )}
