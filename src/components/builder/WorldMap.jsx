@@ -481,34 +481,46 @@ function LeaderMap({
   const metrics = computeLabelMetrics(viewWidthFixed, viewportWidthPx, titleFontSizePx, bodyFontSizePx)
   const inset = metrics.subtitleSize * 0.8
 
-  // Same reasoning as the topBottom direction's own tier spacing: each
-  // label needs a minimum height (it's two lines of text) to not
-  // overlap its neighbors, regardless of how tightly the markers
-  // themselves are cropped vertically.
-  const maxColumnCount = Math.max(left.length, right.length, 1)
-  const cropHeight = bounds.maxY - bounds.minY
-  let viewHeight = Math.max(cropHeight, metrics.step * maxColumnCount)
+  // Each label anchors as close as possible to its own marker's true
+  // y — sliding down only as far as it has to, to clear the previous
+  // (already-placed) label in the same column — instead of being
+  // spread evenly across however tall the view ends up being. Evenly
+  // spreading ignored where the markers actually are, so a label could
+  // land far from its own marker even when nothing forced it to;
+  // anchoring first (and only pushing when two would truly collide)
+  // keeps the leader line short and close to straight whenever the
+  // marker's own spacing already leaves room, the same "move only when
+  // something would otherwise overlap" principle topBottom's tiers use.
+  function layoutColumn(column, gap) {
+    if (column.length === 0) return { laid: [], top: null, bottom: null }
+    let cursor = -Infinity
+    const laid = column.map((m) => {
+      const labelY = Math.max(m.y, cursor)
+      cursor = labelY + gap
+      return { ...m, labelY }
+    })
+    return { laid, top: laid[0].labelY, bottom: cursor - gap }
+  }
+
+  let gap = metrics.step
+  let { laid: leftLaid, top: leftTop, bottom: leftBottom } = layoutColumn(left, gap)
+  let { laid: rightLaid, top: rightTop, bottom: rightBottom } = layoutColumn(right, gap)
+  const naturalTop = Math.min(bounds.minY, leftTop ?? Infinity, rightTop ?? Infinity)
+  const naturalBottom = Math.max(bounds.maxY, leftBottom ?? -Infinity, rightBottom ?? -Infinity)
+
   // A block resized taller than this natural minimum should spread the
   // column's labels further apart — not stretch the map crop itself —
   // to fill the extra room.
-  if (targetAspect > 0 && targetAspect < viewWidthFixed / viewHeight) {
-    viewHeight = viewWidthFixed / targetAspect
-  }
-  const viewMinY = (bounds.minY + bounds.maxY) / 2 - viewHeight / 2
-
-  // Staggers the right column half a slot from the left one — with no
-  // separate margin, both sides' text can now land in the middle of the
-  // same map width, and without this they'd otherwise collide right in
-  // the center whenever a left and a right label share a row.
-  function layoutColumn(column, phase) {
-    if (column.length === 0) return []
-    const n = column.length
-    const slot = viewHeight / n
-    return column.map((m, i) => ({ ...m, labelY: viewMinY + ((i + phase) % n) * slot + slot / 2 }))
+  if (targetAspect > 0 && targetAspect < viewWidthFixed / (naturalBottom - naturalTop)) {
+    const requiredHeight = viewWidthFixed / targetAspect
+    const maxCount = Math.max(left.length, right.length, 1)
+    gap = metrics.step + Math.max(0, (requiredHeight - (naturalBottom - naturalTop)) / maxCount)
+    ;({ laid: leftLaid, top: leftTop, bottom: leftBottom } = layoutColumn(left, gap))
+    ;({ laid: rightLaid, top: rightTop, bottom: rightBottom } = layoutColumn(right, gap))
   }
 
-  const leftLaid = layoutColumn(left, 0)
-  const rightLaid = layoutColumn(right, 0.5)
+  const viewMinY = Math.min(bounds.minY, leftTop ?? Infinity, rightTop ?? Infinity)
+  const viewHeight = Math.max(bounds.maxY, leftBottom ?? -Infinity, rightBottom ?? -Infinity) - viewMinY
 
   // Labels sit inside the map's own width (inset from its edges) rather
   // than in a separate reserved margin — the crop stays exactly the
