@@ -1477,7 +1477,7 @@ export default function BlockRenderer({
       const mapContentWidth = Math.max(20, (block.width || 0) - 16)
       const mapContentHeight = Math.max(20, (block.height || 0) - 16 - titleAreaHeight)
       return (
-        <div className="flex flex-col gap-3">
+        <div className="flex h-full flex-col gap-3">
           {showTitle && (
             <p
               className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
@@ -1486,21 +1486,28 @@ export default function BlockRenderer({
               {titleTextTransformValue(translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides), block, 'title')}
             </p>
           )}
-          <WorldMap
-            items={items}
-            accentColor={globalStyle.primaryColor}
-            legendStyle={block.legendStyle || 'numbered'}
-            leaderDirection={block.leaderDirection || 'sides'}
-            bodyFont={block.bodyFontFamily || resolveBodyFont(globalStyle)}
-            titleFont={block.entryTitleFontFamily || resolveTitleFont(globalStyle)}
-            textColor={globalStyle.textColor}
-            titleColor={block.entryTitleColor || null}
-            titleFontSizePx={block.entryTitleFontSize || 16}
-            titleBold={block.entryTitleBold}
-            targetAspect={mapContentWidth / mapContentHeight}
-            viewportWidthPx={mapContentWidth}
-            bodyFontSizePx={block.bodyFontSize || globalStyle.typographyScale?.p1?.sizePx}
-          />
+          {/* The map's own natural size (from its tight geographic crop)
+              rarely matches the block's resized height exactly — centering
+              it in the remaining space (instead of leaving it pinned to the
+              top with blank room below) keeps a taller block looking
+              intentional rather than like the map is stuck in a corner. */}
+          <div className="flex flex-1 flex-col justify-center overflow-hidden">
+            <WorldMap
+              items={items}
+              accentColor={globalStyle.primaryColor}
+              legendStyle={block.legendStyle || 'numbered'}
+              leaderDirection={block.leaderDirection || 'sides'}
+              bodyFont={block.bodyFontFamily || resolveBodyFont(globalStyle)}
+              titleFont={block.entryTitleFontFamily || resolveTitleFont(globalStyle)}
+              textColor={globalStyle.textColor}
+              titleColor={block.entryTitleColor || null}
+              titleFontSizePx={block.entryTitleFontSize || 16}
+              titleBold={block.entryTitleBold}
+              targetAspect={mapContentWidth / mapContentHeight}
+              viewportWidthPx={mapContentWidth}
+              bodyFontSizePx={block.bodyFontSize || globalStyle.typographyScale?.p1?.sizePx}
+            />
+          </div>
         </div>
       )
     }
