@@ -214,6 +214,7 @@ export default function WorldMap({
         bodyFont={bodyFont}
         titleFont={titleFont}
         titleColor={titleColor}
+        textColor={textColor}
         titleFontSizePx={titleFontSizePx}
         titleBold={titleBold}
         direction={leaderDirection}
@@ -316,7 +317,7 @@ function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, tex
             <div className="flex flex-col gap-0.5">
               <span
                 style={{
-                  color: titleColor || accentColor,
+                  color: titleColor || textColor,
                   fontFamily: titleFont,
                   fontSize: titleFontSizePx ? `${titleFontSizePx}px` : undefined,
                   fontWeight: titleBold === false ? 400 : 700,
@@ -400,6 +401,7 @@ function LeaderMap({
   bodyFont,
   titleFont,
   titleColor,
+  textColor,
   titleFontSizePx,
   titleBold,
   direction = 'sides',
@@ -424,7 +426,7 @@ function LeaderMap({
       metrics = computeLabelMetrics(layout.viewWidth, viewportWidthPx, titleFontSizePx, bodyFontSizePx)
       layout = computeTopBottomLayout(markers, bounds, titleFont, bodyFont, metrics, titleBold)
     }
-    const { top, bottom, topTiers, bottomTiers, minX, viewWidth } = layout
+    const { top, bottom, topTiers, bottomTiers, minX, maxX, viewWidth } = layout
     const baseMargin = metrics.step * 0.6
     const cropHeight = bounds.maxY - bounds.minY
 
@@ -450,9 +452,14 @@ function LeaderMap({
     const topMargin = baseMargin + topTiers * topStep
     const bottomMargin = baseMargin + bottomTiers * bottomStep
 
+    // Spans the dot grid across the label overflow too (minX/maxX, not
+    // the tighter bounds.minX/maxX) — showing the real geography that's
+    // there rather than leaving it blank just because no marker sits in
+    // it, so the map actually fills the width the labels already claim
+    // instead of looking like a narrow strip floating in empty canvas.
     const visibleDots = worldDots
       .map(([lng, lat]) => project(lng, lat))
-      .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
+      .filter(({ x, y }) => x >= minX && x <= maxX && y >= bounds.minY && y <= bounds.maxY)
 
     // Straight leader line from the marker up/down to its own tier,
     // ending in a short dash before the text — "— Dublin", left-aligned,
@@ -476,7 +483,7 @@ function LeaderMap({
             y={titleY}
             fontSize={metrics.titleSize}
             fontWeight={titleBold === false ? 400 : 700}
-            fill={titleColor || accentColor}
+            fill={titleColor || textColor}
             textAnchor="start"
             fontFamily={titleFont}
           >
@@ -565,7 +572,7 @@ function LeaderMap({
           y={labelY - metrics.subtitleSize * 0.55}
           fontSize={metrics.titleSize}
           fontWeight={titleBold === false ? 400 : 700}
-          fill={titleColor || accentColor}
+          fill={titleColor || textColor}
           textAnchor={anchor}
           fontFamily={titleFont}
         >
