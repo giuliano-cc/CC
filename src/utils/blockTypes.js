@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   Languages as LanguagesIcon,
   ListChecks,
+  MapPinned,
   Minus,
   QrCode,
   Quote as QuoteIcon,
@@ -42,6 +43,7 @@ export const BLOCK_TYPES = {
   EDUCATION: 'education_entries',
   SHAPE: 'shape',
   DATE: 'date',
+  MAP: 'map',
 }
 
 // Block types meant to fill their own box completely (a color fill, a
@@ -130,6 +132,7 @@ export const DEFAULT_BLOCK_SIZE = {
   [BLOCK_TYPES.EDUCATION]: { width: 400, height: 220 },
   [BLOCK_TYPES.SHAPE]: { width: 220, height: 140 },
   [BLOCK_TYPES.DATE]: { width: 220, height: 50 },
+  [BLOCK_TYPES.MAP]: { width: 698, height: 480 },
 }
 
 // Interchangeable visual styles for the Skills Chart block — click the
@@ -576,6 +579,31 @@ export const BLOCK_DEFINITIONS = [
       color: null,
       fontFamily: null,
       fontSize: null,
+    },
+  },
+  {
+    type: BLOCK_TYPES.MAP,
+    label: 'Locations Map',
+    icon: MapPinned,
+    defaultProps: {
+      title: 'Selected Works',
+      showTitle: true,
+      titleRule: true,
+      titleSize: 'md',
+      titleColor: null,
+      fontFamily: null,
+      fontSize: null,
+      // Which 'entries'-type Content Library slot to plot — any list
+      // with a location on each item works (Selected Works, Work
+      // Experience, Education, Achievements), not just Selected Works;
+      // picked the same way a Technical Skills chart picks which
+      // checklist to plot (see SkillsChartProperties/block.librarySource).
+      librarySource: 'selectedWorks',
+      // 'numbered': a dot + number on the map, titles listed in a
+      // numbered two-column legend below it.
+      // 'leader': each location's title/location labeled directly,
+      // connected to its dot by a line, no separate legend needed.
+      legendStyle: 'numbered',
     },
   },
 ]

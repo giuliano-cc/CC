@@ -11,6 +11,7 @@ import { composeRecipientText, DATE_FORMATS, formatEntryDate, formatFullDate, la
 import { translateSectionTitle } from '../../utils/sectionTitles'
 import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
+import WorldMap from './WorldMap'
 
 // Shared by Experience/Education and a Text block bound to an 'entries'
 // slot (Selected Works): the title is always bold and always item.title —
@@ -1451,6 +1452,37 @@ export default function BlockRenderer({
               </div>
             )
           })}
+        </div>
+      )
+    }
+
+    case BLOCK_TYPES.MAP: {
+      // Same "pick any slot of the right type" pattern as the Technical
+      // Skills chart's librarySource (any checklist slot) — here, any
+      // 'entries' slot (Selected Works, Work Experience, Education,
+      // Achievements), so this one block plots whichever list the
+      // "Content from library" dropdown picked, not just Selected Works.
+      const source = block.librarySource || 'selectedWorks'
+      const items = parseEntries(library[`${source}Items`], library[source]).filter((item) =>
+        isLibraryItemShown(block, item.id, true),
+      )
+      const showTitle = block.title && block.showTitle !== false
+      return (
+        <div className="flex flex-col gap-3">
+          {showTitle && (
+            <p
+              className={block.titleRule !== false ? 'border-b border-slate-200 pb-1.5' : ''}
+              style={sectionTitleStyle(block, block.titleColor || globalStyle.primaryColor, resolveTitleFont(globalStyle))}
+            >
+              {titleTextTransformValue(translateSectionTitle(block.title, globalStyle.contentLanguage, titleOverrides), block, 'title')}
+            </p>
+          )}
+          <WorldMap
+            items={items}
+            accentColor={globalStyle.primaryColor}
+            legendStyle={block.legendStyle || 'numbered'}
+            bodyFont={resolveBodyFont(globalStyle)}
+          />
         </div>
       )
     }
