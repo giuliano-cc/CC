@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import {
-  a4ConstructionGeometry,
+  a4ConstructionVariants,
   goldenRatioLinesX,
   goldenRatioLinesY,
   goldenRatioOffsetLinesX,
@@ -196,12 +196,15 @@ function Page({
           construction behind the 1:√2 ratio (the ratio the page itself
           already is), not just a split line like the golden ratio guide
           above — an SVG overlay, since CSS borders can't draw the arc.
-          Clipped to the page by the page's own overflow-hidden, same as
-          every other guide here. */}
+          Drawn once per corner of the margin box (see
+          a4ConstructionVariants) so the same reference is available for
+          a composition anchored at any of the four corners, not just
+          the top-left. Clipped to the page by the page's own
+          overflow-hidden, same as every other guide here. */}
       {!preview &&
         showA4Ratio &&
         (() => {
-          const { square, diagonal, arcCenter, landingPoint } = a4ConstructionGeometry(margins)
+          const variants = a4ConstructionVariants(margins)
           return (
             <svg
               className="pdf-ignore pointer-events-none absolute inset-0 z-10"
@@ -209,39 +212,43 @@ function Page({
               height={SHEET_HEIGHT}
               viewBox={`0 0 ${SHEET_WIDTH} ${SHEET_HEIGHT}`}
             >
-              <rect
-                x={square.x}
-                y={square.y}
-                width={square.size}
-                height={square.size}
-                fill="none"
-                stroke="rgb(14 165 233)"
-                strokeWidth="1"
-              />
-              <line
-                x1={diagonal.x1}
-                y1={diagonal.y1}
-                x2={diagonal.x2}
-                y2={diagonal.y2}
-                stroke="rgb(14 165 233)"
-                strokeWidth="1.5"
-              />
-              <path
-                d={`M ${diagonal.x1} ${diagonal.y1} A ${square.size * Math.SQRT2} ${square.size * Math.SQRT2} 0 0 1 ${landingPoint.x} ${landingPoint.y}`}
-                fill="none"
-                stroke="rgb(14 165 233)"
-                strokeWidth="1"
-                strokeDasharray="4 3"
-              />
-              <line
-                x1={arcCenter.x}
-                y1={arcCenter.y}
-                x2={landingPoint.x}
-                y2={landingPoint.y}
-                stroke="rgb(14 165 233)"
-                strokeWidth="1"
-                strokeDasharray="2 2"
-              />
+              {variants.map(({ square, diagonal, arcCenter, landingPoint, sweepFlag }, i) => (
+                <g key={i}>
+                  <rect
+                    x={square.x}
+                    y={square.y}
+                    width={square.size}
+                    height={square.size}
+                    fill="none"
+                    stroke="rgb(14 165 233)"
+                    strokeWidth="1"
+                  />
+                  <line
+                    x1={diagonal.x1}
+                    y1={diagonal.y1}
+                    x2={diagonal.x2}
+                    y2={diagonal.y2}
+                    stroke="rgb(14 165 233)"
+                    strokeWidth="1.5"
+                  />
+                  <path
+                    d={`M ${diagonal.x1} ${diagonal.y1} A ${square.size * Math.SQRT2} ${square.size * Math.SQRT2} 0 0 ${sweepFlag} ${landingPoint.x} ${landingPoint.y}`}
+                    fill="none"
+                    stroke="rgb(14 165 233)"
+                    strokeWidth="1"
+                    strokeDasharray="4 3"
+                  />
+                  <line
+                    x1={arcCenter.x}
+                    y1={arcCenter.y}
+                    x2={landingPoint.x}
+                    y2={landingPoint.y}
+                    stroke="rgb(14 165 233)"
+                    strokeWidth="1"
+                    strokeDasharray="2 2"
+                  />
+                </g>
+              ))}
             </svg>
           )
         })()}
