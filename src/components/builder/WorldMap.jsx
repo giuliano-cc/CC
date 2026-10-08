@@ -104,7 +104,16 @@ function computeMapBounds(markers) {
   }
 }
 
-export default function WorldMap({ items, accentColor, legendStyle = 'numbered', leaderDirection = 'sides', bodyFont, targetAspect }) {
+export default function WorldMap({
+  items,
+  accentColor,
+  legendStyle = 'numbered',
+  leaderDirection = 'sides',
+  bodyFont,
+  titleFont,
+  textColor,
+  targetAspect,
+}) {
   const [worldDots, setWorldDots] = useState(null)
   const [points, setPoints] = useState(null)
 
@@ -156,7 +165,16 @@ export default function WorldMap({ items, accentColor, legendStyle = 'numbered',
       />
     )
   }
-  return <NumberedMap markers={markers} worldDots={worldDots} accentColor={accentColor} bodyFont={bodyFont} />
+  return (
+    <NumberedMap
+      markers={markers}
+      worldDots={worldDots}
+      accentColor={accentColor}
+      bodyFont={bodyFont}
+      titleFont={titleFont}
+      textColor={textColor}
+    />
+  )
 }
 
 // Several markers often sit close enough together (not exactly the same
@@ -197,7 +215,7 @@ function layoutNumberLabels(markers, viewWidth, viewHeight) {
   return labels
 }
 
-function NumberedMap({ markers, worldDots, accentColor }) {
+function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, textColor }) {
   const bounds = computeMapBounds(markers)
   const viewWidth = bounds.maxX - bounds.minX
   const viewHeight = bounds.maxY - bounds.minY
@@ -211,12 +229,14 @@ function NumberedMap({ markers, worldDots, accentColor }) {
         {visibleDots.map(({ x, y }, i) => (
           <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
         ))}
+        {/* Same radius as the basemap's own dots — a marker calls out
+            its location by color alone, not by being drawn bigger. */}
         {markers.map(({ item, index, x, y }) => (
-          <circle key={item.id || index} cx={x} cy={y} r={1.4} fill={accentColor} />
+          <circle key={item.id || index} cx={x} cy={y} r={0.45} fill={accentColor} />
         ))}
         {labels.map(({ marker, labelX, labelY }) => (
           <g key={marker.item.id || marker.index}>
-            <line x1={marker.x} y1={marker.y} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
+            <line x1={marker.x} y1={marker.y} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.35} />
             <text x={labelX} y={labelY} fontSize={4.2} fontWeight={700} fill={accentColor} textAnchor="middle" dominantBaseline="middle">
               {marker.index + 1}
             </text>
@@ -226,14 +246,22 @@ function NumberedMap({ markers, worldDots, accentColor }) {
       <div className="grid grid-cols-2 gap-x-6 gap-y-3">
         {markers.map(({ item, index }) => (
           <div key={item.id || index} className="flex gap-2">
-            <span className="shrink-0 text-xs font-bold" style={{ color: accentColor }}>
+            {/* Only the number carries the accent color — title and
+                description follow the page's own text styling, same as
+                any other entries list, so the legend reads as part of
+                the document rather than a separately-styled widget. */}
+            <span className="shrink-0 text-xs font-bold" style={{ color: accentColor, fontFamily: bodyFont }}>
               {index + 1}
             </span>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold" style={{ color: accentColor }}>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-base font-bold" style={{ color: textColor, fontFamily: titleFont }}>
                 {item.title}
               </span>
-              {labelSubtitle(item) && <span className="text-xs opacity-60">{labelSubtitle(item)}</span>}
+              {labelSubtitle(item) && (
+                <span className="text-sm opacity-70" style={{ color: textColor, fontFamily: bodyFont }}>
+                  {labelSubtitle(item)}
+                </span>
+              )}
             </div>
           </div>
         ))}

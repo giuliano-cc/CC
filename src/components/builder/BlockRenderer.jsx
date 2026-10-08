@@ -1492,6 +1492,8 @@ export default function BlockRenderer({
             legendStyle={block.legendStyle || 'numbered'}
             leaderDirection={block.leaderDirection || 'sides'}
             bodyFont={resolveBodyFont(globalStyle)}
+            titleFont={resolveTitleFont(globalStyle)}
+            textColor={globalStyle.textColor}
             targetAspect={mapContentWidth / mapContentHeight}
           />
         </div>
