@@ -1481,6 +1481,7 @@ export default function BlockRenderer({
             items={items}
             accentColor={globalStyle.primaryColor}
             legendStyle={block.legendStyle || 'numbered'}
+            leaderDirection={block.leaderDirection || 'sides'}
             bodyFont={resolveBodyFont(globalStyle)}
           />
         </div>

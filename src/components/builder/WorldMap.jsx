@@ -22,7 +22,32 @@ function project(lng, lat) {
 const MAP_WIDTH = 360
 const MAP_HEIGHT = 180
 
-export default function WorldMap({ items, accentColor, legendStyle = 'numbered', bodyFont }) {
+// Crops the basemap to the region the markers actually sit in, with
+// some breathing room around them — otherwise a handful of locations
+// clustered in one region (the common case: most CVs don't have
+// projects on every continent) render as a few tiny dots lost in an
+// otherwise-empty world map. Padding is proportional to the cluster's
+// own size, with a floor so a single location (or several right on
+// top of each other) still shows enough surrounding geography for
+// context instead of a blank close-up, and clamped to the world's own
+// bounds so the crop never asks for space outside the actual map.
+function computeMapBounds(markers) {
+  if (markers.length === 0) return { minX: 0, maxX: MAP_WIDTH, minY: 0, maxY: MAP_HEIGHT }
+  const xs = markers.map((m) => m.x)
+  const ys = markers.map((m) => m.y)
+  const spanX = Math.max(...xs) - Math.min(...xs)
+  const spanY = Math.max(...ys) - Math.min(...ys)
+  const padX = Math.max(spanX * 0.3, 18)
+  const padY = Math.max(spanY * 0.3, 18)
+  return {
+    minX: Math.max(0, Math.min(...xs) - padX),
+    maxX: Math.min(MAP_WIDTH, Math.max(...xs) + padX),
+    minY: Math.max(0, Math.min(...ys) - padY),
+    maxY: Math.min(MAP_HEIGHT, Math.max(...ys) + padY),
+  }
+}
+
+export default function WorldMap({ items, accentColor, legendStyle = 'numbered', leaderDirection = 'sides', bodyFont }) {
   const [worldDots, setWorldDots] = useState(null)
   const [points, setPoints] = useState(null)
 
@@ -63,7 +88,15 @@ export default function WorldMap({ items, accentColor, legendStyle = 'numbered',
     .filter(Boolean)
 
   if (legendStyle === 'leader') {
-    return <LeaderMap markers={markers} worldDots={worldDots} accentColor={accentColor} bodyFont={bodyFont} />
+    return (
+      <LeaderMap
+        markers={markers}
+        worldDots={worldDots}
+        accentColor={accentColor}
+        bodyFont={bodyFont}
+        direction={leaderDirection}
+      />
+    )
   }
   return <NumberedMap markers={markers} worldDots={worldDots} accentColor={accentColor} bodyFont={bodyFont} />
 }
@@ -78,13 +111,20 @@ function MapAttribution() {
 }
 
 function NumberedMap({ markers, worldDots, accentColor }) {
+  const bounds = computeMapBounds(markers)
+  const visibleDots = worldDots
+    .map(([lng, lat]) => project(lng, lat))
+    .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
   return (
     <div className="flex flex-col gap-3">
-      <svg viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} className="w-full" style={{ display: 'block' }}>
-        {worldDots.map(([lng, lat], i) => {
-          const { x, y } = project(lng, lat)
-          return <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
-        })}
+      <svg
+        viewBox={`${bounds.minX} ${bounds.minY} ${bounds.maxX - bounds.minX} ${bounds.maxY - bounds.minY}`}
+        className="w-full"
+        style={{ display: 'block' }}
+      >
+        {visibleDots.map(({ x, y }, i) => (
+          <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
+        ))}
         {markers.map(({ item, index, x, y }) => (
           <g key={item.id || index}>
             <circle cx={x} cy={y} r={1.4} fill={accentColor} />
@@ -114,41 +154,132 @@ function NumberedMap({ markers, worldDots, accentColor }) {
   )
 }
 
-// Labels stacked in two columns (left/right of the map, split by which
-// side of the map's own horizontal center each marker falls on — the
-// same rough left/right grouping the reference layout uses), each
-// connected to its marker by a straight leader line. A wider viewBox
-// than the map itself reserves room on both sides for the label text,
-// so the whole thing — dots, markers, lines, and labels — is one SVG
-// in a single coordinate space (what makes the leader lines land
-// exactly on the label they belong to, however the container is
-// eventually scaled).
-const LABEL_MARGIN = 130
-const LEADER_VIEW_WIDTH = MAP_WIDTH + LABEL_MARGIN * 2
+// Labels stacked in two groups, each connected to its marker by a
+// leader line — `direction: 'sides'` splits left/right of the map's
+// own horizontal center (columns stacked top-to-bottom, the reference
+// layout's own grouping); `direction: 'topBottom'` splits above/below
+// its vertical center instead (rows stacked left-to-right). Font sizes
+// are fixed in viewBox units (not scaled to the crop), so the room
+// labels need is roughly constant regardless of how tightly the map
+// is cropped — a fixed margin on whichever side holds the labels,
+// added directly to the cropped viewBox rather than reserved inside
+// the map's own 0..360/0..180 range like the original fixed-world
+// version needed.
+const SIDE_LABEL_MARGIN = 110
+const TOP_BOTTOM_LABEL_MARGIN = 22
 
-function LeaderMap({ markers, worldDots, accentColor, bodyFont }) {
-  const mapCenterX = MAP_WIDTH / 2
-  const left = markers.filter((m) => m.x < mapCenterX).sort((a, b) => a.y - b.y)
-  const right = markers.filter((m) => m.x >= mapCenterX).sort((a, b) => a.y - b.y)
+// Splits into two roughly equal-sized groups by count, not by which
+// side of the crop's own midpoint each marker falls on — several
+// projects often sit in the very same city (or two nearby ones), and a
+// pure midpoint split would then dump every marker into one single
+// overloaded group while the other sits empty, cramming far more
+// labels into one row/column than it has room for (illegible overlap).
+function splitBalanced(markers, axisKey) {
+  const sorted = [...markers].sort((a, b) => a[axisKey] - b[axisKey])
+  const half = Math.ceil(sorted.length / 2)
+  return [sorted.slice(0, half), sorted.slice(half)]
+}
+
+function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sides' }) {
+  const bounds = computeMapBounds(markers)
+  const visibleDots = worldDots
+    .map(([lng, lat]) => project(lng, lat))
+    .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
+
+  if (direction === 'topBottom') {
+    const [topRaw, bottomRaw] = splitBalanced(markers, 'y')
+    const top = [...topRaw].sort((a, b) => a.x - b.x)
+    const bottom = [...bottomRaw].sort((a, b) => a.x - b.x)
+
+    // Each label needs a minimum width to not overlap its neighbors,
+    // regardless of how tightly the markers themselves are cropped —
+    // several projects often sit right on top of each other (same
+    // city), which would otherwise squeeze an entire row of labels
+    // into a sliver of a crop only wide enough for the dots
+    // themselves. Widens the viewBox (recentered on the actual crop)
+    // instead of the crop itself, so the map portion stays accurate to
+    // where the markers are, with label the room added around it.
+    const MIN_SLOT_WIDTH = 85
+    const maxRowCount = Math.max(top.length, bottom.length, 1)
+    const cropWidth = bounds.maxX - bounds.minX
+    const viewWidth = Math.max(cropWidth, MIN_SLOT_WIDTH * maxRowCount)
+    const viewMinX = (bounds.minX + bounds.maxX) / 2 - viewWidth / 2
+
+    function layoutRow(row) {
+      if (row.length === 0) return []
+      const slot = viewWidth / row.length
+      return row.map((m, i) => ({ ...m, labelX: viewMinX + slot * i + slot / 2 }))
+    }
+
+    function renderLabel({ item, x, y, labelX }, pos) {
+      const labelY = pos === 'top' ? bounds.minY - TOP_BOTTOM_LABEL_MARGIN + 6 : bounds.maxY + TOP_BOTTOM_LABEL_MARGIN - 2
+      const lineEndY = pos === 'top' ? bounds.minY - TOP_BOTTOM_LABEL_MARGIN + 10 : bounds.maxY + TOP_BOTTOM_LABEL_MARGIN - 10
+      return (
+        <g key={item.id}>
+          <line x1={x} y1={y} x2={labelX} y2={lineEndY} stroke="#94a3b8" strokeWidth={0.4} />
+          <line x1={labelX} y1={lineEndY} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
+          <circle cx={x} cy={y} r={1.1} fill={accentColor} />
+          <text x={labelX} y={labelY} fontSize={4.8} fontWeight={700} fill={accentColor} textAnchor="middle" fontFamily={bodyFont}>
+            {item.title}
+          </text>
+          {item.location && (
+            <text
+              x={labelX}
+              y={labelY + (pos === 'top' ? -5 : 5)}
+              fontSize={3.6}
+              fill="currentColor"
+              opacity={0.6}
+              textAnchor="middle"
+              fontFamily={bodyFont}
+            >
+              {item.location}
+            </text>
+          )}
+        </g>
+      )
+    }
+
+    const topLaid = layoutRow(top)
+    const bottomLaid = layoutRow(bottom)
+    const viewBox = `${viewMinX} ${bounds.minY - TOP_BOTTOM_LABEL_MARGIN} ${viewWidth} ${
+      bounds.maxY - bounds.minY + TOP_BOTTOM_LABEL_MARGIN * 2
+    }`
+    return (
+      <div className="flex flex-col gap-2">
+        <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
+          {visibleDots.map(({ x, y }, i) => (
+            <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
+          ))}
+          {topLaid.map((m) => renderLabel(m, 'top'))}
+          {bottomLaid.map((m) => renderLabel(m, 'bottom'))}
+        </svg>
+        <MapAttribution />
+      </div>
+    )
+  }
+
+  const [leftRaw, rightRaw] = splitBalanced(markers, 'x')
+  const left = [...leftRaw].sort((a, b) => a.y - b.y)
+  const right = [...rightRaw].sort((a, b) => a.y - b.y)
 
   function layoutColumn(column) {
     if (column.length === 0) return []
-    const slot = MAP_HEIGHT / column.length
-    return column.map((m, i) => ({ ...m, labelY: slot * i + slot / 2 }))
+    const slot = (bounds.maxY - bounds.minY) / column.length
+    return column.map((m, i) => ({ ...m, labelY: bounds.minY + slot * i + slot / 2 }))
   }
 
   const leftLaid = layoutColumn(left)
   const rightLaid = layoutColumn(right)
 
   function renderLabel({ item, x, y, labelY }, side) {
-    const labelX = side === 'left' ? 4 : LEADER_VIEW_WIDTH - 4
+    const labelX = side === 'left' ? bounds.minX - SIDE_LABEL_MARGIN + 4 : bounds.maxX + SIDE_LABEL_MARGIN - 4
     const anchor = side === 'left' ? 'start' : 'end'
-    const lineEndX = side === 'left' ? LABEL_MARGIN - 6 : LABEL_MARGIN + MAP_WIDTH + 6
+    const lineEndX = side === 'left' ? bounds.minX - 6 : bounds.maxX + 6
     return (
       <g key={item.id}>
-        <line x1={x + LABEL_MARGIN} y1={y} x2={lineEndX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
+        <line x1={x} y1={y} x2={lineEndX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
         <line x1={lineEndX} y1={labelY} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
-        <circle cx={x + LABEL_MARGIN} cy={y} r={1.1} fill={accentColor} />
+        <circle cx={x} cy={y} r={1.1} fill={accentColor} />
         <text x={labelX} y={labelY - 2} fontSize={4.8} fontWeight={700} fill={accentColor} textAnchor={anchor} fontFamily={bodyFont}>
           {item.title}
         </text>
@@ -161,13 +292,15 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont }) {
     )
   }
 
+  const viewBox = `${bounds.minX - SIDE_LABEL_MARGIN} ${bounds.minY} ${
+    bounds.maxX - bounds.minX + SIDE_LABEL_MARGIN * 2
+  } ${bounds.maxY - bounds.minY}`
   return (
     <div className="flex flex-col gap-2">
-      <svg viewBox={`0 0 ${LEADER_VIEW_WIDTH} ${MAP_HEIGHT}`} className="w-full" style={{ display: 'block' }}>
-        {worldDots.map(([lng, lat], i) => {
-          const { x, y } = project(lng, lat)
-          return <circle key={i} cx={x + LABEL_MARGIN} cy={y} r={0.45} fill="#cbd5e1" />
-        })}
+      <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
+        {visibleDots.map(({ x, y }, i) => (
+          <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
+        ))}
         {leftLaid.map((m) => renderLabel(m, 'left'))}
         {rightLaid.map((m) => renderLabel(m, 'right'))}
       </svg>

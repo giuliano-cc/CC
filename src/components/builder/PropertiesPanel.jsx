@@ -1443,6 +1443,18 @@ function MapProperties({ block, onChange }) {
           <option value="leader">Leader lines — labels pointing to each location</option>
         </select>
       </Field>
+      {block.legendStyle === 'leader' && (
+        <Field label="Leader line direction">
+          <select
+            value={block.leaderDirection || 'sides'}
+            onChange={(e) => onChange({ leaderDirection: e.target.value })}
+            className={inputClasses}
+          >
+            <option value="sides">Left / Right</option>
+            <option value="topBottom">Top / Bottom</option>
+          </select>
+        </Field>
+      )}
     </div>
   )
 }

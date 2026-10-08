@@ -604,6 +604,9 @@ export const BLOCK_DEFINITIONS = [
       // 'leader': each location's title/location labeled directly,
       // connected to its dot by a line, no separate legend needed.
       legendStyle: 'numbered',
+      // Only matters when legendStyle is 'leader': 'sides' groups
+      // labels left/right of the map, 'topBottom' above/below it.
+      leaderDirection: 'sides',
     },
   },
 ]
