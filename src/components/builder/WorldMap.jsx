@@ -176,14 +176,20 @@ export default function WorldMap({
     return <div className="flex aspect-[2/1] w-full items-center justify-center rounded-md bg-slate-50 text-xs text-slate-400">Loading map…</div>
   }
 
+  // `index` numbers the markers that actually made it onto the map, not
+  // the item's own position in the full entries list — an entry whose
+  // location is empty or couldn't be geocoded is dropped (no `point`),
+  // and numbering by its original position would leave a gap (2, 3, 4…
+  // instead of 1, 2, 3…) where that entry used to be.
   const markers = items
     .map((item, i) => {
       const point = points[i]
       if (!point) return null
       const { x, y } = project(point.lng, point.lat)
-      return { item, index: i, x, y }
+      return { item, x, y }
     })
     .filter(Boolean)
+    .map((marker, index) => ({ ...marker, index }))
 
   if (legendStyle === 'leader') {
     return (
@@ -265,26 +271,21 @@ function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, tex
     .map(([lng, lat]) => project(lng, lat))
     .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
   const labels = layoutNumberLabels(markers, viewWidth, viewHeight)
-  return (
-    <div className="flex flex-col gap-3">
-      <svg viewBox={`${bounds.minX} ${bounds.minY} ${viewWidth} ${viewHeight}`} className="w-full" style={{ display: 'block' }}>
-        {visibleDots.map(({ x, y }, i) => (
-          <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
-        ))}
-        {markers.map(({ item, index, x, y }) => (
-          <circle key={item.id || index} cx={x} cy={y} r={1.4} fill={accentColor} />
-        ))}
-        {labels.map(({ marker, labelX, labelY }) => (
-          <g key={marker.item.id || marker.index}>
-            <line x1={marker.x} y1={marker.y} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
-            <text x={labelX} y={labelY} fontSize={4.2} fontWeight={700} fill={accentColor} textAnchor="middle" dominantBaseline="middle">
-              {marker.index + 1}
-            </text>
-          </g>
-        ))}
-      </svg>
+
+  // Split the legend above/below the map (rather than all of it in one
+  // block below) so the map itself sits in the middle of the block
+  // instead of pinned to the top — same "map stays centered" goal as
+  // the leader styles, reached here by framing it with text on both
+  // sides instead of a flex wrapper alone (a legend twice as tall as
+  // the map would otherwise still leave it looking stuck at the top).
+  const half = Math.ceil(markers.length / 2)
+  const topMarkers = markers.slice(0, half)
+  const bottomMarkers = markers.slice(half)
+
+  function renderLegend(list) {
+    return (
       <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-        {markers.map(({ item, index }) => (
+        {list.map(({ item, index }) => (
           <div key={item.id || index} className="flex gap-2">
             {/* Only the number carries the accent color — title and
                 description follow the block's own configurable text
@@ -321,6 +322,29 @@ function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, tex
           </div>
         ))}
       </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {topMarkers.length > 0 && renderLegend(topMarkers)}
+      <svg viewBox={`${bounds.minX} ${bounds.minY} ${viewWidth} ${viewHeight}`} className="w-full" style={{ display: 'block' }}>
+        {visibleDots.map(({ x, y }, i) => (
+          <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
+        ))}
+        {markers.map(({ item, index, x, y }) => (
+          <circle key={item.id || index} cx={x} cy={y} r={1.4} fill={accentColor} />
+        ))}
+        {labels.map(({ marker, labelX, labelY }) => (
+          <g key={marker.item.id || marker.index}>
+            <line x1={marker.x} y1={marker.y} x2={labelX} y2={labelY} stroke="#94a3b8" strokeWidth={0.4} />
+            <text x={labelX} y={labelY} fontSize={4.2} fontWeight={700} fill={accentColor} textAnchor="middle" dominantBaseline="middle">
+              {marker.index + 1}
+            </text>
+          </g>
+        ))}
+      </svg>
+      {bottomMarkers.length > 0 && renderLegend(bottomMarkers)}
     </div>
   )
 }
