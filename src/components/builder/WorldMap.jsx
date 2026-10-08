@@ -101,40 +101,54 @@ export default function WorldMap({ items, accentColor, legendStyle = 'numbered',
   return <NumberedMap markers={markers} worldDots={worldDots} accentColor={accentColor} bodyFont={bodyFont} />
 }
 
-// Basemap is derived from Natural Earth (public domain, no attribution
-// required); place names/coordinates are GeoNames data via the
-// `all-the-cities` package, under GeoNames' own CC BY 4.0 license,
-// which does require it — shown the same unobtrusive way the reference
-// examples credit their own basemap source.
-function MapAttribution() {
-  return <p className="text-[8px] text-slate-400">Map: Natural Earth · Places: GeoNames (CC BY 4.0)</p>
+// Several markers often sit close enough together (not exactly the same
+// point, but close at the map's own scale) that their number labels
+// would otherwise land right on top of each other — groups markers
+// within a small distance of one another (relative to the visible
+// map's own size, so it scales with however tightly cropped the map
+// is) and gives each such group one combined label ("1,7") near their
+// shared position instead of several overlapping ones. The dots
+// themselves stay at their own true positions either way — only the
+// number labels merge.
+function clusterMarkers(markers, viewWidth, viewHeight) {
+  const threshold = Math.max(viewWidth, viewHeight) * 0.035
+  const clusters = []
+  for (const marker of markers) {
+    const existing = clusters.find((c) => Math.hypot(c.x - marker.x, c.y - marker.y) < threshold)
+    if (existing) {
+      existing.members.push(marker)
+      existing.x = existing.members.reduce((sum, m) => sum + m.x, 0) / existing.members.length
+      existing.y = existing.members.reduce((sum, m) => sum + m.y, 0) / existing.members.length
+    } else {
+      clusters.push({ x: marker.x, y: marker.y, members: [marker] })
+    }
+  }
+  return clusters
 }
 
 function NumberedMap({ markers, worldDots, accentColor }) {
   const bounds = computeMapBounds(markers)
+  const viewWidth = bounds.maxX - bounds.minX
+  const viewHeight = bounds.maxY - bounds.minY
   const visibleDots = worldDots
     .map(([lng, lat]) => project(lng, lat))
     .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
+  const clusters = clusterMarkers(markers, viewWidth, viewHeight)
   return (
     <div className="flex flex-col gap-3">
-      <svg
-        viewBox={`${bounds.minX} ${bounds.minY} ${bounds.maxX - bounds.minX} ${bounds.maxY - bounds.minY}`}
-        className="w-full"
-        style={{ display: 'block' }}
-      >
+      <svg viewBox={`${bounds.minX} ${bounds.minY} ${viewWidth} ${viewHeight}`} className="w-full" style={{ display: 'block' }}>
         {visibleDots.map(({ x, y }, i) => (
           <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
         ))}
         {markers.map(({ item, index, x, y }) => (
-          <g key={item.id || index}>
-            <circle cx={x} cy={y} r={1.4} fill={accentColor} />
-            <text x={x + 2} y={y - 1.5} fontSize={4.2} fontWeight={700} fill={accentColor}>
-              {index + 1}
-            </text>
-          </g>
+          <circle key={item.id || index} cx={x} cy={y} r={1.4} fill={accentColor} />
+        ))}
+        {clusters.map((cluster, ci) => (
+          <text key={ci} x={cluster.x + 2} y={cluster.y - 1.5} fontSize={4.2} fontWeight={700} fill={accentColor}>
+            {cluster.members.map((m) => m.index + 1).join(',')}
+          </text>
         ))}
       </svg>
-      <MapAttribution />
       <div className="grid grid-cols-2 gap-x-6 gap-y-3">
         {markers.map(({ item, index }) => (
           <div key={item.id || index} className="flex gap-2">
@@ -166,7 +180,7 @@ function NumberedMap({ markers, worldDots, accentColor }) {
 // the map's own 0..360/0..180 range like the original fixed-world
 // version needed.
 const SIDE_LABEL_MARGIN = 110
-const TOP_BOTTOM_LABEL_MARGIN = 22
+const TOP_BOTTOM_LABEL_MARGIN = 28
 
 // Splits into two roughly equal-sized groups by count, not by which
 // side of the crop's own midpoint each marker falls on — several
@@ -245,16 +259,13 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
       bounds.maxY - bounds.minY + TOP_BOTTOM_LABEL_MARGIN * 2
     }`
     return (
-      <div className="flex flex-col gap-2">
-        <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
-          {visibleDots.map(({ x, y }, i) => (
-            <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
-          ))}
-          {topLaid.map((m) => renderLabel(m, 'top'))}
-          {bottomLaid.map((m) => renderLabel(m, 'bottom'))}
-        </svg>
-        <MapAttribution />
-      </div>
+      <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
+        {visibleDots.map(({ x, y }, i) => (
+          <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
+        ))}
+        {topLaid.map((m) => renderLabel(m, 'top'))}
+        {bottomLaid.map((m) => renderLabel(m, 'bottom'))}
+      </svg>
     )
   }
 
@@ -262,10 +273,20 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
   const left = [...leftRaw].sort((a, b) => a.y - b.y)
   const right = [...rightRaw].sort((a, b) => a.y - b.y)
 
+  // Same reasoning as the top/bottom direction's own MIN_SLOT_WIDTH:
+  // each label needs a minimum height (it's two lines of text) to not
+  // overlap its neighbors, regardless of how tightly the markers
+  // themselves are cropped vertically.
+  const MIN_SLOT_HEIGHT = 20
+  const maxColumnCount = Math.max(left.length, right.length, 1)
+  const cropHeight = bounds.maxY - bounds.minY
+  const viewHeight = Math.max(cropHeight, MIN_SLOT_HEIGHT * maxColumnCount)
+  const viewMinY = (bounds.minY + bounds.maxY) / 2 - viewHeight / 2
+
   function layoutColumn(column) {
     if (column.length === 0) return []
-    const slot = (bounds.maxY - bounds.minY) / column.length
-    return column.map((m, i) => ({ ...m, labelY: bounds.minY + slot * i + slot / 2 }))
+    const slot = viewHeight / column.length
+    return column.map((m, i) => ({ ...m, labelY: viewMinY + slot * i + slot / 2 }))
   }
 
   const leftLaid = layoutColumn(left)
@@ -292,19 +313,16 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
     )
   }
 
-  const viewBox = `${bounds.minX - SIDE_LABEL_MARGIN} ${bounds.minY} ${
+  const viewBox = `${bounds.minX - SIDE_LABEL_MARGIN} ${viewMinY} ${
     bounds.maxX - bounds.minX + SIDE_LABEL_MARGIN * 2
-  } ${bounds.maxY - bounds.minY}`
+  } ${viewHeight}`
   return (
-    <div className="flex flex-col gap-2">
-      <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
-        {visibleDots.map(({ x, y }, i) => (
-          <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
-        ))}
-        {leftLaid.map((m) => renderLabel(m, 'left'))}
-        {rightLaid.map((m) => renderLabel(m, 'right'))}
-      </svg>
-      <MapAttribution />
-    </div>
+    <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
+      {visibleDots.map(({ x, y }, i) => (
+        <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
+      ))}
+      {leftLaid.map((m) => renderLabel(m, 'left'))}
+      {rightLaid.map((m) => renderLabel(m, 'right'))}
+    </svg>
   )
 }
