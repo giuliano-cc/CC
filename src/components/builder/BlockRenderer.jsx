@@ -1467,6 +1467,15 @@ export default function BlockRenderer({
         isLibraryItemShown(block, item.id, true),
       )
       const showTitle = block.title && block.showTitle !== false
+      // The block can be resized to any height independent of what the
+      // map actually needs — WorldMap uses this (the content area's own
+      // width/height, title and padding already subtracted) to spread
+      // labels into the extra room instead of leaving it blank or
+      // growing the map crop past its natural minimum size.
+      const titleSizePx = block.fontSize || HEADING_SIZE_PX[block.titleSize || 'md'] || HEADING_SIZE_PX.md
+      const titleAreaHeight = showTitle ? titleSizePx * 1.25 + (block.titleRule !== false ? 7 : 0) + 12 : 0
+      const mapContentWidth = Math.max(20, (block.width || 0) - 16)
+      const mapContentHeight = Math.max(20, (block.height || 0) - 16 - titleAreaHeight)
       return (
         <div className="flex flex-col gap-3">
           {showTitle && (
@@ -1483,6 +1492,7 @@ export default function BlockRenderer({
             legendStyle={block.legendStyle || 'numbered'}
             leaderDirection={block.leaderDirection || 'sides'}
             bodyFont={resolveBodyFont(globalStyle)}
+            targetAspect={mapContentWidth / mapContentHeight}
           />
         </div>
       )

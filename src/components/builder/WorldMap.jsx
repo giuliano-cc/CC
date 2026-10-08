@@ -104,7 +104,7 @@ function computeMapBounds(markers) {
   }
 }
 
-export default function WorldMap({ items, accentColor, legendStyle = 'numbered', leaderDirection = 'sides', bodyFont }) {
+export default function WorldMap({ items, accentColor, legendStyle = 'numbered', leaderDirection = 'sides', bodyFont, targetAspect }) {
   const [worldDots, setWorldDots] = useState(null)
   const [points, setPoints] = useState(null)
 
@@ -152,6 +152,7 @@ export default function WorldMap({ items, accentColor, legendStyle = 'numbered',
         accentColor={accentColor}
         bodyFont={bodyFont}
         direction={leaderDirection}
+        targetAspect={targetAspect}
       />
     )
   }
@@ -288,7 +289,7 @@ function splitBalanced(markers, axisKey) {
   return [sorted.slice(0, half), sorted.slice(half)]
 }
 
-function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sides' }) {
+function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sides', targetAspect }) {
   const bounds = computeMapBounds(markers)
 
   if (direction === 'topBottom') {
@@ -312,8 +313,30 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
     const effectiveBounds = zoomBoundsToWidth(bounds, neededWidth)
     const minX = Math.min(effectiveBounds.minX, labelMinX)
     const maxX = Math.max(effectiveBounds.maxX, labelMaxX)
-    const topMargin = TOP_BOTTOM_LABEL_MARGIN + topTiers * TIER_HEIGHT
-    const bottomMargin = TOP_BOTTOM_LABEL_MARGIN + bottomTiers * TIER_HEIGHT
+    const viewWidth = maxX - minX
+    const cropHeight = effectiveBounds.maxY - effectiveBounds.minY
+
+    // The block can be resized to any height, independent of what the
+    // content actually needs — and when it's made taller than the
+    // natural minimum, the extra room should go into spacing the labels
+    // further apart (so a tall block doesn't look like a small map
+    // glued to the top with blank space below it), never into the map
+    // itself growing past the tight crop it already has. Each tier's
+    // own height only grows beyond TIER_HEIGHT when there's a target
+    // aspect ratio taller than what the natural layout would produce.
+    const naturalHeight = cropHeight + TOP_BOTTOM_LABEL_MARGIN * 2 + (topTiers + bottomTiers) * TIER_HEIGHT
+    const naturalAspect = viewWidth / naturalHeight
+    let topTierHeight = TIER_HEIGHT
+    let bottomTierHeight = TIER_HEIGHT
+    if (targetAspect > 0 && targetAspect < naturalAspect) {
+      const requiredHeight = viewWidth / targetAspect
+      const extraHeight = requiredHeight - naturalHeight
+      const totalTiers = topTiers + bottomTiers || 1
+      if (topTiers > 0) topTierHeight = TIER_HEIGHT + (extraHeight * (topTiers / totalTiers)) / topTiers
+      if (bottomTiers > 0) bottomTierHeight = TIER_HEIGHT + (extraHeight * (bottomTiers / totalTiers)) / bottomTiers
+    }
+    const topMargin = TOP_BOTTOM_LABEL_MARGIN + topTiers * topTierHeight
+    const bottomMargin = TOP_BOTTOM_LABEL_MARGIN + bottomTiers * bottomTierHeight
 
     const visibleDots = worldDots
       .map(([lng, lat]) => project(lng, lat))
@@ -326,7 +349,8 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
     // title then address below it — reading like a real map callout
     // instead of a centered floating label.
     function renderLabel({ item, x, y, labelX, tier }, pos) {
-      const nearOffset = TOP_BOTTOM_LABEL_MARGIN + tier * TIER_HEIGHT
+      const tierHeight = pos === 'top' ? topTierHeight : bottomTierHeight
+      const nearOffset = TOP_BOTTOM_LABEL_MARGIN + tier * tierHeight
       const rail = pos === 'top' ? effectiveBounds.minY - nearOffset : effectiveBounds.maxY + nearOffset
       const textX = labelX + DASH_LEN + 2
       const titleY = pos === 'top' ? rail - 9 : rail + 5
@@ -348,9 +372,7 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
       )
     }
 
-    const viewBox = `${minX} ${effectiveBounds.minY - topMargin} ${maxX - minX} ${
-      effectiveBounds.maxY - effectiveBounds.minY + topMargin + bottomMargin
-    }`
+    const viewBox = `${minX} ${effectiveBounds.minY - topMargin} ${viewWidth} ${cropHeight + topMargin + bottomMargin}`
     return (
       <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
         {visibleDots.map(({ x, y }, i) => (
@@ -382,7 +404,15 @@ function LeaderMap({ markers, worldDots, accentColor, bodyFont, direction = 'sid
   const MIN_SLOT_HEIGHT = 20
   const maxColumnCount = Math.max(left.length, right.length, 1)
   const cropHeight = bounds.maxY - bounds.minY
-  const viewHeight = Math.max(cropHeight, MIN_SLOT_HEIGHT * maxColumnCount)
+  let viewHeight = Math.max(cropHeight, MIN_SLOT_HEIGHT * maxColumnCount)
+  // As with the topBottom direction, a block resized taller than this
+  // natural minimum should spread the column's labels further apart —
+  // not stretch the map crop itself — to fill the extra room.
+  const naturalWidth = bounds.maxX - bounds.minX + sideLabelMargin * 2
+  const naturalAspect = naturalWidth / viewHeight
+  if (targetAspect > 0 && targetAspect < naturalAspect) {
+    viewHeight = naturalWidth / targetAspect
+  }
   const viewMinY = (bounds.minY + bounds.maxY) / 2 - viewHeight / 2
 
   function layoutColumn(column) {
