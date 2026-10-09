@@ -88,7 +88,7 @@ function PhotoField({ value, onChange, variant = 'photo' }) {
           <User size={24} />
         )}
       </div>
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <input ref={fileInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFile} />
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}

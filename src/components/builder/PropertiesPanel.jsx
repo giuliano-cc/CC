@@ -589,7 +589,7 @@ function PageBackgroundImageField({ globalStyle, setGlobalStyle }) {
   return (
     <Field label="Page background image">
       <div className="flex items-center gap-1.5">
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+        <input ref={fileInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFile} />
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
@@ -2180,7 +2180,7 @@ function ImageUploadField({ onChange }) {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf"
         className="hidden"
         onChange={handleFile}
       />
