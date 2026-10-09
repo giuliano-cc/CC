@@ -9,6 +9,8 @@ import {
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
   AlignVerticalJustifyStart,
+  ChevronDown,
+  ChevronUp,
   Crop,
   Maximize2,
   Shuffle,
@@ -28,7 +30,16 @@ import {
 import { DATE_FORMAT_LABELS, DATE_FORMATS, emptyEntry, parseChecklist, parseEntries, parseRecipients, todayISODate } from '../../utils/contentLists'
 import { splitTextToFit } from '../../utils/textFlow'
 import { resizeImageFile } from '../../utils/imageResize'
-import { isSvgDataUrl, decodeSvgMarkup, encodeSvgMarkup, extractSvgTexts, replaceSvgText } from '../../utils/svgText'
+import {
+  isSvgDataUrl,
+  decodeSvgMarkup,
+  encodeSvgMarkup,
+  extractSvgTexts,
+  replaceSvgText,
+  getSvgTextStyle,
+  setSvgTextStyle,
+  setAllSvgTextStyles,
+} from '../../utils/svgText'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import { SOCIAL_PLATFORMS } from '../../utils/socialIcons'
 import FontPicker from './FontPicker'
@@ -2236,35 +2247,113 @@ function ImageCropButton({ block, onChange }) {
   )
 }
 
+// Font/size/color/bold/italic controls for one SVG <text> element's
+// style — shared by the "global" (applies to every text at once) and
+// "local" (one specific text, overriding the global style for just that
+// one) controls below. `style` is whatever getSvgTextStyle read back —
+// `null` fields show as this field's own placeholder/unchecked default,
+// the same "not explicitly set" convention every other block style field
+// already uses.
+function SvgTextStyleControls({ style, onChange }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <FontPicker value={style.fontFamily || ''} onChange={(v) => onChange({ fontFamily: v || null })} />
+      <div className="flex items-center gap-1.5">
+        <input
+          type="number"
+          min={4}
+          max={200}
+          placeholder="size"
+          value={style.fontSize || ''}
+          onChange={(e) => onChange({ fontSize: e.target.value ? Number(e.target.value) : null })}
+          className={`${inputClasses} !w-20`}
+          title="Font size (px)"
+        />
+        <input
+          type="color"
+          value={style.fill || '#000000'}
+          onChange={(e) => onChange({ fill: e.target.value })}
+          className="h-9 w-9 shrink-0 cursor-pointer rounded-md border border-slate-300"
+          title="Text color"
+        />
+        <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600">
+          <input type="checkbox" checked={!!style.bold} onChange={(e) => onChange({ bold: e.target.checked })} />
+          Bold
+        </label>
+        <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600">
+          <input type="checkbox" checked={!!style.italic} onChange={(e) => onChange({ italic: e.target.checked })} />
+          Italic
+        </label>
+      </div>
+    </div>
+  )
+}
+
 // Edits an uploaded SVG's own <text> labels in place — one field per
 // <text> element found, same "select the block, edit its text here"
 // pattern every other block already uses, rather than a one-off
 // click-to-edit-on-canvas behavior no other block has. Only for a
 // directly-uploaded SVG (block.src); an imageSlot-bound one is edited
 // from the Content Library instead, same as any other library image.
+// A "global" style control applies the same font/size/color/bold/italic
+// to every text at once; each one can still be expanded for its own
+// "local" override afterwards — editing the global control again
+// overwrites any local overrides already made, same as every other
+// bulk-then-per-item style control in this app (e.g. Global Style's
+// typography rows vs. a single block's own font override).
 function SvgTextFields({ block, onChange }) {
+  const [expandedIndex, setExpandedIndex] = useState(null)
   if (block.imageSlot || !isSvgDataUrl(block.src)) return null
-  const texts = extractSvgTexts(decodeSvgMarkup(block.src))
+  const markup = decodeSvgMarkup(block.src)
+  const texts = extractSvgTexts(markup)
   if (texts.length === 0) return null
+
+  function updateMarkup(fn) {
+    onChange({ src: encodeSvgMarkup(fn(decodeSvgMarkup(block.src))) })
+  }
+
   return (
-    <Field label="Text in this SVG">
-      <div className="flex flex-col gap-1.5">
-        {texts.map((text, i) => (
-          <input
+    <>
+      <Field label="Text style (all text in this SVG)">
+        <SvgTextStyleControls
+          style={getSvgTextStyle(markup, 0) || {}}
+          onChange={(patch) => updateMarkup((m) => setAllSvgTextStyles(m, patch))}
+        />
+      </Field>
+      <Field label="Text in this SVG">
+        <div className="flex flex-col gap-1.5">
+          {texts.map((text, i) => (
             // eslint-disable-next-line react/no-array-index-key -- texts
             // are re-derived from the SVG markup itself on every render,
             // so their order/count is this element's own stable identity.
-            key={i}
-            type="text"
-            value={text}
-            onChange={(e) =>
-              onChange({ src: encodeSvgMarkup(replaceSvgText(decodeSvgMarkup(block.src), i, e.target.value)) })
-            }
-            className={inputClasses}
-          />
-        ))}
-      </div>
-    </Field>
+            <div key={i} className="flex flex-col gap-1.5 rounded-md border border-slate-200 p-1.5">
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={text}
+                  onChange={(e) => updateMarkup((m) => replaceSvgText(m, i, e.target.value))}
+                  className={`${inputClasses} flex-1`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}
+                  title="This text's own style override"
+                  className="flex shrink-0 items-center justify-center rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-primary"
+                >
+                  {expandedIndex === i ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
+              </div>
+              {expandedIndex === i && (
+                <SvgTextStyleControls
+                  style={getSvgTextStyle(markup, i) || {}}
+                  onChange={(patch) => updateMarkup((m) => setSvgTextStyle(m, i, patch))}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </Field>
+    </>
   )
 }
 
