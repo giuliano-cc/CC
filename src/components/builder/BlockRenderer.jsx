@@ -7,7 +7,7 @@ import {
 } from '../../utils/blockTypes'
 import { CONTENT_SLOTS, useContentLibrary } from '../../context/ContentLibraryContext'
 import { getPlatformMeta, normalizeUrl, parseSocialLinks } from '../../utils/socialIcons'
-import { composeRecipientText, DATE_FORMATS, formatEntryDate, formatFullDate, languageLevelText, parseChecklist, parseEntries, parseLanguages, parseRecipients, skillLevelText, sortByMapOrder, sortEntriesByDate, todayISODate } from '../../utils/contentLists'
+import { composeRecipientText, DATE_FORMATS, formatEntryDate, formatFullDate, languageLevelText, parseChecklist, parseEntries, parseLanguages, parseRecipients, skillLevelText, sortEntriesByDate, todayISODate } from '../../utils/contentLists'
 import { translateSectionTitle } from '../../utils/sectionTitles'
 import { Globe, Image as ImageIcon, Mail, MapPin, Phone, RefreshCw } from 'lucide-react'
 import QRCodeImage from './QRCodeImage'
@@ -698,10 +698,7 @@ export default function BlockRenderer({
               isLibraryItemShown(block, item.id, true),
             )
           : []
-      // A manual order number (Content Library → Selected Works' own "#"
-      // field) always wins when set — a no-op otherwise, so this is safe
-      // to apply unconditionally after whatever date-sort already ran.
-      const entriesItems = sortByMapOrder(block.sortByDate !== false ? sortEntriesByDate(entriesRawItems) : entriesRawItems)
+      const entriesItems = block.sortByDate !== false ? sortEntriesByDate(entriesRawItems) : entriesRawItems
       // A Text block bound to a "recipients" slot (Cover Letter
       // Recipients) shows just the one recipient picked in
       // PropertiesPanel.jsx's "Which recipient" field (defaulting to the
@@ -756,13 +753,12 @@ export default function BlockRenderer({
                 {secondaryLine}
               </p>
             )
-            // The manual "#" field (Content Library → Selected Works)
-            // wins when set, same priority sortByMapOrder already gives
-            // it; otherwise falls back to this item's position in the
-            // (already date/mapOrder-sorted) list — same convention the
-            // Locations Map's own numbered style uses for an entry with
-            // no explicit order.
-            const displayNumber = item.mapOrder !== undefined && item.mapOrder !== null && item.mapOrder !== '' ? item.mapOrder : i + 1
+            // Always just this item's position in the (already
+            // date-sorted, if that's on) list — the same list reordering
+            // (see ContentLibraryPage.jsx's Move up/down) is the only way
+            // to change it, rather than a separate manual number that
+            // would drift out of sync with the list itself.
+            const displayNumber = i + 1
             const entryChildren = (
               <>
                 {block.titleOnly ? (
@@ -1489,12 +1485,12 @@ export default function BlockRenderer({
       // Achievements), so this one block plots whichever list the
       // "Content from library" dropdown picked, not just Selected Works.
       const source = block.librarySource || 'selectedWorks'
-      // A manual order number (Content Library → Selected Works' own "#"
-      // field) keeps the map's marker numbers agreeing with however the
-      // entries list itself is ordered/numbered elsewhere — a no-op when
-      // no entry has one set.
-      const items = sortByMapOrder(
-        parseEntries(library[`${source}Items`], library[source]).filter((item) => isLibraryItemShown(block, item.id, true)),
+      // Plotted in the entries list's own order — the same list order
+      // the Content Library's Selected Works section itself shows (and
+      // lets you change with Move up/down), so the map's marker numbers
+      // always agree with it without a separate field to keep in sync.
+      const items = parseEntries(library[`${source}Items`], library[source]).filter((item) =>
+        isLibraryItemShown(block, item.id, true),
       )
       const showTitle = block.title && block.showTitle !== false
       // The content area's own width (title and padding already

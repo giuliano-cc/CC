@@ -3059,7 +3059,7 @@ function BlockPropertiesPanel({ block, onChange }) {
                 checked={block.showEntryNumber === true}
                 onChange={(e) => onChange({ showEntryNumber: e.target.checked })}
               />
-              Show number (accent-colored, same style as the Locations Map's numbered legend — set each entry's own number in Content Library → Selected Works)
+              Show number (accent-colored, same style as the Locations Map's numbered legend — follows this list's own order)
             </label>
             {!block.titleOnly && (
               <>

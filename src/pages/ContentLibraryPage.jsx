@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ArrowLeft, ChevronDown, Copy, Crop, Download, Trash2, Upload, User } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, Copy, Crop, Download, Trash2, Upload, User } from 'lucide-react'
 import { CONTENT_SLOTS, SHARED_SLOT_KEYS, useContentLibrary } from '../context/ContentLibraryContext'
 import ImageCropModal from '../components/builder/ImageCropModal'
 import { resizeImageFile } from '../utils/imageResize'
@@ -19,7 +19,6 @@ import {
   parseLanguages,
   parseRecipients,
   SKILL_LEVELS,
-  sortByMapOrder,
   sortEntriesByDate,
 } from '../utils/contentLists'
 
@@ -572,7 +571,8 @@ function EntriesField({
   showSubtitle = true,
   showLocation = true,
   showDates = true,
-  showOrder = false,
+  showNumber = false,
+  onMoveEntry,
   onUpdate,
 }) {
   const items = parseEntries(itemsJson, fallbackText)
@@ -602,24 +602,14 @@ function EntriesField({
     set(sortEntriesByDate(items))
   }
 
-  function sortByOrder() {
-    set(sortByMapOrder(items))
-  }
-
   return (
     <div className="flex flex-col gap-3">
       {items.map((item, i) => (
         <div key={item.id || i} className="flex flex-col gap-2 rounded-md border border-slate-200 p-2.5">
           <div className="flex items-end gap-1.5">
-            {showOrder && (
-              <EntryFieldLabel label="Order #" title="Keeps this list and the Locations Map's numbers in the same order">
-                <input
-                  type="number"
-                  value={item.mapOrder ?? ''}
-                  onChange={(e) => updateItem(i, { mapOrder: e.target.value })}
-                  placeholder="#"
-                  className={`${inputClasses} !w-14 shrink-0`}
-                />
+            {showNumber && (
+              <EntryFieldLabel label="#" title="This entry's number — follows this list's own order; use the ↑/↓ buttons to change it">
+                <div className={`${inputClasses} !w-10 shrink-0 text-center text-slate-400`}>{i + 1}</div>
               </EntryFieldLabel>
             )}
             <EntryFieldLabel label={titleLabel} className="min-w-0 flex-1">
@@ -631,6 +621,28 @@ function EntriesField({
                 className={`${inputClasses} min-w-0 flex-1`}
               />
             </EntryFieldLabel>
+            {onMoveEntry && (
+              <div className="flex shrink-0 flex-col">
+                <button
+                  type="button"
+                  onClick={() => onMoveEntry(i, -1)}
+                  disabled={i === 0}
+                  title="Move up"
+                  className="rounded-t-md px-1 py-0.5 text-slate-400 hover:bg-slate-100 hover:text-primary disabled:pointer-events-none disabled:opacity-30"
+                >
+                  <ChevronUp size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onMoveEntry(i, 1)}
+                  disabled={i === items.length - 1}
+                  title="Move down"
+                  className="rounded-b-md px-1 py-0.5 text-slate-400 hover:bg-slate-100 hover:text-primary disabled:pointer-events-none disabled:opacity-30"
+                >
+                  <ChevronDown size={14} />
+                </button>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => removeItem(i)}
@@ -714,11 +726,6 @@ function EntriesField({
             Sort by date
           </button>
         )}
-        {showOrder && items.length > 1 && (
-          <button type="button" onClick={sortByOrder} className="text-xs font-medium text-primary hover:underline">
-            Sort by #
-          </button>
-        )}
       </div>
     </div>
   )
@@ -728,7 +735,7 @@ function EntriesField({
 // page always had, just no longer assuming there's only one language's
 // value to read/write (see SlotCard below, which renders this once per
 // language for anything other than a shared 'image' slot).
-function SlotField({ slot, library, onChange, onBlur }) {
+function SlotField({ slot, library, onChange, onBlur, onMoveEntry }) {
   return (
     <>
       {slot.type === 'social' && (
@@ -789,7 +796,8 @@ function SlotField({ slot, library, onChange, onBlur }) {
           showSubtitle={slot.key !== 'selectedWorks' && slot.key !== 'achievements'}
           showLocation={slot.key !== 'achievements'}
           showDates={slot.key !== 'achievements'}
-          showOrder={slot.key === 'selectedWorks'}
+          showNumber={slot.key === 'selectedWorks'}
+          onMoveEntry={slot.key === 'selectedWorks' ? (index, delta) => onMoveEntry(slot.key, index, delta) : undefined}
           onUpdate={(items) => {
             onChange(`${slot.key}Items`, JSON.stringify(items))
             onChange(slot.key, composeEntriesText(items))
@@ -859,6 +867,30 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
     )
   }
 
+  // Moves the entry at `index` up/down by `delta` in every language's own
+  // Selected Works list at once (see EntriesField's onMoveEntry) — each
+  // language stores its own separate array (translated per-entry, not
+  // shared like a photo), so without this a reorder in one language would
+  // leave the other out of sync, forcing the same move to be repeated by
+  // hand for each. Silently left alone for a language whose list doesn't
+  // have an entry at both `index` and `index + delta` (e.g. one language
+  // has fewer entries than the other) rather than guessing at a position
+  // that doesn't exist there.
+  function moveEntry(slotKey, index, delta) {
+    const itemsKey = `${slotKey}Items`
+    languages.forEach((lang) => {
+      const lib = libraries[lang.key]
+      const items = parseEntries(lib[itemsKey], lib[slotKey])
+      const target = index + delta
+      if (target < 0 || target >= items.length) return
+      const next = [...items]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      onChange(itemsKey, JSON.stringify(next), lang.key)
+      onChange(slotKey, composeEntriesText(next), lang.key)
+    })
+    toast.success('Content saved', { id: 'content-library-save' })
+  }
+
   return (
     <div className={cardClasses}>
       <label className="text-sm font-semibold text-slate-800">{slot.label}</label>
@@ -880,6 +912,7 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
               library={libraries[lang.key]}
               onChange={(key, value) => onChange(key, value, lang.key)}
               onBlur={onBlur}
+              onMoveEntry={moveEntry}
             />
           </div>
         ))}
