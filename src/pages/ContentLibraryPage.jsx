@@ -545,6 +545,21 @@ function LanguagesField({ itemsJson, fallbackText, onUpdate }) {
   )
 }
 
+// A small persistent caption above an entry field — a placeholder alone
+// (the only hint these fields used to have) disappears the moment a
+// field has a value, leaving no way to tell what a filled-in field
+// actually is at a glance (especially a terse one like the "#" order
+// field below). `title` adds a native tooltip for anything that needs
+// more than its own label to explain.
+function EntryFieldLabel({ label, title, className = '', children }) {
+  return (
+    <div className={`flex flex-col gap-0.5 ${className}`} title={title}>
+      <span className="text-[11px] font-medium text-slate-400">{label}</span>
+      {children}
+    </div>
+  )
+}
+
 // Repeatable Work Experience / Education entry: title (Job Role / Degree),
 // subtitle (Company / Institution), an optional location, a date range
 // with a "current/ongoing" flag, and a description (rendered as bullet
@@ -594,25 +609,28 @@ function EntriesField({
   return (
     <div className="flex flex-col gap-3">
       {items.map((item, i) => (
-        <div key={item.id || i} className="flex flex-col gap-1.5 rounded-md border border-slate-200 p-2.5">
-          <div className="flex items-center gap-1.5">
+        <div key={item.id || i} className="flex flex-col gap-2 rounded-md border border-slate-200 p-2.5">
+          <div className="flex items-end gap-1.5">
             {showOrder && (
-              <input
-                type="number"
-                value={item.mapOrder ?? ''}
-                onChange={(e) => updateItem(i, { mapOrder: e.target.value })}
-                placeholder="#"
-                title="Order — keeps this list and the Locations Map's numbers in the same order"
-                className={`${inputClasses} w-14 shrink-0`}
-              />
+              <EntryFieldLabel label="Order #" title="Keeps this list and the Locations Map's numbers in the same order">
+                <input
+                  type="number"
+                  value={item.mapOrder ?? ''}
+                  onChange={(e) => updateItem(i, { mapOrder: e.target.value })}
+                  placeholder="#"
+                  className={`${inputClasses} !w-14 shrink-0`}
+                />
+              </EntryFieldLabel>
             )}
-            <input
-              type="text"
-              value={item.title}
-              onChange={(e) => updateItem(i, { title: e.target.value })}
-              placeholder={titleLabel}
-              className={`${inputClasses} min-w-0 flex-1`}
-            />
+            <EntryFieldLabel label={titleLabel} className="min-w-0 flex-1">
+              <input
+                type="text"
+                value={item.title}
+                onChange={(e) => updateItem(i, { title: e.target.value })}
+                placeholder={titleLabel}
+                className={`${inputClasses} min-w-0 flex-1`}
+              />
+            </EntryFieldLabel>
             <button
               type="button"
               onClick={() => removeItem(i)}
@@ -622,45 +640,51 @@ function EntriesField({
             </button>
           </div>
           {(showSubtitle || showLocation) && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-end gap-1.5">
               {showSubtitle && (
-                <input
-                  type="text"
-                  value={item.subtitle}
-                  onChange={(e) => updateItem(i, { subtitle: e.target.value })}
-                  placeholder={subtitleLabel}
-                  className={`${inputClasses} min-w-0 flex-1`}
-                />
+                <EntryFieldLabel label={subtitleLabel} className="min-w-0 flex-1">
+                  <input
+                    type="text"
+                    value={item.subtitle}
+                    onChange={(e) => updateItem(i, { subtitle: e.target.value })}
+                    placeholder={subtitleLabel}
+                    className={`${inputClasses} min-w-0 flex-1`}
+                  />
+                </EntryFieldLabel>
               )}
               {showLocation && (
-                <input
-                  type="text"
-                  value={item.location}
-                  onChange={(e) => updateItem(i, { location: e.target.value })}
-                  placeholder="City, Country"
-                  className={`${inputClasses} min-w-0 flex-1`}
-                />
+                <EntryFieldLabel label="Location" className="min-w-0 flex-1">
+                  <input
+                    type="text"
+                    value={item.location}
+                    onChange={(e) => updateItem(i, { location: e.target.value })}
+                    placeholder="City, Country"
+                    className={`${inputClasses} min-w-0 flex-1`}
+                  />
+                </EntryFieldLabel>
               )}
             </div>
           )}
           {showDates && (
-            <div className="flex items-center gap-1.5">
-              <input
-                type="month"
-                value={item.startDate}
-                onChange={(e) => updateItem(i, { startDate: e.target.value })}
-                title="Start"
-                className={`${inputClasses} min-w-0 flex-1`}
-              />
-              <input
-                type="month"
-                value={item.endDate}
-                onChange={(e) => updateItem(i, { endDate: e.target.value })}
-                title="End"
-                disabled={item.current}
-                className={`${inputClasses} min-w-0 flex-1 disabled:bg-slate-50 disabled:text-slate-400`}
-              />
-              <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600">
+            <div className="flex items-end gap-1.5">
+              <EntryFieldLabel label="Start date" className="min-w-0 flex-1">
+                <input
+                  type="month"
+                  value={item.startDate}
+                  onChange={(e) => updateItem(i, { startDate: e.target.value })}
+                  className={`${inputClasses} min-w-0 flex-1`}
+                />
+              </EntryFieldLabel>
+              <EntryFieldLabel label="End date" className="min-w-0 flex-1">
+                <input
+                  type="month"
+                  value={item.endDate}
+                  onChange={(e) => updateItem(i, { endDate: e.target.value })}
+                  disabled={item.current}
+                  className={`${inputClasses} min-w-0 flex-1 disabled:bg-slate-50 disabled:text-slate-400`}
+                />
+              </EntryFieldLabel>
+              <label className="flex shrink-0 items-center gap-1 pb-2 text-xs text-slate-600">
                 <input
                   type="checkbox"
                   checked={item.current}
@@ -670,13 +694,15 @@ function EntriesField({
               </label>
             </div>
           )}
-          <textarea
-            rows={2}
-            value={item.description}
-            onChange={(e) => updateItem(i, { description: e.target.value })}
-            placeholder="Description, responsibilities and results achieved"
-            className={inputClasses}
-          />
+          <EntryFieldLabel label="Description">
+            <textarea
+              rows={2}
+              value={item.description}
+              onChange={(e) => updateItem(i, { description: e.target.value })}
+              placeholder="Description, responsibilities and results achieved"
+              className={inputClasses}
+            />
+          </EntryFieldLabel>
         </div>
       ))}
       <div className="flex items-center gap-3">
