@@ -1,26 +1,31 @@
 import { useEffect, useState } from 'react'
 import { geocodeLocations } from '../../utils/geocode'
-
-// The dot-grid basemap (~13k points, land areas only, derived from
-// Natural Earth's 110m land data) and this component itself are both
-// dynamically imported — see geocode.js's own note on why: a document
-// that never uses this block shouldn't pay for ~1MB of bundled map/city
-// data.
-let worldDotsPromise = null
-function loadWorldDots() {
-  if (!worldDotsPromise) worldDotsPromise = import('../../data/worldDots.json').then((m) => m.default)
-  return worldDotsPromise
-}
+import worldMapBasemap from '../../data/worldMapBasemap.png'
 
 // Plain equirectangular projection (lng/lat straight onto x/y) — same
-// projection the dot basemap itself was generated with, and the same
-// kind of flat, unprojected world map the reference screenshots use.
+// projection the dot-grid basemap image was generated with (it's drawn
+// as a single <image> spanning exactly this x/y range in every legend
+// style below), and the same kind of flat, unprojected world map the
+// reference screenshots use. The basemap image is itself a square
+// (its own width == height, not the 2:1 a true-to-scale equirectangular
+// world would be), so latitude is scaled by the same 2x factor longitude
+// already gets (degrees-to-units is 1 for x, 2 for y) to land in that
+// same square coordinate space — stretching the image to fit a 2:1 box
+// instead would squash every dot/continent into a flattened oval.
 function project(lng, lat) {
-  return { x: lng + 180, y: 90 - lat }
+  return { x: lng + 180, y: (90 - lat) * 2 }
 }
 
 const MAP_WIDTH = 360
-const MAP_HEIGHT = 180
+const MAP_HEIGHT = 360
+
+// One <image> spanning the full equirectangular world, cropped by
+// whatever viewBox the caller already set (same crop-by-viewBox the old
+// per-dot circles relied on) — a single image needs no per-marker
+// visibility filtering the way thousands of individual dots did.
+function WorldBasemapImage() {
+  return <image href={worldMapBasemap} x={0} y={0} width={MAP_WIDTH} height={MAP_HEIGHT} preserveAspectRatio="none" />
+}
 
 // Measures real rendered text width (in viewBox units — font sizes
 // throughout this file are already in those same units, so a canvas
@@ -146,20 +151,9 @@ export default function WorldMap({
   viewportWidthPx,
   bodyFontSizePx,
 }) {
-  const [worldDots, setWorldDots] = useState(null)
   const [points, setPoints] = useState(null)
 
   const locationsKey = items.map((i) => i.location || '').join('|')
-
-  useEffect(() => {
-    let cancelled = false
-    loadWorldDots().then((dots) => {
-      if (!cancelled) setWorldDots(dots)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -172,7 +166,7 @@ export default function WorldMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationsKey])
 
-  if (!worldDots || !points) {
+  if (!points) {
     return <div className="flex aspect-[2/1] w-full items-center justify-center rounded-md bg-slate-50 text-xs text-slate-400">Loading map…</div>
   }
 
@@ -195,7 +189,6 @@ export default function WorldMap({
     return (
       <LeaderMap
         markers={markers}
-        worldDots={worldDots}
         accentColor={accentColor}
         bodyFont={bodyFont}
         titleFont={titleFont}
@@ -212,7 +205,6 @@ export default function WorldMap({
   return (
     <NumberedMap
       markers={markers}
-      worldDots={worldDots}
       accentColor={accentColor}
       bodyFont={bodyFont}
       titleFont={titleFont}
@@ -263,13 +255,10 @@ function layoutNumberLabels(markers, viewWidth, viewHeight) {
   return labels
 }
 
-function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, textColor, titleColor, titleFontSizePx, titleBold, bodyFontSizePx }) {
+function NumberedMap({ markers, accentColor, bodyFont, titleFont, textColor, titleColor, titleFontSizePx, titleBold, bodyFontSizePx }) {
   const bounds = computeMapBounds(markers)
   const viewWidth = bounds.maxX - bounds.minX
   const viewHeight = bounds.maxY - bounds.minY
-  const visibleDots = worldDots
-    .map(([lng, lat]) => project(lng, lat))
-    .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
   const labels = layoutNumberLabels(markers, viewWidth, viewHeight)
 
   // Split the legend above/below the map (rather than all of it in one
@@ -329,9 +318,7 @@ function NumberedMap({ markers, worldDots, accentColor, bodyFont, titleFont, tex
     <div className="flex flex-col gap-3">
       {topMarkers.length > 0 && renderLegend(topMarkers)}
       <svg viewBox={`${bounds.minX} ${bounds.minY} ${viewWidth} ${viewHeight}`} className="w-full" style={{ display: 'block' }}>
-        {visibleDots.map(({ x, y }, i) => (
-          <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
-        ))}
+        <WorldBasemapImage />
         {markers.map(({ item, index, x, y }) => (
           <circle key={item.id || index} cx={x} cy={y} r={1.4} fill={accentColor} />
         ))}
@@ -403,7 +390,6 @@ function computeTopBottomLayout(markers, bounds, titleFont, bodyFont, metrics, t
 
 function LeaderMap({
   markers,
-  worldDots,
   accentColor,
   bodyFont,
   titleFont,
@@ -443,10 +429,6 @@ function LeaderMap({
     const bottomStep = metrics.step
     const topMargin = baseMargin + topTiers * topStep
     const bottomMargin = baseMargin + bottomTiers * bottomStep
-
-    const visibleDots = worldDots
-      .map(([lng, lat]) => project(lng, lat))
-      .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
 
     // Orthogonal leader line from the marker to its own tier — a
     // straight vertical run up/down from the marker to the tier's own
@@ -498,18 +480,12 @@ function LeaderMap({
     const viewBox = `${bounds.minX} ${bounds.minY - topMargin} ${viewWidth} ${cropHeight + topMargin + bottomMargin}`
     return (
       <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
-        {visibleDots.map(({ x, y }, i) => (
-          <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
-        ))}
+        <WorldBasemapImage />
         {top.map((m) => renderLabel(m, 'top'))}
         {bottom.map((m) => renderLabel(m, 'bottom'))}
       </svg>
     )
   }
-
-  const visibleDots = worldDots
-    .map(([lng, lat]) => project(lng, lat))
-    .filter(({ x, y }) => x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY)
 
   const [leftRaw, rightRaw] = splitBalanced(markers, 'x')
   const left = [...leftRaw].sort((a, b) => a.y - b.y)
@@ -614,9 +590,7 @@ function LeaderMap({
   const viewBox = `${bounds.minX} ${viewMinY} ${viewWidthFixed} ${viewHeight}`
   return (
     <svg viewBox={viewBox} className="w-full" style={{ display: 'block' }}>
-      {visibleDots.map(({ x, y }, i) => (
-        <circle key={i} cx={x} cy={y} r={0.45} fill="#cbd5e1" />
-      ))}
+      <WorldBasemapImage />
       {leftLaid.map((m) => renderLabel(m, 'left'))}
       {rightLaid.map((m) => renderLabel(m, 'right'))}
     </svg>
