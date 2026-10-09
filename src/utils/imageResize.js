@@ -90,9 +90,29 @@ function resizeRasterFile(file, { maxDimension, quality }) {
   })
 }
 
+// Read straight through as a data URL, no canvas round-trip — rasterizing
+// an SVG (the same way every other format is downscaled) would throw away
+// exactly what makes it an SVG: it stays crisp at any print size and its
+// own file size already has nothing to do with pixel dimensions, so
+// there's no quota-driven reason to re-encode it as a raster image. An
+// SVG loaded through <img src="..."> (every place this app renders one)
+// never executes scripts it contains, so this is no less safe than any
+// other uploaded image.
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error)
+    reader.onload = () => resolve(reader.result)
+    reader.readAsDataURL(file)
+  })
+}
+
 export function resizeImageFile(file, { maxDimension = 1000, quality = 0.85 } = {}) {
   if (file.type === 'application/pdf') {
     return resizePdfFile(file, { maxDimension, quality })
+  }
+  if (file.type === 'image/svg+xml') {
+    return readFileAsDataUrl(file)
   }
   return resizeRasterFile(file, { maxDimension, quality })
 }
