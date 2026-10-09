@@ -19,6 +19,7 @@ import {
   parseLanguages,
   parseRecipients,
   SKILL_LEVELS,
+  sortByMapOrder,
   sortEntriesByDate,
 } from '../utils/contentLists'
 
@@ -556,6 +557,7 @@ function EntriesField({
   showSubtitle = true,
   showLocation = true,
   showDates = true,
+  showOrder = false,
   onUpdate,
 }) {
   const items = parseEntries(itemsJson, fallbackText)
@@ -585,11 +587,25 @@ function EntriesField({
     set(sortEntriesByDate(items))
   }
 
+  function sortByOrder() {
+    set(sortByMapOrder(items))
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {items.map((item, i) => (
         <div key={item.id || i} className="flex flex-col gap-1.5 rounded-md border border-slate-200 p-2.5">
           <div className="flex items-center gap-1.5">
+            {showOrder && (
+              <input
+                type="number"
+                value={item.mapOrder ?? ''}
+                onChange={(e) => updateItem(i, { mapOrder: e.target.value })}
+                placeholder="#"
+                title="Order — keeps this list and the Locations Map's numbers in the same order"
+                className={`${inputClasses} w-14 shrink-0`}
+              />
+            )}
             <input
               type="text"
               value={item.title}
@@ -672,6 +688,11 @@ function EntriesField({
             Sort by date
           </button>
         )}
+        {showOrder && items.length > 1 && (
+          <button type="button" onClick={sortByOrder} className="text-xs font-medium text-primary hover:underline">
+            Sort by #
+          </button>
+        )}
       </div>
     </div>
   )
@@ -742,6 +763,7 @@ function SlotField({ slot, library, onChange, onBlur }) {
           showSubtitle={slot.key !== 'selectedWorks' && slot.key !== 'achievements'}
           showLocation={slot.key !== 'achievements'}
           showDates={slot.key !== 'achievements'}
+          showOrder={slot.key === 'selectedWorks'}
           onUpdate={(items) => {
             onChange(`${slot.key}Items`, JSON.stringify(items))
             onChange(slot.key, composeEntriesText(items))

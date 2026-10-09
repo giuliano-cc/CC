@@ -106,7 +106,12 @@ export function languageLevelText(item) {
 // Entry items (Work Experience, Education): a repeatable row with a
 // title (Job Role / Degree), a subtitle (Company / Institution), an
 // optional location, a date range (free text, with a "current" flag for
-// "Present"/"Ongoing"), and a description shown as bullet lines.
+// "Present"/"Ongoing"), a description shown as bullet lines, and an
+// optional manual `mapOrder` (only exposed in the Content Library UI for
+// Selected Works — see ContentLibraryPage.jsx's showOrder prop) used to
+// keep that list's own order, its optional number badge, and the
+// Locations Map's marker numbers all agreeing with each other instead of
+// each picking its own (see sortByMapOrder below).
 export function emptyEntry() {
   return {
     id: `entry-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -117,7 +122,28 @@ export function emptyEntry() {
     endDate: '',
     current: false,
     description: '',
+    mapOrder: '',
   }
+}
+
+// A no-op unless at least one item actually has a `mapOrder` set — safe
+// to call unconditionally on any entries list, since every entry type
+// other than Selected Works simply never gets a UI to set this field.
+// Items without their own mapOrder sort after every item that has one
+// (rather than being treated as "0"), keeping its own original relative
+// order among themselves and among ties.
+export function sortByMapOrder(items) {
+  if (!items.some((item) => item.mapOrder !== undefined && item.mapOrder !== null && item.mapOrder !== '')) {
+    return items
+  }
+  return items
+    .map((item, i) => ({ item, i }))
+    .sort((a, b) => {
+      const av = a.item.mapOrder === undefined || a.item.mapOrder === null || a.item.mapOrder === '' ? Infinity : Number(a.item.mapOrder)
+      const bv = b.item.mapOrder === undefined || b.item.mapOrder === null || b.item.mapOrder === '' ? Infinity : Number(b.item.mapOrder)
+      return av !== bv ? av - bv : a.i - b.i
+    })
+    .map(({ item }) => item)
 }
 
 export function parseEntries(itemsJson, fallbackText) {

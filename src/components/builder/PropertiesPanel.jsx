@@ -3053,6 +3053,14 @@ function BlockPropertiesPanel({ block, onChange }) {
               />
               Minimal — show only the title (hide company/location, dates, description)
             </label>
+            <label className="flex items-center gap-1.5 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={block.showEntryNumber === true}
+                onChange={(e) => onChange({ showEntryNumber: e.target.checked })}
+              />
+              Show number (accent-colored, same style as the Locations Map's numbered legend — set each entry's own number in Content Library → Selected Works)
+            </label>
             {!block.titleOnly && (
               <>
                 <label className="flex items-center gap-1.5 text-xs text-slate-600">
