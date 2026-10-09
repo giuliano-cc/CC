@@ -28,6 +28,7 @@ import {
 import { DATE_FORMAT_LABELS, DATE_FORMATS, emptyEntry, parseChecklist, parseEntries, parseRecipients, todayISODate } from '../../utils/contentLists'
 import { splitTextToFit } from '../../utils/textFlow'
 import { resizeImageFile } from '../../utils/imageResize'
+import { isSvgDataUrl, decodeSvgMarkup, encodeSvgMarkup, extractSvgTexts, replaceSvgText } from '../../utils/svgText'
 import { SHEET_HEIGHT, SHEET_WIDTH } from '../../utils/layout'
 import { SOCIAL_PLATFORMS } from '../../utils/socialIcons'
 import FontPicker from './FontPicker'
@@ -2235,6 +2236,38 @@ function ImageCropButton({ block, onChange }) {
   )
 }
 
+// Edits an uploaded SVG's own <text> labels in place — one field per
+// <text> element found, same "select the block, edit its text here"
+// pattern every other block already uses, rather than a one-off
+// click-to-edit-on-canvas behavior no other block has. Only for a
+// directly-uploaded SVG (block.src); an imageSlot-bound one is edited
+// from the Content Library instead, same as any other library image.
+function SvgTextFields({ block, onChange }) {
+  if (block.imageSlot || !isSvgDataUrl(block.src)) return null
+  const texts = extractSvgTexts(decodeSvgMarkup(block.src))
+  if (texts.length === 0) return null
+  return (
+    <Field label="Text in this SVG">
+      <div className="flex flex-col gap-1.5">
+        {texts.map((text, i) => (
+          <input
+            // eslint-disable-next-line react/no-array-index-key -- texts
+            // are re-derived from the SVG markup itself on every render,
+            // so their order/count is this element's own stable identity.
+            key={i}
+            type="text"
+            value={text}
+            onChange={(e) =>
+              onChange({ src: encodeSvgMarkup(replaceSvgText(decodeSvgMarkup(block.src), i, e.target.value)) })
+            }
+            className={inputClasses}
+          />
+        ))}
+      </div>
+    </Field>
+  )
+}
+
 function AlignIconButton({ icon: Icon, label, onClick }) {
   return (
     <button
@@ -3103,6 +3136,7 @@ function BlockPropertiesPanel({ block, onChange }) {
             </>
           )}
           <ImageCropButton block={block} onChange={onChange} />
+          <SvgTextFields block={block} onChange={onChange} />
           <Field label="Shape">
             <select
               value={block.shape}

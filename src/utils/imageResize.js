@@ -13,6 +13,7 @@
 // PNG is kept as PNG (so a signature's transparency survives); anything
 // else is re-encoded as JPEG, which shrinks a multi-MB photo dramatically
 // with no visible quality loss at CV print sizes.
+import { decodeSvgMarkup, encodeSvgMarkup, sanitizeSvgMarkup } from './svgText.js'
 
 // pdfjs-dist pulls in its own parser/worker bundle (a few hundred KB) —
 // dynamically imported so a document that never uploads a PDF doesn't pay
@@ -97,12 +98,20 @@ function resizeRasterFile(file, { maxDimension, quality }) {
 // there's no quota-driven reason to re-encode it as a raster image. An
 // SVG loaded through <img src="..."> (every place this app renders one)
 // never executes scripts it contains, so this is no less safe than any
-// other uploaded image.
-function readFileAsDataUrl(file) {
+// other uploaded image — stripped anyway (see utils/svgText.js) so a
+// script/handler an uploaded SVG carries never ends up stored at all,
+// not just never executed today.
+function readSvgFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onerror = () => reject(reader.error)
-    reader.onload = () => resolve(reader.result)
+    reader.onload = () => {
+      try {
+        resolve(encodeSvgMarkup(sanitizeSvgMarkup(decodeSvgMarkup(reader.result))))
+      } catch (err) {
+        reject(err)
+      }
+    }
     reader.readAsDataURL(file)
   })
 }
@@ -112,7 +121,7 @@ export function resizeImageFile(file, { maxDimension = 1000, quality = 0.85 } = 
     return resizePdfFile(file, { maxDimension, quality })
   }
   if (file.type === 'image/svg+xml') {
-    return readFileAsDataUrl(file)
+    return readSvgFileAsDataUrl(file)
   }
   return resizeRasterFile(file, { maxDimension, quality })
 }
