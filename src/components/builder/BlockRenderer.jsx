@@ -753,12 +753,14 @@ export default function BlockRenderer({
                 {secondaryLine}
               </p>
             )
-            // Always just this item's position in the (already
-            // date-sorted, if that's on) list — the same list reordering
-            // (see ContentLibraryPage.jsx's Move up/down) is the only way
-            // to change it, rather than a separate manual number that
-            // would drift out of sync with the list itself.
-            const displayNumber = i + 1
+            // This item's position in the (already date-sorted, if that's
+            // on) list, offset by `numberStartAt` — the list order itself
+            // is still only changeable via reordering (see
+            // ContentLibraryPage.jsx's Move up/down); the offset exists
+            // purely so a second block showing the rest of a list split
+            // across blocks/columns can continue the numbering from where
+            // an earlier block left off instead of restarting at 1.
+            const displayNumber = i + (block.numberStartAt || 1)
             const entryChildren = (
               <>
                 {block.titleOnly ? (
@@ -1527,6 +1529,8 @@ export default function BlockRenderer({
               titleBold={block.entryTitleBold}
               viewportWidthPx={mapContentWidth}
               bodyFontSizePx={block.bodyFontSize || globalStyle.typographyScale?.p1?.sizePx}
+              lineSpacing={block.lineSpacing}
+              letterSpacing={block.letterSpacing}
             />
           </div>
         </div>

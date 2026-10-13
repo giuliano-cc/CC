@@ -99,17 +99,21 @@ function measureLabelWidth(item, titleFont, bodyFont, titleSize, subtitleSize, t
 // pixels, using the crop's own natural width (before any label-driven
 // overflow) as the conversion rate — that rate only shifts with how
 // much of the world is in view, not with the text itself.
-function computeLabelMetrics(cropWidthUnits, viewportWidthPx, titleFontSizePx, bodyFontSizePx) {
+function computeLabelMetrics(cropWidthUnits, viewportWidthPx, titleFontSizePx, bodyFontSizePx, lineSpacing) {
   const unitsPerPx = viewportWidthPx > 0 ? cropWidthUnits / viewportWidthPx : 0.6
   const titleSize = (titleFontSizePx || 16) * unitsPerPx
   const subtitleSize = (bodyFontSizePx || 14) * unitsPerPx
+  const lineSpacingMult = lineSpacing || 1
   // One tier/column step: both text lines plus a little breathing room,
   // so consecutive labels never collide regardless of how big the
-  // scaled fonts turn out to be.
-  const blockHeight = titleSize * 1.1 + subtitleSize * 1.25 + subtitleSize * 0.5
+  // scaled fonts turn out to be. The title-to-subtitle gap (subtitleSize
+  // * 1.25) is the one that visibly grows/shrinks with the block's own
+  // "Line spacing" setting — scaling the whole block height instead would
+  // also fight the fixed title-size/padding terms.
+  const blockHeight = titleSize * 1.1 + subtitleSize * 1.25 * lineSpacingMult + subtitleSize * 0.5
   const step = blockHeight + subtitleSize * 0.7
   const dashLen = Math.max(4, subtitleSize * 1.2)
-  return { titleSize, subtitleSize, step, dashLen }
+  return { titleSize, subtitleSize, step, dashLen, unitsPerPx, lineSpacing: lineSpacingMult }
 }
 
 // Crops the basemap to the region the markers actually sit in, with
@@ -150,6 +154,8 @@ export default function WorldMap({
   titleBold,
   viewportWidthPx,
   bodyFontSizePx,
+  lineSpacing,
+  letterSpacing,
 }) {
   const [points, setPoints] = useState(null)
 
@@ -199,6 +205,8 @@ export default function WorldMap({
         direction={leaderDirection}
         viewportWidthPx={viewportWidthPx}
         bodyFontSizePx={bodyFontSizePx}
+        lineSpacing={lineSpacing}
+        letterSpacing={letterSpacing}
       />
     )
   }
@@ -213,6 +221,8 @@ export default function WorldMap({
       titleFontSizePx={titleFontSizePx}
       titleBold={titleBold}
       bodyFontSizePx={bodyFontSizePx}
+      lineSpacing={lineSpacing}
+      letterSpacing={letterSpacing}
     />
   )
 }
@@ -255,7 +265,19 @@ function layoutNumberLabels(markers, viewWidth, viewHeight) {
   return labels
 }
 
-function NumberedMap({ markers, accentColor, bodyFont, titleFont, textColor, titleColor, titleFontSizePx, titleBold, bodyFontSizePx }) {
+function NumberedMap({
+  markers,
+  accentColor,
+  bodyFont,
+  titleFont,
+  textColor,
+  titleColor,
+  titleFontSizePx,
+  titleBold,
+  bodyFontSizePx,
+  lineSpacing,
+  letterSpacing,
+}) {
   const bounds = computeMapBounds(markers)
   const viewWidth = bounds.maxX - bounds.minX
   const viewHeight = bounds.maxY - bounds.minY
@@ -291,6 +313,8 @@ function NumberedMap({ markers, accentColor, bodyFont, titleFont, textColor, tit
                   fontFamily: titleFont,
                   fontSize: titleFontSizePx ? `${titleFontSizePx}px` : undefined,
                   fontWeight: titleBold === false ? 400 : 700,
+                  lineHeight: lineSpacing || undefined,
+                  letterSpacing: letterSpacing ? `${letterSpacing}px` : undefined,
                 }}
               >
                 {item.title}
@@ -302,6 +326,8 @@ function NumberedMap({ markers, accentColor, bodyFont, titleFont, textColor, tit
                     color: textColor,
                     fontFamily: bodyFont,
                     fontSize: bodyFontSizePx ? `${bodyFontSizePx}px` : undefined,
+                    lineHeight: lineSpacing || undefined,
+                    letterSpacing: letterSpacing ? `${letterSpacing}px` : undefined,
                   }}
                 >
                   {labelSubtitle(item)}
@@ -400,8 +426,14 @@ function LeaderMap({
   direction = 'sides',
   viewportWidthPx,
   bodyFontSizePx,
+  lineSpacing,
+  letterSpacing,
 }) {
   const bounds = computeMapBounds(markers)
+  // Letter-spacing is configured in real pixels (same unit the Properties
+  // panel's "Letter spacing (px)" field uses everywhere else), but these
+  // labels are SVG <text> sized in viewBox units — scale it by the same
+  // unitsPerPx rate used for font size so it visually matches that px value.
 
   if (direction === 'topBottom') {
     // The map's own width must be identical to the numbered style's —
@@ -410,7 +442,8 @@ function LeaderMap({
     // it; the font scale is a single direct conversion, the same one
     // the numbered style and the crop itself already use.
     const viewWidth = bounds.maxX - bounds.minX
-    const metrics = computeLabelMetrics(viewWidth, viewportWidthPx, titleFontSizePx, bodyFontSizePx)
+    const metrics = computeLabelMetrics(viewWidth, viewportWidthPx, titleFontSizePx, bodyFontSizePx, lineSpacing)
+    const svgLetterSpacing = letterSpacing ? letterSpacing * metrics.unitsPerPx : undefined
     const { top, bottom, topTiers, bottomTiers } = computeTopBottomLayout(markers, bounds, titleFont, bodyFont, metrics, titleBold)
     const baseMargin = metrics.step * 0.6
     const cropHeight = bounds.maxY - bounds.minY
@@ -442,8 +475,8 @@ function LeaderMap({
       const rail = pos === 'top' ? bounds.minY - nearOffset : bounds.maxY + nearOffset
       const textX = labelX + metrics.dashLen + 2
       const pad = metrics.subtitleSize * 0.5
-      const titleY = pos === 'top' ? rail - pad - metrics.subtitleSize * 1.1 : rail + pad + metrics.titleSize * 0.85
-      const locY = pos === 'top' ? rail - pad : titleY + metrics.subtitleSize * 1.15
+      const titleY = pos === 'top' ? rail - pad - metrics.subtitleSize * 1.1 * metrics.lineSpacing : rail + pad + metrics.titleSize * 0.85
+      const locY = pos === 'top' ? rail - pad : titleY + metrics.subtitleSize * 1.15 * metrics.lineSpacing
       return (
         <g key={item.id}>
           <line x1={x} y1={y} x2={x} y2={rail} stroke="#94a3b8" strokeWidth={0.4} />
@@ -457,6 +490,7 @@ function LeaderMap({
             fill={titleColor || textColor}
             textAnchor="start"
             fontFamily={titleFont}
+            letterSpacing={svgLetterSpacing}
           >
             {item.title}
           </text>
@@ -469,6 +503,7 @@ function LeaderMap({
               opacity={0.6}
               textAnchor="start"
               fontFamily={bodyFont}
+              letterSpacing={svgLetterSpacing}
             >
               {labelSubtitle(item)}
             </text>
@@ -497,7 +532,8 @@ function LeaderMap({
   // from the (fixed) crop's own edges instead (below), same width as
   // the numbered style, always.
   const viewWidthFixed = bounds.maxX - bounds.minX
-  const metrics = computeLabelMetrics(viewWidthFixed, viewportWidthPx, titleFontSizePx, bodyFontSizePx)
+  const metrics = computeLabelMetrics(viewWidthFixed, viewportWidthPx, titleFontSizePx, bodyFontSizePx, lineSpacing)
+  const svgLetterSpacing = letterSpacing ? letterSpacing * metrics.unitsPerPx : undefined
   const inset = metrics.subtitleSize * 0.8
   // The two columns split the map's width between them — unlike
   // 'numbered'/'topBottom', where a label can freely claim the full
@@ -561,24 +597,26 @@ function LeaderMap({
         <circle cx={x} cy={y} r={1.1} fill={accentColor} />
         <text
           x={labelX}
-          y={labelY - metrics.subtitleSize * 0.55}
+          y={labelY - metrics.subtitleSize * 0.55 * metrics.lineSpacing}
           fontSize={metrics.titleSize}
           fontWeight={titleBoldValue ? 700 : 400}
           fill={titleColor || textColor}
           textAnchor={anchor}
           fontFamily={titleFont}
+          letterSpacing={svgLetterSpacing}
         >
           {title}
         </text>
         {subtitle && (
           <text
             x={labelX}
-            y={labelY + metrics.subtitleSize * 0.85}
+            y={labelY + metrics.subtitleSize * 0.85 * metrics.lineSpacing}
             fontSize={metrics.subtitleSize}
             fill="currentColor"
             opacity={0.6}
             textAnchor={anchor}
             fontFamily={bodyFont}
+            letterSpacing={svgLetterSpacing}
           >
             {subtitle}
           </text>

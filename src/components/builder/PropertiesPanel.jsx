@@ -3061,6 +3061,17 @@ function BlockPropertiesPanel({ block, onChange }) {
               />
               Show number (accent-colored, same style as the Locations Map's numbered legend — follows this list's own order)
             </label>
+            {block.showEntryNumber === true && (
+              <Field label="Continue numbering from (first number shown here)">
+                <input
+                  type="number"
+                  min={1}
+                  value={block.numberStartAt || 1}
+                  onChange={(e) => onChange({ numberStartAt: Math.max(1, Number(e.target.value) || 1) })}
+                  className={inputClasses}
+                />
+              </Field>
+            )}
             {!block.titleOnly && (
               <>
                 <label className="flex items-center gap-1.5 text-xs text-slate-600">
