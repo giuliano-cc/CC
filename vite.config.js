@@ -15,5 +15,11 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // Vite's own default (loopback-only) isn't reachable from outside the
+    // container this app is usually developed in (a cloud sandbox, a
+    // Docker dev environment, etc.) — binding to all interfaces means
+    // `npm run dev` with no extra flags is reachable the same way
+    // regardless of where it's run.
+    host: true,
   },
 })
