@@ -353,7 +353,7 @@ function RecipientsField({ itemsJson, onUpdate }) {
 // Line-by-line editor with a visibility checkbox per row: unchecking an
 // item keeps it saved but excludes it from the plain-text value that the
 // rest of the app (bindings, "Fill with my content") already reads.
-function ChecklistField({ itemsJson, fallbackText, onUpdate, showLevel }) {
+function ChecklistField({ itemsJson, fallbackText, onUpdate, showLevel, onMoveItem }) {
   const items = parseChecklist(itemsJson, fallbackText)
 
   function set(next) {
@@ -365,7 +365,7 @@ function ChecklistField({ itemsJson, fallbackText, onUpdate, showLevel }) {
   }
 
   function addItem() {
-    set([...items, { text: '', visible: true, ...(showLevel ? { level: 75 } : {}) }])
+    set([...items, { text: '', visible: true, description: '', ...(showLevel ? { level: 75 } : {}) }])
   }
 
   function removeItem(index) {
@@ -382,10 +382,7 @@ function ChecklistField({ itemsJson, fallbackText, onUpdate, showLevel }) {
   return (
     <div className="flex flex-col gap-2">
       {items.map((item, i) => (
-        <div
-          key={i}
-          className={showLevel ? 'flex flex-col gap-1 rounded-md border border-slate-200 p-2' : 'flex items-center gap-1.5'}
-        >
+        <div key={i} className="flex flex-col gap-1.5 rounded-md border border-slate-200 p-2">
           <div className="flex items-center gap-1.5">
             <input
               type="checkbox"
@@ -425,6 +422,28 @@ function ChecklistField({ itemsJson, fallbackText, onUpdate, showLevel }) {
                 />
               </>
             )}
+            {onMoveItem && (
+              <div className="flex shrink-0 items-center">
+                <button
+                  type="button"
+                  onClick={() => onMoveItem(i, -1)}
+                  disabled={i === 0}
+                  title="Move up"
+                  className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronUp size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onMoveItem(i, 1)}
+                  disabled={i === items.length - 1}
+                  title="Move down"
+                  className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronDown size={14} />
+                </button>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => removeItem(i)}
@@ -442,6 +461,13 @@ function ChecklistField({ itemsJson, fallbackText, onUpdate, showLevel }) {
               className={`${inputClasses} text-xs`}
             />
           )}
+          <textarea
+            rows={2}
+            value={item.description || ''}
+            onChange={(e) => updateItem(i, { description: e.target.value })}
+            placeholder="Description (optional) — shown below the item when this list is bound to a Text block"
+            className={`${inputClasses} text-xs`}
+          />
         </div>
       ))}
       <div className="flex items-center gap-3">
@@ -735,7 +761,7 @@ function EntriesField({
 // page always had, just no longer assuming there's only one language's
 // value to read/write (see SlotCard below, which renders this once per
 // language for anything other than a shared 'image' slot).
-function SlotField({ slot, library, onChange, onBlur, onMoveEntry }) {
+function SlotField({ slot, library, onChange, onBlur, onMoveEntry, onMoveItem }) {
   return (
     <>
       {slot.type === 'social' && (
@@ -759,6 +785,7 @@ function SlotField({ slot, library, onChange, onBlur, onMoveEntry }) {
           itemsJson={library[`${slot.key}Items`]}
           fallbackText={library[slot.key]}
           showLevel
+          onMoveItem={onMoveItem ? (index, delta) => onMoveItem(slot.key, index, delta) : undefined}
           onUpdate={(items) => {
             onChange(`${slot.key}Items`, JSON.stringify(items))
             onChange(slot.key, composeChecklistText(items))
@@ -852,6 +879,21 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
     )
   }
 
+  // Reorders a shared checklist slot's items (e.g. Technical Skills, which
+  // — unlike Core Competencies/Certifications/... — has one list shared
+  // across every language, not a separate one per language) in place.
+  function moveSharedChecklistItem(slotKey, index, delta) {
+    const lib = libraries[languages[0].key]
+    const items = parseChecklist(lib[`${slotKey}Items`], lib[slotKey])
+    const target = index + delta
+    if (target < 0 || target >= items.length) return
+    const next = [...items]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    onChange(`${slotKey}Items`, JSON.stringify(next), languages[0].key)
+    onChange(slotKey, composeChecklistText(next), languages[0].key)
+    toast.success('Content saved', { id: 'content-library-save' })
+  }
+
   if (SHARED_SLOT_KEYS.includes(slot.key)) {
     return (
       <div className={cardClasses}>
@@ -862,6 +904,7 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
           library={libraries[languages[0].key]}
           onChange={(key, value) => onChange(key, value, languages[0].key)}
           onBlur={onBlur}
+          onMoveItem={moveSharedChecklistItem}
         />
       </div>
     )
@@ -891,6 +934,25 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
     toast.success('Content saved', { id: 'content-library-save' })
   }
 
+  // Same idea as moveEntry above, for a checklist slot that keeps its own
+  // separate list per language (Core Competencies, Certifications,
+  // Publications, Hobbies — unlike Technical Skills, see
+  // moveSharedChecklistItem above).
+  function moveChecklistItem(slotKey, index, delta) {
+    const itemsKey = `${slotKey}Items`
+    languages.forEach((lang) => {
+      const lib = libraries[lang.key]
+      const items = parseChecklist(lib[itemsKey], lib[slotKey])
+      const target = index + delta
+      if (target < 0 || target >= items.length) return
+      const next = [...items]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      onChange(itemsKey, JSON.stringify(next), lang.key)
+      onChange(slotKey, composeChecklistText(next), lang.key)
+    })
+    toast.success('Content saved', { id: 'content-library-save' })
+  }
+
   return (
     <div className={cardClasses}>
       <label className="text-sm font-semibold text-slate-800">{slot.label}</label>
@@ -913,6 +975,7 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
               onChange={(key, value) => onChange(key, value, lang.key)}
               onBlur={onBlur}
               onMoveEntry={moveEntry}
+              onMoveItem={moveChecklistItem}
             />
           </div>
         ))}

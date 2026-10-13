@@ -2,6 +2,7 @@ import { CONTENT_SLOTS } from '../../../context/ContentLibraryContext'
 import {
   composeRecipientText,
   formatEntryDate,
+  parseChecklist,
   parseEntries,
   parseRecipients,
   sortEntriesByDate,
@@ -92,6 +93,22 @@ export default function renderTextBlock({ block, globalStyle, resolvedContent, l
         })()
       : null
   const textContent = recipientContent !== null ? recipientContent : resolvedContent
+
+  // A Text block bound to a "checklist" library slot (Core Competencies,
+  // Certifications, Publications, Technical Skills, Leisure/Hobbies) reads
+  // as a flat joined-text list by default (textContent above) — the same
+  // as always. Once any item there has its own description filled in
+  // (ContentLibraryPage.jsx's ChecklistField), it switches to a
+  // structural render instead (title + description per item), the same
+  // "falls back to the old flat behavior until there's something only the
+  // structural view can show" rule the "entries" case above follows.
+  const checklistItems =
+    boundSlot?.type === 'checklist'
+      ? parseChecklist(library[`${boundSlot.key}Items`], library[boundSlot.key]).filter(
+          (item) => item.visible !== false && item.text?.trim(),
+        )
+      : []
+  const checklistHasDescriptions = checklistItems.some((item) => item.description?.trim())
   const body = boundSlot?.type === 'entries' ? (
     <div className={`group/entries relative flex flex-col gap-3 ${alignClass(block.align)}`}>
       <EntryLayoutCycleButton block={block} onUpdateBlock={onUpdateBlock} />
@@ -221,6 +238,34 @@ export default function renderTextBlock({ block, globalStyle, resolvedContent, l
         )
       })}
     </div>
+  ) : boundSlot?.type === 'checklist' && checklistHasDescriptions ? (
+    (() => {
+      const ListTag = block.list === false ? 'div' : block.ordered ? 'ol' : 'ul'
+      const ItemTag = block.list === false ? 'div' : 'li'
+      const listClass =
+        block.list === false
+          ? 'flex flex-col gap-2'
+          : `${block.ordered ? 'list-decimal' : 'list-disc'} space-y-1.5 pl-5 marker:text-slate-400`
+      return (
+        <ListTag className={`text-sm leading-relaxed ${listClass} ${alignClass(block.align)}`}>
+          {checklistItems.map((item, i) => (
+            <ItemTag key={i}>
+              <span
+                className={textStyleClasses({ ...block, align: undefined })}
+                style={typographyStyle(block, bodyFont, globalStyle.typographyScale?.p1?.sizePx)}
+              >
+                {displayText(item.text, block)}
+              </span>
+              {item.description && (
+                <p className="mt-0.5 text-xs not-italic normal-case opacity-70" style={{ fontFamily: bodyFont }}>
+                  {item.description}
+                </p>
+              )}
+            </ItemTag>
+          ))}
+        </ListTag>
+      )
+    })()
   ) : block.list ? (
     (() => {
       const ListTag = block.ordered ? 'ol' : 'ul'
