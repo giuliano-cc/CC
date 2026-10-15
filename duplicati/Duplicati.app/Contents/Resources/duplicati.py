@@ -59,6 +59,8 @@ def scan(roots, min_size):
                         if os.path.islink(p):
                             continue
                         s = os.stat(p)
+                        if getattr(s, "st_flags", 0) & 0x40000000 or fn.endswith(".icloud"):
+                            continue  # file iCloud non scaricato: leggerlo lo scaricherebbe
                         if s.st_size >= min_size:
                             by_size[s.st_size].append((p, s.st_mtime))
                     except OSError:
