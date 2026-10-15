@@ -29,6 +29,7 @@ if ! /usr/bin/python3 --version >/dev/null 2>&1; then
   osascript -e 'display dialog "Serve Python 3. Apri il Terminale ed esegui: xcode-select --install, poi riapri Duplicati." buttons {"OK"} with icon caution'
   exit 1
 fi
+pkill -f "Resources/duplicati.py" 2>/dev/null && sleep 0.5  # chiude una vecchia istanza: parte sempre questa versione
 exec /usr/bin/python3 "$DIR/duplicati.py"
 SH
 chmod +x "$APP/Contents/MacOS/launcher"
