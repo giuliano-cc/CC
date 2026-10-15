@@ -16,7 +16,17 @@ SKIP_DIRS = {".git", "node_modules", "Library", ".Trash", "__pycache__", ".venv"
 SKIP_SUFFIX = (".app", ".photoslibrary", ".musiclibrary", ".imovielibrary")
 TOKEN = secrets.token_urlsafe(16)
 
-state = {"phase": "idle", "scanned": 0, "groups": [], "error": None}
+HOME = os.path.expanduser("~")
+PRESETS = [HOME] + [os.path.join(HOME, d) for d in ("Downloads", "Documents", "Desktop", "Pictures", "Movies", "Music")]
+if os.path.isdir("/Volumes"):
+    PRESETS += [os.path.join("/Volumes", v) for v in sorted(os.listdir("/Volumes"))
+                if os.path.ismount(os.path.join("/Volumes", v)) and not os.path.islink(os.path.join("/Volumes", v))]
+PRESETS = [p for p in PRESETS if os.path.isdir(p)]
+DEFAULT_ROOTS = [p for p in PRESETS if p != HOME and p.startswith(HOME) and os.path.basename(p) in
+                 ("Downloads", "Documents", "Desktop", "Pictures")]
+
+state = {"phase": "idle", "scanned": 0, "groups": [], "error": None, "roots": [], "denied": 0,
+         "min_size": MIN_SIZE, "presets": PRESETS}
 lock = threading.Lock()
 
 
@@ -31,13 +41,17 @@ def sha(path, limit=None):
     return h.hexdigest()
 
 
-def scan(roots):
+def scan(roots, min_size):
     try:
         by_size = defaultdict(list)
         with lock:
-            state.update(phase="scanning", scanned=0, groups=[], error=None)
+            state.update(phase="scanning", scanned=0, groups=[], error=None, roots=roots, denied=0, min_size=min_size)
+        def denied(_err):
+            with lock:
+                state["denied"] += 1
+
         for root in roots:
-            for dp, dns, fns in os.walk(root):
+            for dp, dns, fns in os.walk(root, onerror=denied):
                 dns[:] = [d for d in dns if d not in SKIP_DIRS and not d.endswith(SKIP_SUFFIX)]
                 for fn in fns:
                     p = os.path.join(dp, fn)
@@ -45,7 +59,7 @@ def scan(roots):
                         if os.path.islink(p):
                             continue
                         s = os.stat(p)
-                        if s.st_size >= MIN_SIZE:
+                        if s.st_size >= min_size:
                             by_size[s.st_size].append((p, s.st_mtime))
                     except OSError:
                         continue
@@ -153,6 +167,20 @@ class H(BaseHTTPRequestHandler):
                 self.send(200, json.dumps({"done": len(done), "errors": errors}))
             except ValueError as e:
                 self.send(400, json.dumps({"error": str(e)}))
+        elif self.path == "/api/scan":
+            roots = [os.path.abspath(os.path.expanduser(r)) for r in body.get("roots", [])]
+            roots = [r for r in roots if os.path.isdir(r)]
+            if not roots:
+                return self.send(400, json.dumps({"error": "Nessuna cartella valida"}))
+            with lock:
+                busy = state["phase"] in ("scanning", "hashing")
+            if busy:
+                return self.send(409, json.dumps({"error": "Scansione già in corso"}))
+            min_size = max(1, int(body.get("min_size", MIN_SIZE)))
+            with lock:
+                state["phase"] = "scanning"
+            threading.Thread(target=scan, args=(roots, min_size), daemon=True).start()
+            self.send(200, "{}")
         elif self.path == "/api/reveal":
             p = body.get("path", "")
             with lock:
@@ -171,6 +199,7 @@ PAGE = r"""<!doctype html><html lang="it"><meta charset="utf-8"><meta name="view
 @media(prefers-color-scheme:dark){:root{--bg:#1c1c1e;--fg:#f5f5f7;--mut:#98989d;--line:#3a3a3c}}
 body{font:15px -apple-system,system-ui,sans-serif;background:var(--bg);color:var(--fg);margin:0;padding:0 16px 90px}
 main{max-width:900px;margin:0 auto}h1{font-size:24px;margin:24px 0 4px}p.s{color:var(--mut);margin:0 0 16px}
+details{margin:10px 0}summary{cursor:pointer;font-weight:600}#cfg label{display:block;font-size:13px;padding:2px 0}input[type=text],#custom{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--fg)}select{font:inherit}
 .g{border:1px solid var(--line);border-radius:10px;margin:12px 0;overflow:hidden}
 .gh{padding:8px 12px;border-bottom:1px solid var(--line);color:var(--mut);font-size:13px}
 .f{display:flex;gap:10px;align-items:center;padding:7px 12px;border-bottom:1px solid var(--line)}.f:last-child{border:0}
@@ -179,7 +208,12 @@ button{font:inherit;border:1px solid var(--line);background:none;color:var(--fg)
 button.p{background:var(--acc);border-color:var(--acc);color:#fff}button.d{background:var(--red);border-color:var(--red);color:#fff}
 button:disabled{opacity:.4;cursor:default}
 bar{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding:12px 16px;display:flex;gap:10px;justify-content:center;align-items:center}
-</style><main><h1>File duplicati</h1><p class="s" id="st">Avvio…</p><div id="out"></div></main>
+</style><main><h1>File duplicati</h1>
+<details id="cfgbox" open><summary>Dove cercare</summary><div id="cfg"></div>
+<p><input id="custom" placeholder="Altro percorso, es. /Users/nome/Progetti" size="40">
+ Dimensione minima <select id="minsz"><option value="1024">1 KB</option><option value="102400">100 KB</option><option value="1048576">1 MB</option><option value="10485760">10 MB</option></select>
+ <button class="p" id="go">Scansiona</button></p></details>
+<p class="s" id="st">Avvio…</p><div id="out"></div></main>
 <bar><button id="auto" disabled>Seleziona automaticamente (tieni il più vecchio)</button>
 <button id="clear" disabled>Deseleziona</button><button class="d" id="del" disabled>Sposta nel Cestino</button></bar>
 <script>
@@ -200,10 +234,18 @@ function render(){
       d.append(r)});$("out").append(d)});
   $("auto").disabled=$("clear").disabled=!groups.length;$("del").disabled=!sel.size;
 }
-async function poll(){const s=await (await fetch("/api/state")).json();
-  if(s.phase=="scanning"||s.phase=="hashing"){$("st").textContent=(s.phase=="scanning"?"Scansione… ":"Confronto contenuto… ")+s.scanned+" file";setTimeout(poll,700)}
+let cfgDone=false;
+function cfg(s){if(cfgDone)return;cfgDone=true;
+  $("cfg").innerHTML=s.presets.map(p=>`<label><input type="checkbox" value="${p}" ${s.roots.includes(p)?"checked":""}> ${p}</label>`).join("");
+  $("minsz").value=String(s.min_size)}
+const note=s=>s.denied?` · ${s.denied} cartelle non accessibili (dai a Terminale/Python l'accesso in Impostazioni → Privacy e sicurezza → Accesso completo al disco)`:"";
+async function poll(){const s=await (await fetch("/api/state")).json();cfg(s);
+  if(s.phase=="scanning"||s.phase=="hashing"){$("st").textContent=(s.phase=="scanning"?"Scansione… ":"Confronto contenuto… ")+s.scanned+" file"+note(s);$("go").disabled=true;setTimeout(poll,700)}
   else if(s.phase=="error")$("st").textContent="Errore: "+s.error;
-  else{groups=s.groups;render()}}
+  else{$("go").disabled=false;groups=s.groups;render();if(s.denied)$("st").textContent+=note(s)}}
+$("go").onclick=async()=>{const roots=[...document.querySelectorAll("#cfg input:checked")].map(i=>i.value);
+  const c=$("custom").value.trim();if(c)roots.push(c);if(!roots.length)return alert("Scegli almeno una cartella");
+  sel=new Set();const r=await post("/api/scan",{roots,min_size:+$("minsz").value});if(r.error)return alert(r.error);poll()};
 $("auto").onclick=()=>{sel=new Set();groups.forEach(g=>g.files.slice(1).forEach(f=>sel.add(f.path)));render()};
 $("clear").onclick=()=>{sel=new Set();render()};
 $("del").onclick=async()=>{if(!confirm(`Spostare ${sel.size} file nel Cestino?`))return;
@@ -214,8 +256,7 @@ poll();
 
 
 def main():
-    roots = [os.path.expanduser(a) for a in sys.argv[1:]] or [
-        os.path.expanduser("~/" + d) for d in ("Downloads", "Documents", "Desktop", "Pictures")]
+    roots = [os.path.abspath(os.path.expanduser(a)) for a in sys.argv[1:]] or DEFAULT_ROOTS
     roots = [r for r in roots if os.path.isdir(r)]
     if not roots:
         sys.exit("Nessuna cartella valida da scansionare.")
@@ -226,7 +267,7 @@ def main():
         webbrowser.open(url)
         return
     print("Scansione di:", *roots, sep="\n  ")
-    threading.Thread(target=scan, args=(roots,), daemon=True).start()
+    threading.Thread(target=scan, args=(roots, MIN_SIZE), daemon=True).start()
     print("Apri", url, "(Ctrl+C per uscire)")
     webbrowser.open(url)
     try:

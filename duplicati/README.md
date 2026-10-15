@@ -15,6 +15,7 @@ il server ascolta solo su localhost e le azioni richiedono un token casuale.
 Al primo avvio macOS potrebbe bloccarla perché non è firmata: fai clic destro sull'app, scegli **Apri**, poi **Apri** di nuovo
 (oppure Impostazioni di Sistema → Privacy e sicurezza → "Apri comunque").
 Per uscire: clic destro sull'icona nel Dock → **Esci**.
+Nell'app puoi scegliere le cartelle da scansionare (Home, Musica, Film, dischi esterni o un percorso a piacere) e la dimensione minima dei file.
 Dopo aver modificato `duplicati.py`, rigenera l'app con `./build_app.sh`.
 
 L'icona è generata da `make_icon.py` (richiede Pillow) e salvata in `icon.icns`; `build_app.sh` la inserisce nell'app.
