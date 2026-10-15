@@ -68,6 +68,13 @@ function BlockPropertiesPanel({ block, onChange }) {
   // reselecting the block) — either way, nothing more than seeing the
   // block selected here is needed; it only ever grows the block, never
   // shrinks it (so switching from XL back to L doesn't auto-shrink it).
+  // `block.height` is a dependency too (not just read inside) so the
+  // check re-runs if something else changes it later — e.g. the user
+  // manually shrinks the "Height (px)" field below while the marks are
+  // already on — instead of only re-checking on id/showQuoteMarks/
+  // quoteMarkSize changes. Safe against a dependency loop: once this
+  // effect grows the block to fit, `measured.naturalHeight > block.height`
+  // is false on the next run, so it doesn't re-fire itself.
   useEffect(() => {
     if (block.type !== BLOCK_TYPES.QUOTE || !block.showQuoteMarks) return
     const raf = requestAnimationFrame(() => {
@@ -77,8 +84,14 @@ function BlockPropertiesPanel({ block, onChange }) {
       }
     })
     return () => cancelAnimationFrame(raf)
+    // `onChange` deliberately stays out of this list — it's a fresh
+    // closure every render (see PropertiesPanel's `onChange={(patch) =>
+    // updateBlock(selectedBlock.id, patch)}`) that always resolves to the
+    // same `updateBlock(selectedBlock.id, ...)` call for as long as
+    // `block.id` doesn't change, so including it would only make this
+    // effect re-run on every render for no behavioral difference.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [block.id, block.showQuoteMarks, block.quoteMarkSize])
+  }, [block.id, block.showQuoteMarks, block.quoteMarkSize, block.height])
 
   const Dedicated = DEDICATED_PROPERTIES[block.type]
   if (Dedicated) {
