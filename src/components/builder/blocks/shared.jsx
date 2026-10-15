@@ -1,5 +1,4 @@
 import { HEADING_SIZE_PX } from '../../../utils/blockTypes'
-import { useContentLibrary } from '../../../context/ContentLibraryContext'
 import { RefreshCw } from 'lucide-react'
 
 // Shared by Experience/Education and a Text block bound to an 'entries'
@@ -256,10 +255,12 @@ export function sectionTitleStyle(block, color, fallbackFont) {
 // A block can be "linked" to a Content Library entry (block.contentSlot):
 // in that case the displayed text is read from the library instead of
 // block.content, so the same content can be tried on different templates
-// without having to rewrite it.
-export function useResolvedContent(block, globalStyle) {
-  const { getLibrary } = useContentLibrary()
-  const library = getLibrary(globalStyle.contentLanguage)
+// without having to rewrite it. Takes `library` rather than fetching it
+// itself — the caller (BlockRenderer) already reads the content library
+// for every block anyway, so resolving content this way is a plain
+// function, not its own hook, and doesn't cost a second
+// useContentLibrary()/getLibrary() call on top of the caller's own.
+export function resolveContent(block, library) {
   if (block.contentSlot && block.contentSlot in library) {
     return library[block.contentSlot]
   }

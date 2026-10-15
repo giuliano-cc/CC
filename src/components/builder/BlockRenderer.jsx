@@ -1,6 +1,6 @@
 import { BLOCK_TYPES } from '../../utils/blockTypes'
 import { useContentLibrary } from '../../context/ContentLibraryContext'
-import { useResolvedContent } from './blocks/shared'
+import { resolveContent } from './blocks/shared'
 import renderHeaderBlock from './blocks/Header'
 import renderCvHeaderBlock from './blocks/CvHeader'
 import renderHeadingBlock from './blocks/Heading'
@@ -25,10 +25,15 @@ import renderColumnsBlock from './blocks/Columns'
 // ./blocks/ — this used to be a single ~1600-line switch statement with
 // every block type's rendering logic inline, which made finding (and
 // safely editing) any one block type's code slower the bigger this file
-// grew. Each renderXBlock function gets the same `ctx` shape regardless
+// grew. Each renderXBlock function gets the same props shape regardless
 // of which fields it actually needs, so adding a new block type here is
-// just one new file + one new case, never a reason to touch another
-// block's code.
+// just one new file + one new entry, never a reason to touch another
+// block's code. Rendered below as a real JSX component (`<Render .../>`),
+// not called directly as a plain function — none of these currently use
+// hooks, but calling them as functions instead of components would make
+// it a silent Rules-of-Hooks violation (a hook call gated behind
+// `block.type`) the moment one did, since `renderXBlock` doesn't look
+// like a hook or a component to the linter.
 const BLOCK_RENDERERS = {
   [BLOCK_TYPES.HEADER]: renderHeaderBlock,
   [BLOCK_TYPES.CV_HEADER]: renderCvHeaderBlock,
@@ -61,23 +66,25 @@ export default function BlockRenderer({
   onUpdateBlock,
   globalStyle = {},
 }) {
-  const resolvedContent = useResolvedContent(block, globalStyle)
   const { getLibrary, getTitleOverrides } = useContentLibrary()
   const library = getLibrary(globalStyle.contentLanguage)
   const titleOverrides = getTitleOverrides(globalStyle.contentLanguage)
+  const resolvedContent = resolveContent(block, library)
 
-  const render = BLOCK_RENDERERS[block.type]
-  if (!render) return null
-  return render({
-    block,
-    globalStyle,
-    resolvedContent,
-    library,
-    titleOverrides,
-    onUpdateBlock,
-    onAddItem,
-    interactive,
-    selectedId,
-    onSelectItem,
-  })
+  const Render = BLOCK_RENDERERS[block.type]
+  if (!Render) return null
+  return (
+    <Render
+      block={block}
+      globalStyle={globalStyle}
+      resolvedContent={resolvedContent}
+      library={library}
+      titleOverrides={titleOverrides}
+      onUpdateBlock={onUpdateBlock}
+      onAddItem={onAddItem}
+      interactive={interactive}
+      selectedId={selectedId}
+      onSelectItem={onSelectItem}
+    />
+  )
 }

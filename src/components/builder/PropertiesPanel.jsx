@@ -53,6 +53,23 @@ const DEDICATED_PROPERTIES = {
   [BLOCK_TYPES.LEISURE]: LeisureProperties,
 }
 
+// Every block type's panel shares this same "Block: <label>" header and
+// PositionSizeFields footer — written once here instead of once per
+// return branch in BlockPropertiesPanel below, so changing the wrapper
+// (or adding something every panel should have) doesn't mean finding
+// and updating 4 near-identical copies.
+function BlockPanelShell({ block, onChange, children }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <h3 className="text-sm font-semibold text-slate-800">
+        Block: {BLOCK_LABELS[block.type] || block.type}
+      </h3>
+      {children}
+      <PositionSizeFields block={block} onChange={onChange} />
+    </div>
+  )
+}
+
 function BlockPropertiesPanel({ block, onChange }) {
   const { globalStyle } = useBuilder()
   const { getLibrary } = useContentLibrary()
@@ -96,22 +113,15 @@ function BlockPropertiesPanel({ block, onChange }) {
   const Dedicated = DEDICATED_PROPERTIES[block.type]
   if (Dedicated) {
     return (
-      <div className="flex flex-col gap-4">
-        <h3 className="text-sm font-semibold text-slate-800">
-          Block: {BLOCK_LABELS[block.type]}
-        </h3>
+      <BlockPanelShell block={block} onChange={onChange}>
         <Dedicated block={block} onChange={onChange} />
-        <PositionSizeFields block={block} onChange={onChange} />
-      </div>
+      </BlockPanelShell>
     )
   }
 
   if (block.type === BLOCK_TYPES.EXPERIENCE) {
     return (
-      <div className="flex flex-col gap-4">
-        <h3 className="text-sm font-semibold text-slate-800">
-          Block: {BLOCK_LABELS[block.type]}
-        </h3>
+      <BlockPanelShell block={block} onChange={onChange}>
         <EntriesBlockProperties
           block={block}
           onChange={onChange}
@@ -119,17 +129,13 @@ function BlockPropertiesPanel({ block, onChange }) {
           librarySlotLabel="Work Experience"
           librarySlotKey="experience"
         />
-        <PositionSizeFields block={block} onChange={onChange} />
-      </div>
+      </BlockPanelShell>
     )
   }
 
   if (block.type === BLOCK_TYPES.EDUCATION) {
     return (
-      <div className="flex flex-col gap-4">
-        <h3 className="text-sm font-semibold text-slate-800">
-          Block: {BLOCK_LABELS[block.type]}
-        </h3>
+      <BlockPanelShell block={block} onChange={onChange}>
         <EntriesBlockProperties
           block={block}
           onChange={onChange}
@@ -137,11 +143,11 @@ function BlockPropertiesPanel({ block, onChange }) {
           librarySlotLabel="Education"
           librarySlotKey="education"
         />
-        <PositionSizeFields block={block} onChange={onChange} />
-      </div>
+      </BlockPanelShell>
     )
   }
 
+  const boundSlot = CONTENT_SLOTS.find((s) => s.key === block.contentSlot)
   const showAlign = block.type !== BLOCK_TYPES.DIVIDER
   const showContent = block.type !== BLOCK_TYPES.DIVIDER && block.type !== BLOCK_TYPES.IMAGE
   const isHeading = block.type === BLOCK_TYPES.HEADING
@@ -156,14 +162,10 @@ function BlockPropertiesPanel({ block, onChange }) {
     block.type === BLOCK_TYPES.FOOTER
 
   return (
-    <div className="flex flex-col gap-4">
-      <h3 className="text-sm font-semibold text-slate-800">
-        Block: {BLOCK_LABELS[block.type] || block.type}
-      </h3>
-
+    <BlockPanelShell block={block} onChange={onChange}>
       {canBindContent && <ContentSlotBinder block={block} onChange={onChange} />}
 
-      {CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.type === 'recipients' &&
+      {boundSlot?.type === 'recipients' &&
         (() => {
           const recipients = parseRecipients(library[`${block.contentSlot}Items`])
           return (
@@ -243,7 +245,7 @@ function BlockPropertiesPanel({ block, onChange }) {
                   type="text"
                   value={block.titleText || ''}
                   onChange={(e) => onChange({ titleText: e.target.value || null })}
-                  placeholder={CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.label || 'e.g. Portfolio'}
+                  placeholder={boundSlot?.label || 'e.g. Portfolio'}
                   className={inputClasses}
                 />
               </Field>
@@ -262,7 +264,7 @@ function BlockPropertiesPanel({ block, onChange }) {
       )}
 
       {block.type === BLOCK_TYPES.TEXT &&
-        CONTENT_SLOTS.find((s) => s.key === block.contentSlot)?.type === 'entries' && (
+        boundSlot?.type === 'entries' && (
           <>
             <LibraryItemOverridesField
               block={block}
@@ -681,9 +683,7 @@ function BlockPropertiesPanel({ block, onChange }) {
           </select>
         </Field>
       )}
-
-      <PositionSizeFields block={block} onChange={onChange} />
-    </div>
+    </BlockPanelShell>
   )
 }
 
