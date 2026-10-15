@@ -185,14 +185,21 @@ const ALLOWED_LANGUAGE_KEYS = new Set(Object.keys(DEFAULT_LANGUAGE_LIBRARY))
 const ALLOWED_SHARED_KEYS = new Set(SHARED_SLOT_KEYS)
 const ALLOWED_TITLE_KEYS = new Set(SECTION_TITLE_DEFS.map((def) => def.key))
 const ALLOWED_FLAT_IMPORT_KEYS = new Set([...ALLOWED_LANGUAGE_KEYS, ...ALLOWED_SHARED_KEYS])
-const MAX_IMPORTED_VALUE_LENGTH = 2_000_000 // ~2MB — comfortably fits a base64 photo/signature
+// Most slots are short plain text — 500KB is already enormous for those.
+// Photo/signature are base64 data URLs, which need far more room: a phone
+// photo resized to the app's own upload cap (see imageResize.js) can
+// still land in the low-megabyte range once base64-encoded.
+const IMAGE_SLOT_KEY_SET = new Set(IMAGE_SLOT_KEYS)
+const MAX_TEXT_VALUE_LENGTH = 500_000
+const MAX_IMAGE_VALUE_LENGTH = 15_000_000
 
 function sanitizeImportedMap(source, allowedKeys) {
   const result = {}
   if (!source || typeof source !== 'object' || Array.isArray(source)) return result
   for (const key of allowedKeys) {
     const value = source[key]
-    if (typeof value === 'string' && value.length <= MAX_IMPORTED_VALUE_LENGTH) {
+    const maxLength = IMAGE_SLOT_KEY_SET.has(key) ? MAX_IMAGE_VALUE_LENGTH : MAX_TEXT_VALUE_LENGTH
+    if (typeof value === 'string' && value.length <= maxLength) {
       result[key] = value
     }
   }
