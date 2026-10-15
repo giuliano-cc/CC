@@ -168,6 +168,37 @@ function isValidLanguage(lang) {
 // run even once a slot has long been shared: nothing writes that key into
 // a per-language map any more (see updateSlot/DEFAULT_LANGUAGE_LIBRARY),
 // so it simply returns '' for it from then on.
+// A backup file (imported via Topbar.jsx's "Import full backup", read
+// straight from whatever .json the user picks) is untrusted input —
+// unlike the app's own previously-saved state (stateFromRaw/buildState
+// below, used for the normal localStorage/IndexedDB load), which never
+// goes through this. Rebuilding a fresh object and copying over only
+// known slot keys whose value is actually a string (capped at a
+// generous length so a legitimate base64 photo/signature still fits)
+// means: an unexpected shape can't crash a block renderer or property
+// editor downstream (every one of them assumes a plain string here), a
+// single absurdly large value can't bloat storage, and a key named
+// `__proto__`/`constructor`/`prototype` is just ignored like any other
+// key this allow-list doesn't recognize — it's never assigned in a way
+// that could reach the real prototype chain.
+const ALLOWED_LANGUAGE_KEYS = new Set(Object.keys(DEFAULT_LANGUAGE_LIBRARY))
+const ALLOWED_SHARED_KEYS = new Set(SHARED_SLOT_KEYS)
+const ALLOWED_TITLE_KEYS = new Set(SECTION_TITLE_DEFS.map((def) => def.key))
+const ALLOWED_FLAT_IMPORT_KEYS = new Set([...ALLOWED_LANGUAGE_KEYS, ...ALLOWED_SHARED_KEYS])
+const MAX_IMPORTED_VALUE_LENGTH = 2_000_000 // ~2MB — comfortably fits a base64 photo/signature
+
+function sanitizeImportedMap(source, allowedKeys) {
+  const result = {}
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return result
+  for (const key of allowedKeys) {
+    const value = source[key]
+    if (typeof value === 'string' && value.length <= MAX_IMPORTED_VALUE_LENGTH) {
+      result[key] = value
+    }
+  }
+  return result
+}
+
 function extractShared(...maps) {
   return Object.fromEntries(
     SHARED_SLOT_KEYS.map((key) => [key, maps.map((m) => m?.[key]).find((v) => v?.trim()) || '']),
@@ -400,6 +431,9 @@ export function ContentLibraryProvider({ children }) {
 
   function importLibrary(json) {
     const parsed = JSON.parse(json)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('Not a valid Content Library backup')
+    }
     // A bilingual export is flat — `{ en, de, shared, titles }` at the top
     // level, exactly what exportLibrary above produces (no `content`
     // wrapper, unlike the localStorage shape — see loadInitialState). A
@@ -408,13 +442,29 @@ export function ContentLibraryProvider({ children }) {
     // migration; German (and any image/title override already saved) is
     // kept rather than wiped, since the import has nothing to say about
     // them.
-    if (parsed && (parsed.en || parsed.de)) {
-      setState(buildState(parsed.en, parsed.de, parsed.shared, parsed.titles))
+    if (parsed.en || parsed.de) {
+      setState(
+        buildState(
+          sanitizeImportedMap(parsed.en, ALLOWED_LANGUAGE_KEYS),
+          sanitizeImportedMap(parsed.de, ALLOWED_LANGUAGE_KEYS),
+          sanitizeImportedMap(parsed.shared, ALLOWED_SHARED_KEYS),
+          parsed.titles && typeof parsed.titles === 'object'
+            ? {
+                en: sanitizeImportedMap(parsed.titles.en, ALLOWED_TITLE_KEYS),
+                de: sanitizeImportedMap(parsed.titles.de, ALLOWED_TITLE_KEYS),
+              }
+            : undefined,
+        ),
+      )
     } else {
+      // Pre-bilingual shape: a single flat map that may hold both
+      // language-specific and shared-slot keys together, so it's
+      // sanitized against the union of both allow-lists.
+      const sanitized = sanitizeImportedMap(parsed, ALLOWED_FLAT_IMPORT_KEYS)
       setState((prev) => ({
         ...prev,
-        shared: { ...prev.shared, ...extractShared(parsed) },
-        content: { en: { ...DEFAULT_LANGUAGE_LIBRARY, ...parsed }, de: prev.content.de },
+        shared: { ...prev.shared, ...extractShared(sanitized) },
+        content: { en: { ...DEFAULT_LANGUAGE_LIBRARY, ...sanitized }, de: prev.content.de },
       }))
     }
   }

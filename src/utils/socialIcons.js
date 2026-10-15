@@ -38,9 +38,25 @@ export function formatSocialLinks(items) {
   return items.map((item) => `${item.platform}|${item.url}`).join('\n')
 }
 
+// Only these schemes are ever handed to a real <a href> — anything else
+// (most notably "javascript:", which runs arbitrary script the instant
+// the link is clicked) is rejected outright, whether or not the string
+// already looked like it had a scheme. A user can type one of these in
+// by hand, or it can arrive from an imported Content Library backup (see
+// ContentLibraryContext.importLibrary) — either way this is the one gate
+// that decides what's safe to put in href.
+const ALLOWED_URL_SCHEMES = new Set(['http:', 'https:', 'mailto:', 'tel:'])
+
 // So a link typed as "linkedin.com/in/you" (no scheme) still opens
 // correctly when clicked, instead of being treated as a relative path.
+// Returns undefined for anything that isn't on the scheme allow-list —
+// callers must treat that as "do not render as a link".
 export function normalizeUrl(url) {
   if (!url) return url
-  return /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`
+  try {
+    return ALLOWED_URL_SCHEMES.has(new URL(candidate).protocol) ? candidate : undefined
+  } catch {
+    return undefined
+  }
 }
