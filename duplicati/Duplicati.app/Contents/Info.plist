@@ -4,6 +4,7 @@
 <key>CFBundleName</key><string>Duplicati</string>
 <key>CFBundleDisplayName</key><string>Duplicati</string>
 <key>CFBundleIdentifier</key><string>local.duplicati</string>
+<key>CFBundleIconFile</key><string>icon</string>
 <key>CFBundleExecutable</key><string>launcher</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleVersion</key><string>1.0</string>

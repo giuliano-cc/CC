@@ -6,6 +6,7 @@ APP=Duplicati.app
 rm -rf "$APP" Duplicati.zip
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp duplicati.py "$APP/Contents/Resources/duplicati.py"
+[ -f icon.icns ] && cp icon.icns "$APP/Contents/Resources/icon.icns"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -13,6 +14,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>Duplicati</string>
 <key>CFBundleDisplayName</key><string>Duplicati</string>
 <key>CFBundleIdentifier</key><string>local.duplicati</string>
+<key>CFBundleIconFile</key><string>icon</string>
 <key>CFBundleExecutable</key><string>launcher</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleVersion</key><string>1.0</string>

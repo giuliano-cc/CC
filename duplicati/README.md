@@ -16,3 +16,6 @@ Al primo avvio macOS potrebbe bloccarla perché non è firmata: fai clic destro 
 (oppure Impostazioni di Sistema → Privacy e sicurezza → "Apri comunque").
 Per uscire: clic destro sull'icona nel Dock → **Esci**.
 Dopo aver modificato `duplicati.py`, rigenera l'app con `./build_app.sh`.
+
+L'icona è generata da `make_icon.py` (richiede Pillow) e salvata in `icon.icns`; `build_app.sh` la inserisce nell'app.
+Per cambiarla modifica `make_icon.py`, esegui `python3 make_icon.py` e poi `./build_app.sh`.
