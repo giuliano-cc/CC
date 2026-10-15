@@ -219,10 +219,14 @@ def main():
     roots = [r for r in roots if os.path.isdir(r)]
     if not roots:
         sys.exit("Nessuna cartella valida da scansionare.")
+    url = "http://127.0.0.1:%d" % PORT
+    try:
+        srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
+    except OSError:  # già in esecuzione: riapri solo la pagina
+        webbrowser.open(url)
+        return
     print("Scansione di:", *roots, sep="\n  ")
     threading.Thread(target=scan, args=(roots,), daemon=True).start()
-    srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
-    url = "http://127.0.0.1:%d" % PORT
     print("Apri", url, "(Ctrl+C per uscire)")
     webbrowser.open(url)
     try:
