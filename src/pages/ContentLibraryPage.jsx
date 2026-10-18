@@ -12,11 +12,13 @@ import {
   composeEntriesText,
   composeLanguagesText,
   emptyEntry,
+  emptyReference,
   emptyRecipient,
   LANGUAGE_LEVELS,
   parseChecklist,
   parseEntries,
   parseLanguages,
+  parseReferences,
   parseRecipients,
   SKILL_LEVELS,
   sortEntriesByDate,
@@ -345,6 +347,112 @@ function RecipientsField({ itemsJson, onUpdate }) {
       ))}
       <button type="button" onClick={addItem} className="self-start text-xs font-medium text-primary hover:underline">
         + Add recipient
+      </button>
+    </div>
+  )
+}
+
+// One card per reference: Name Surname, Role, Collaboration, Phone, Email
+// — each with its own visibility checkbox ("selectable so I can pick the
+// ones I need most") and Move up/down, same gesture as every other
+// reorderable list on this page.
+function ReferencesField({ itemsJson, onUpdate, onMoveItem }) {
+  const items = parseReferences(itemsJson)
+
+  function updateItem(index, patch) {
+    onUpdate(items.map((item, i) => (i === index ? { ...item, ...patch } : item)))
+  }
+
+  function addItem() {
+    onUpdate([...items, emptyReference()])
+  }
+
+  function removeItem(index) {
+    onUpdate(items.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((item, i) => (
+        <div key={item.id} className="flex flex-col gap-2 rounded-md border border-slate-200 p-3">
+          <div className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={item.visible}
+              onChange={(e) => updateItem(i, { visible: e.target.checked })}
+              title="Visible on the CV"
+            />
+            <input
+              type="text"
+              value={item.name}
+              onChange={(e) => updateItem(i, { name: e.target.value })}
+              placeholder="Name Surname"
+              className={`${inputClasses} min-w-0 flex-1 font-medium`}
+            />
+            {onMoveItem && (
+              <div className="flex shrink-0 items-center">
+                <button
+                  type="button"
+                  onClick={() => onMoveItem(i, -1)}
+                  disabled={i === 0}
+                  title="Move up"
+                  className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronUp size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onMoveItem(i, 1)}
+                  disabled={i === items.length - 1}
+                  title="Move down"
+                  className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronDown size={14} />
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => removeItem(i)}
+              className="shrink-0 rounded-md px-2 py-1.5 text-xs text-red-500 hover:bg-red-50"
+            >
+              ✕
+            </button>
+          </div>
+          <input
+            type="text"
+            value={item.role}
+            onChange={(e) => updateItem(i, { role: e.target.value })}
+            placeholder="Role, Company, City"
+            className={inputClasses}
+          />
+          <input
+            type="text"
+            value={item.collaboration}
+            onChange={(e) => updateItem(i, { collaboration: e.target.value })}
+            placeholder="Collaboration (e.g. Project, Years)"
+            className={inputClasses}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="text"
+              value={item.phone}
+              onChange={(e) => updateItem(i, { phone: e.target.value })}
+              placeholder="Phone"
+              className={inputClasses}
+            />
+            <input
+              type="email"
+              value={item.email}
+              onChange={(e) => updateItem(i, { email: e.target.value })}
+              placeholder="Email"
+              className={inputClasses}
+            />
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={addItem} className="self-start text-xs font-medium text-primary hover:underline">
+        + Add reference
       </button>
     </div>
   )
@@ -784,14 +892,22 @@ function SlotField({ slot, library, onChange, onBlur, onMoveEntry, onMoveItem })
         <ChecklistField
           itemsJson={library[`${slot.key}Items`]}
           fallbackText={library[slot.key]}
-          // The level control sets the proficiency bar/dots used by the
-          // Skills Chart block — meaningless for a list of people, so it's
-          // hidden here rather than shown with no effect.
-          showLevel={slot.key !== 'references'}
+          showLevel
           onMoveItem={onMoveItem ? (index, delta) => onMoveItem(slot.key, index, delta) : undefined}
           onUpdate={(items) => {
             onChange(`${slot.key}Items`, JSON.stringify(items))
             onChange(slot.key, composeChecklistText(items))
+            toast.success('Content saved', { id: 'content-library-save' })
+          }}
+        />
+      )}
+
+      {slot.type === 'references' && (
+        <ReferencesField
+          itemsJson={library[`${slot.key}Items`]}
+          onMoveItem={onMoveItem ? (index, delta) => onMoveItem(slot.key, index, delta) : undefined}
+          onUpdate={(items) => {
+            onChange(`${slot.key}Items`, JSON.stringify(items))
             toast.success('Content saved', { id: 'content-library-save' })
           }}
         />
@@ -897,6 +1013,22 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
     toast.success('Content saved', { id: 'content-library-save' })
   }
 
+  // Same idea as moveSharedChecklistItem above, for References (shared
+  // across languages the same way Technical Skills is) — a plain array
+  // reorder, with no flat composed text to keep in sync since References
+  // never had one (see ContentLibraryContext.jsx — only `referencesItems`
+  // is read for the structural render).
+  function moveSharedReferenceItem(slotKey, index, delta) {
+    const lib = libraries[languages[0].key]
+    const items = parseReferences(lib[`${slotKey}Items`])
+    const target = index + delta
+    if (target < 0 || target >= items.length) return
+    const next = [...items]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    onChange(`${slotKey}Items`, JSON.stringify(next), languages[0].key)
+    toast.success('Content saved', { id: 'content-library-save' })
+  }
+
   if (SHARED_SLOT_KEYS.includes(slot.key)) {
     return (
       <div className={cardClasses}>
@@ -907,7 +1039,7 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
           library={libraries[languages[0].key]}
           onChange={(key, value) => onChange(key, value, languages[0].key)}
           onBlur={onBlur}
-          onMoveItem={moveSharedChecklistItem}
+          onMoveItem={slot.type === 'references' ? moveSharedReferenceItem : moveSharedChecklistItem}
         />
       </div>
     )

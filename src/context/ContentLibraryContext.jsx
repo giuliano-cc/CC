@@ -49,14 +49,22 @@ export const CONTENT_SLOTS = [
   { key: 'languages', label: 'Languages', type: 'languages' },
   { key: 'certifications', label: 'Certifications', type: 'checklist' },
   { key: 'publications', label: 'Publications', type: 'checklist' },
-  // 'checklist', not plain text: each reference needs its own visibility
-  // toggle (so you can keep someone in the library but leave them out of
-  // a specific document — "selectable so I can pick the ones I need
-  // most") and its own free-form description (role, company, phone,
-  // email, ...) under their name — same shape Core Competencies/
-  // Certifications/Publications already use.
-  { key: 'references', label: 'References', type: 'checklist' },
-  { key: 'additionalInfo', label: 'Additional Information (other notes worth mentioning)', multiline: true },
+  // 'references', not 'checklist': each reference is a person with its
+  // own structured fields (name, role, collaboration, phone, email, see
+  // utils/contentLists.js' emptyReference/parseReferences), plus its own
+  // visibility toggle — "selectable so I can pick the ones I need most" —
+  // same idea as Cover Letter Recipients, but every visible one renders,
+  // not just one picked at a time.
+  { key: 'references', label: 'References', type: 'references' },
+  // 'checklist', not plain text: each note is optional on its own (its own
+  // visibility toggle, same as Core Competencies/Certifications/...) so a
+  // note can be left out of a given document without deleting it from the
+  // library — and, since it's the same item shape as every other
+  // checklist slot, a single note can also be shown appended to a
+  // different block instead of its own section (see ContactInfo.jsx's
+  // `showAdditionalInfo` option, which reads this same `additionalInfoItems`
+  // list onto the end of the Contact Info block).
+  { key: 'additionalInfo', label: 'Additional Information (other notes worth mentioning)', type: 'checklist' },
   { key: 'quote', label: 'Quote', multiline: false },
   { key: 'quoteAuthor', label: 'Quote Author (name, position)', multiline: false },
   // 'contact' itself holds the composed, newline-joined text (auto-derived
@@ -91,7 +99,7 @@ export const CONTENT_SLOTS = [
 // full editable row list, including unchecked/hidden items) alongside
 // the plain-text one already covered by CONTENT_SLOTS above.
 const STRUCTURED_LIST_KEYS = CONTENT_SLOTS.filter((s) =>
-  ['checklist', 'languages', 'entries', 'recipients'].includes(s.type),
+  ['checklist', 'languages', 'entries', 'recipients', 'references'].includes(s.type),
 ).map((s) => s.key)
 
 // 'image' slots (Profile Photo, Signature) are a scan/photo of the same

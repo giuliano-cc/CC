@@ -1,4 +1,5 @@
-import { Globe, Mail, MapPin, Phone } from 'lucide-react'
+import { Globe, Info, Mail, MapPin, Phone } from 'lucide-react'
+import { parseChecklist } from '../../../utils/contentLists'
 import { translateSectionTitle } from '../../../utils/sectionTitles'
 import {
   alignClass,
@@ -42,7 +43,19 @@ export default function renderContactInfoBlock({ block, globalStyle, library, ti
         { key: 'email', value: block.email, Icon: Mail },
         { key: 'website', value: block.website, Icon: Globe },
       ]
-  const visible = fields.filter((f) => f.value?.trim())
+  // Additional Information notes are their own checklist slot (own
+  // section, own "Content Library" card) — `showAdditionalInfo` is an
+  // opt-in on this block to append its visible notes as extra lines
+  // here too, instead of/in addition to a separate Additional
+  // Information section, since the same note can be exactly what you'd
+  // want to read right under a contact detail (e.g. "Available for
+  // remote work").
+  const additionalInfoFields = block.showAdditionalInfo
+    ? parseChecklist(library.additionalInfoItems, library.additionalInfo)
+        .filter((item) => item.visible !== false && item.text?.trim())
+        .map((item, i) => ({ key: `additional-${i}`, value: item.text, Icon: Info }))
+    : []
+  const visible = [...fields, ...additionalInfoFields].filter((f) => f.value?.trim())
   const alignItems = block.align === 'center' ? 'items-center' : block.align === 'right' ? 'items-end' : 'items-start'
   const justify =
     block.align === 'center' ? 'justify-center' : block.align === 'right' ? 'justify-end' : 'justify-start'

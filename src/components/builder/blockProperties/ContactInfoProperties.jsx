@@ -81,6 +81,14 @@ export default function ContactInfoProperties({ block, onChange }) {
         />
         Show icons next to each field
       </label>
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={!!block.showAdditionalInfo}
+          onChange={(e) => onChange({ showAdditionalInfo: e.target.checked })}
+        />
+        Append Additional Information notes marked visible in the library
+      </label>
       <Field label="Layout">
         <select
           value={block.layout || 'stacked'}

@@ -4,7 +4,9 @@ import {
   formatEntryDate,
   parseChecklist,
   parseEntries,
+  parseReferences,
   parseRecipients,
+  REFERENCE_FIELD_LABELS,
   sortEntriesByDate,
 } from '../../../utils/contentLists'
 import { translateSectionTitle } from '../../../utils/sectionTitles'
@@ -109,6 +111,21 @@ export default function renderTextBlock({ block, globalStyle, resolvedContent, l
         )
       : []
   const checklistHasDescriptions = checklistItems.some((item) => item.description?.trim())
+  // A Text block bound to the "references" library slot renders every
+  // visible reference structurally (name, role, then its Collaboration/
+  // Phone/Email lines) — unlike "recipients" above, which shows only the
+  // one picked entry, every reference marked visible shows up here, since
+  // that's the whole point of "selectable so I can pick the ones I need
+  // most". Falls through to the block's own static content (e.g. the
+  // built-in templates' "Available upon request.") when nothing's been
+  // added yet, same as any other still-empty contentSlot binding.
+  const referencesItems =
+    boundSlot?.type === 'references'
+      ? parseReferences(library[`${boundSlot.key}Items`]).filter(
+          (item) => item.visible !== false && (item.name?.trim() || item.role?.trim()),
+        )
+      : []
+  const referenceLabels = REFERENCE_FIELD_LABELS[globalStyle.contentLanguage] || REFERENCE_FIELD_LABELS.en
   const body = boundSlot?.type === 'entries' ? (
     <div className={`group/entries relative flex flex-col gap-3 ${alignClass(block.align)}`}>
       <EntryLayoutCycleButton block={block} onUpdateBlock={onUpdateBlock} />
@@ -234,6 +251,35 @@ export default function renderTextBlock({ block, globalStyle, resolvedContent, l
         ) : (
           <div key={item.id || i} className="flex flex-col gap-0.5">
             {entryChildren}
+          </div>
+        )
+      })}
+    </div>
+  ) : boundSlot?.type === 'references' && referencesItems.length > 0 ? (
+    <div className={`flex flex-col gap-3 ${alignClass(block.align)}`}>
+      {referencesItems.map((item, i) => {
+        const detailLines = [
+          item.collaboration?.trim() && `${referenceLabels.collaboration}: ${item.collaboration}`,
+          item.phone?.trim() && `${referenceLabels.phone}: ${item.phone}`,
+          item.email?.trim() && `${referenceLabels.email}: ${item.email}`,
+        ].filter(Boolean)
+        return (
+          <div key={item.id || i} className="flex flex-col gap-0.5">
+            {item.name && (
+              <p className="text-sm font-bold" style={{ fontFamily: entryTitleFont, color: globalStyle.textColor }}>
+                {item.name}
+              </p>
+            )}
+            {item.role && (
+              <p className="text-sm opacity-80" style={entryMetaStyle}>
+                {item.role}
+              </p>
+            )}
+            {detailLines.map((line, li) => (
+              <p key={li} className="text-sm opacity-70" style={entryMetaStyle}>
+                {line}
+              </p>
+            ))}
           </div>
         )
       })}

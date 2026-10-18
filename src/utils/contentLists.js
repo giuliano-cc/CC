@@ -272,6 +272,45 @@ export function composeRecipientText(recipient) {
     .join('\n')
 }
 
+// References: a repeatable person entry (name, role/company, how you
+// worked together, phone, email), each with its own visibility toggle —
+// "selectable so I can pick the ones I need most". Unlike Cover Letter
+// Recipients (one picked at a time per document), every visible reference
+// renders on the CV — see Text.jsx's structural render.
+export function emptyReference() {
+  return {
+    id: `reference-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    visible: true,
+    name: '',
+    role: '',
+    collaboration: '',
+    phone: '',
+    email: '',
+  }
+}
+
+export function parseReferences(itemsJson) {
+  try {
+    const parsed = JSON.parse(itemsJson)
+    if (Array.isArray(parsed)) return parsed
+  } catch {
+    // not valid JSON yet (empty) — fall through
+  }
+  return []
+}
+
+// Name and Role need no label on the CV — their position/styling already
+// say what they are (bold name, then role right below it). Collaboration/
+// Phone/Email do, and that label switches with the document's own Content
+// language the same way section headings do (see utils/sectionTitles.js) —
+// References itself is shared across languages (a person's phone number
+// doesn't change by language), but the words "Phone"/"Telefon" in front of
+// it still should.
+export const REFERENCE_FIELD_LABELS = {
+  en: { collaboration: 'Collaboration', phone: 'Phone', email: 'Email' },
+  de: { collaboration: 'Zusammenarbeit', phone: 'Telefon', email: 'E-Mail' },
+}
+
 // Today's date as a native <input type="date"> value (local time, not
 // UTC — toISOString() would roll over to the next/previous day near
 // midnight depending on the viewer's timezone).
