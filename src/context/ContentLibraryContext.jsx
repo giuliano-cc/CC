@@ -129,8 +129,10 @@ const TEXT_SHARED_KEYS = [
 // the checked/unchecked state and levels stay in sync too, not just the
 // plain-text value. Cover Letter Recipients is shared for the same reason
 // as the rest of TEXT_SHARED_KEYS above — a company's name and address
-// don't change by document language either.
-const SHARED_STRUCTURED_LIST_KEYS = ['skills', 'coverLetterRecipients']
+// don't change by document language either. References joins them for
+// the same reason: a reference's name, company, phone and email don't
+// change by document language either.
+const SHARED_STRUCTURED_LIST_KEYS = ['skills', 'coverLetterRecipients', 'references']
 
 // Exported so ContentLibraryPage.jsx can render these slots once instead
 // of in an English/German pair, the same way it already does for photo/
