@@ -49,7 +49,13 @@ export const CONTENT_SLOTS = [
   { key: 'languages', label: 'Languages', type: 'languages' },
   { key: 'certifications', label: 'Certifications', type: 'checklist' },
   { key: 'publications', label: 'Publications', type: 'checklist' },
-  { key: 'references', label: 'References', multiline: true },
+  // 'checklist', not plain text: each reference needs its own visibility
+  // toggle (so you can keep someone in the library but leave them out of
+  // a specific document — "selectable so I can pick the ones I need
+  // most") and its own free-form description (role, company, phone,
+  // email, ...) under their name — same shape Core Competencies/
+  // Certifications/Publications already use.
+  { key: 'references', label: 'References', type: 'checklist' },
   { key: 'additionalInfo', label: 'Additional Information (other notes worth mentioning)', multiline: true },
   { key: 'quote', label: 'Quote', multiline: false },
   { key: 'quoteAuthor', label: 'Quote Author (name, position)', multiline: false },

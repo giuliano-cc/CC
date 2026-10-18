@@ -257,7 +257,10 @@ export default function renderTextBlock({ block, globalStyle, resolvedContent, l
                 {displayText(item.text, block)}
               </span>
               {item.description && (
-                <p className="mt-0.5 text-xs not-italic normal-case opacity-70" style={{ fontFamily: bodyFont }}>
+                <p
+                  className="mt-0.5 whitespace-pre-line text-xs not-italic normal-case opacity-70"
+                  style={{ fontFamily: bodyFont }}
+                >
                   {item.description}
                 </p>
               )}
