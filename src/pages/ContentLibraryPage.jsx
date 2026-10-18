@@ -784,7 +784,10 @@ function SlotField({ slot, library, onChange, onBlur, onMoveEntry, onMoveItem })
         <ChecklistField
           itemsJson={library[`${slot.key}Items`]}
           fallbackText={library[slot.key]}
-          showLevel
+          // The level control sets the proficiency bar/dots used by the
+          // Skills Chart block — meaningless for a list of people, so it's
+          // hidden here rather than shown with no effect.
+          showLevel={slot.key !== 'references'}
           onMoveItem={onMoveItem ? (index, delta) => onMoveItem(slot.key, index, delta) : undefined}
           onUpdate={(items) => {
             onChange(`${slot.key}Items`, JSON.stringify(items))
