@@ -79,40 +79,52 @@ export function goldenRatioLinesY(margins) {
   return { top: margins.top + (height - a), bottom: margins.top + a }
 }
 
-// The classic, minimal way of visualizing the ISO 216 ("A4") 1:√2
-// ratio: since the page's own height is its width×√2, a square whose
-// side is half the page's height has a side of exactly width/√2 — and
-// a square's diagonal is its side×√2, so THIS square's diagonal is
-// exactly width/√2×√2 = the page's own width. Two such squares, stacked
-// to run from the page's own top edge to its own bottom edge (no margin
-// inset, so there's no few-millimeter gap at either end), meet exactly
-// in the middle — neither a gap nor an overlap — and both are centered
-// horizontally, so left-right symmetry is automatic rather than a
-// second mirrored copy to keep in sync. Just the two squares and their
-// corner-to-corner diagonals — no arc, nothing swung into place.
-export function a4Squares() {
-  const side = SHEET_HEIGHT / 2
-  const x = (SHEET_WIDTH - side) / 2
-  return [
-    { x, y: 0, size: side },
-    { x, y: side, size: side },
-  ]
+// The classic compass-and-straightedge construction behind the ISO 216
+// ("A4") ratio (1:√2), anchored to the margin box (like the golden ratio
+// and column/row guides — not the page's bare edges):
+//  - A square on the box's own width sits at the top; its diagonal,
+//    swung flat, crosses the box's vertical center at half the box's
+//    width down from the top — that crossing is `rows.topSquare`. The
+//    same square mirrored from the bottom gives `rows.bottomSquare`.
+//  - The leftover band between those two crossings (box height minus box
+//    width) is split the same way again, sideways: a square on the
+//    band's own width/√2 inscribed from each side lands its far edge at
+//    `cols.left`/`cols.right`, and the matching vertical split of that
+//    band (by the same (√2-1) ratio the sideways square's own diagonal
+//    produces) gives `rows.topBand`/`rows.bottomBand`.
+// The result reads as a big square (and its crossed diagonals) at top
+// and bottom, with a thin band holding a smaller crossed pair between
+// them — see Canvas.jsx for the actual line overlay.
+export function a4ConstructionGeometry(margins) {
+  const boxLeft = margins.left
+  const boxRight = SHEET_WIDTH - margins.right
+  const boxTop = margins.top
+  const boxBottom = SHEET_HEIGHT - margins.bottom
+  const boxWidth = boxRight - boxLeft
+  const boxHeight = boxBottom - boxTop
+  const half = boxWidth / 2
+  const band = boxHeight - boxWidth
+  const bandInset = (Math.SQRT2 - 1) * band
+  const squareSide = boxWidth / Math.SQRT2
+
+  const topSquare = boxTop + half
+  const bottomSquare = boxBottom - half
+  return {
+    box: { left: boxLeft, right: boxRight, top: boxTop, bottom: boxBottom },
+    rows: { topSquare, topBand: topSquare + bandInset, bottomBand: bottomSquare - bandInset, bottomSquare },
+    cols: { left: boxRight - squareSide, right: boxLeft + squareSide },
+  }
 }
 
-// The construction's meaningful reference lines, in the same
-// {label: position} shape goldenRatioLinesX/Y use — for FreeBlock.jsx's
-// snapping. Both squares share the same left/right edges (they're the
-// same size, centered the same way), and meet at the page's exact
-// vertical center, so there's one of each to snap to rather than a
-// pair per square.
-export function a4RatioLinesX() {
-  const [square] = a4Squares()
-  return { left: square.x, right: square.x + square.size }
+// The construction's reference lines, in the same {label: position}
+// shape goldenRatioLinesX/Y use — for both the guide overlay
+// (Canvas.jsx) and FreeBlock.jsx's drag/resize snapping.
+export function a4RatioLinesX(margins) {
+  return a4ConstructionGeometry(margins).cols
 }
 
-export function a4RatioLinesY() {
-  const [square] = a4Squares()
-  return { middle: square.y + square.size }
+export function a4RatioLinesY(margins) {
+  return a4ConstructionGeometry(margins).rows
 }
 
 // A symmetric pair of lines duplicated from each exact golden ratio line

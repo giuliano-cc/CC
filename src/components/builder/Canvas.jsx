@@ -17,7 +17,8 @@ import {
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import {
-  a4Squares,
+  a4RatioLinesX,
+  a4RatioLinesY,
   goldenRatioLinesX,
   goldenRatioLinesY,
   goldenRatioOffsetLinesX,
@@ -194,39 +195,31 @@ function Page({
             />
           ))}
 
-      {/* A4 ratio guide: the minimal construction behind the page's own
-          1:√2 ratio — two squares (each side = half the page height,
-          so each one's own diagonal is exactly the page's width), run
-          from the page's own top edge to its own bottom edge with no
-          margin inset, meeting exactly in the middle with neither a gap
-          nor an overlap. Centered horizontally, so left-right symmetry
-          is automatic; stacked top/bottom, so top-bottom symmetry is
-          too — no arc, no mirrored second copy needed. An SVG overlay
-          purely for convenience (plain divs could draw this, but the
-          diagonals need line elements regardless). Clipped to the page
-          by the page's own overflow-hidden, same as every other guide
-          here. */}
+      {/* A4 ratio guide: the reference lines from the classic square +
+          diagonal construction behind the 1:√2 ratio (the compass-and-
+          straightedge build is only how the positions below are derived
+          — see a4ConstructionGeometry in utils/layout.js — nothing here
+          draws the square or its diagonal, just the resulting lines).
+          Both axes stay confined to the margin box, like every other
+          guide here. */}
       {!preview &&
         showA4Ratio &&
-        (() => {
-          const squares = a4Squares()
-          return (
-            <svg
-              className="pdf-ignore pointer-events-none absolute inset-0 z-10"
-              width={SHEET_WIDTH}
-              height={SHEET_HEIGHT}
-              viewBox={`0 0 ${SHEET_WIDTH} ${SHEET_HEIGHT}`}
-            >
-              {squares.map(({ x, y, size }, i) => (
-                <g key={i}>
-                  <rect x={x} y={y} width={size} height={size} fill="none" stroke="rgb(14 165 233)" strokeWidth="1" />
-                  <line x1={x} y1={y} x2={x + size} y2={y + size} stroke="rgb(14 165 233)" strokeWidth="1" />
-                  <line x1={x + size} y1={y} x2={x} y2={y + size} stroke="rgb(14 165 233)" strokeWidth="1" />
-                </g>
-              ))}
-            </svg>
-          )
-        })()}
+        Object.values(a4RatioLinesX(margins)).map((x, i) => (
+          <div
+            key={`a4-v-${i}`}
+            style={{ left: x, top: margins.top, bottom: margins.bottom }}
+            className="pdf-ignore pointer-events-none absolute z-10 w-px border-l border-dashed border-sky-500"
+          />
+        ))}
+      {!preview &&
+        showA4Ratio &&
+        Object.values(a4RatioLinesY(margins)).map((y, i) => (
+          <div
+            key={`a4-h-${i}`}
+            style={{ top: y, left: margins.left, right: margins.right }}
+            className="pdf-ignore pointer-events-none absolute z-10 h-px border-t border-dashed border-sky-500"
+          />
+        ))}
 
       {/* Column × row "structure grid" (see utils/layout.js) — a
           separate teal color from the grid/margin/golden-ratio guides so
