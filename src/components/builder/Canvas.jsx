@@ -205,6 +205,54 @@ function Page({
         showA4Ratio &&
         (() => {
           const variants = a4ConstructionVariants(margins)
+          // The four variants above are already mirrored left-to-right
+          // (each orientation's mirrorX pair), but not top-to-bottom — the
+          // 'vertical' pair anchors at the top, the 'horizontal' pair at
+          // the bottom (see a4ConstructionVariants' own comment), so the
+          // construction reads top-heavy. A second copy of the exact same
+          // drawing, rotated 180° around the page's own center, turns that
+          // existing left-right symmetry into full left-right-AND-top-
+          // bottom symmetry — the top-anchored pair's rotated twin lands
+          // at the bottom and vice versa — without needing a second,
+          // separately-computed geometry.
+          const renderVariants = (keyPrefix) =>
+            variants.map(({ square, diagonal, arcCenter, landingPoint, sweepFlag }, i) => (
+              <g key={`${keyPrefix}-${i}`}>
+                <rect
+                  x={square.x}
+                  y={square.y}
+                  width={square.size}
+                  height={square.size}
+                  fill="none"
+                  stroke="rgb(14 165 233)"
+                  strokeWidth="1"
+                />
+                <line
+                  x1={diagonal.x1}
+                  y1={diagonal.y1}
+                  x2={diagonal.x2}
+                  y2={diagonal.y2}
+                  stroke="rgb(14 165 233)"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d={`M ${diagonal.x1} ${diagonal.y1} A ${square.size * Math.SQRT2} ${square.size * Math.SQRT2} 0 0 ${sweepFlag} ${landingPoint.x} ${landingPoint.y}`}
+                  fill="none"
+                  stroke="rgb(14 165 233)"
+                  strokeWidth="1"
+                  strokeDasharray="4 3"
+                />
+                <line
+                  x1={arcCenter.x}
+                  y1={arcCenter.y}
+                  x2={landingPoint.x}
+                  y2={landingPoint.y}
+                  stroke="rgb(14 165 233)"
+                  strokeWidth="1"
+                  strokeDasharray="2 2"
+                />
+              </g>
+            ))
           return (
             <svg
               className="pdf-ignore pointer-events-none absolute inset-0 z-10"
@@ -212,43 +260,10 @@ function Page({
               height={SHEET_HEIGHT}
               viewBox={`0 0 ${SHEET_WIDTH} ${SHEET_HEIGHT}`}
             >
-              {variants.map(({ square, diagonal, arcCenter, landingPoint, sweepFlag }, i) => (
-                <g key={i}>
-                  <rect
-                    x={square.x}
-                    y={square.y}
-                    width={square.size}
-                    height={square.size}
-                    fill="none"
-                    stroke="rgb(14 165 233)"
-                    strokeWidth="1"
-                  />
-                  <line
-                    x1={diagonal.x1}
-                    y1={diagonal.y1}
-                    x2={diagonal.x2}
-                    y2={diagonal.y2}
-                    stroke="rgb(14 165 233)"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d={`M ${diagonal.x1} ${diagonal.y1} A ${square.size * Math.SQRT2} ${square.size * Math.SQRT2} 0 0 ${sweepFlag} ${landingPoint.x} ${landingPoint.y}`}
-                    fill="none"
-                    stroke="rgb(14 165 233)"
-                    strokeWidth="1"
-                    strokeDasharray="4 3"
-                  />
-                  <line
-                    x1={arcCenter.x}
-                    y1={arcCenter.y}
-                    x2={landingPoint.x}
-                    y2={landingPoint.y}
-                    stroke="rgb(14 165 233)"
-                    strokeWidth="1"
-                    strokeDasharray="2 2"
-                  />
-                </g>
-              ))}
+              {renderVariants('base')}
+              <g transform={`rotate(180 ${SHEET_WIDTH / 2} ${SHEET_HEIGHT / 2})`}>
+                {renderVariants('mirror')}
+              </g>
             </svg>
           )
         })()}
