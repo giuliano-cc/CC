@@ -58,11 +58,26 @@ const SECTIONS = [
 
 // Shared by any 'image' Content Library slot (Profile Photo, Signature):
 // `variant` picks the preview shape/crop defaults, since a face photo and
-// a signature scan are cropped very differently.
-function PhotoField({ value, onChange, variant = 'photo' }) {
+// a signature scan are cropped very differently. `cropMeta`/
+// `onCropMetaChange` remember the aspect/shape this slot's "Crop" button
+// last used (a small `{ aspect, circular }` JSON blob — see
+// ContentLibraryContext.jsx's IMAGE_CROP_META_KEYS) so replacing the photo
+// with a new upload can reopen the crop tool pre-set the same way instead
+// of defaulting back to "Original" every time.
+function PhotoField({ value, onChange, variant = 'photo', cropMeta, onCropMetaChange }) {
   const fileInputRef = useRef(null)
   const [isCropping, setIsCropping] = useState(false)
+  const [pendingSrc, setPendingSrc] = useState(null)
   const isSignature = variant === 'signature'
+  const storedCrop = (() => {
+    if (!cropMeta) return null
+    try {
+      const parsed = JSON.parse(cropMeta)
+      return parsed && typeof parsed === 'object' ? parsed : null
+    } catch {
+      return null
+    }
+  })()
 
   function handleFile(event) {
     const file = event.target.files?.[0]
@@ -71,10 +86,26 @@ function PhotoField({ value, onChange, variant = 'photo' }) {
     // photo can be several MB, which alone can blow the ~5-10MB per-origin
     // storage quota and make every save silently fail from then on.
     resizeImageFile(file, { maxDimension: isSignature ? 700 : 900 }).then((dataUrl) => {
-      onChange(dataUrl)
-      toast.success(`${isSignature ? 'Signature' : 'Photo'} saved`, { id: 'content-library-save' })
+      if (storedCrop) {
+        // Already cropped once before — treat this upload as a
+        // replacement photo/signature and reopen the crop tool pre-set to
+        // the same aspect/shape, instead of silently swapping in the raw,
+        // uncropped image.
+        setPendingSrc(dataUrl)
+      } else {
+        onChange(dataUrl)
+        toast.success(`${isSignature ? 'Signature' : 'Photo'} saved`, { id: 'content-library-save' })
+      }
     })
     event.target.value = ''
+  }
+
+  function applyCrop(dataUrl, meta) {
+    onChange(dataUrl)
+    onCropMetaChange?.(JSON.stringify(meta))
+    setIsCropping(false)
+    setPendingSrc(null)
+    toast.success(`${isSignature ? 'Signature' : 'Photo'} saved`, { id: 'content-library-save' })
   }
 
   return (
@@ -97,7 +128,7 @@ function PhotoField({ value, onChange, variant = 'photo' }) {
         className="flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
       >
         <Upload size={13} />
-        Upload {isSignature ? 'signature' : 'photo'}
+        {storedCrop ? `Replace ${isSignature ? 'signature' : 'photo'}` : `Upload ${isSignature ? 'signature' : 'photo'}`}
       </button>
       {value && (
         <>
@@ -119,17 +150,18 @@ function PhotoField({ value, onChange, variant = 'photo' }) {
           </button>
         </>
       )}
-      {isCropping && (
+      {(isCropping || pendingSrc) && (
         <ImageCropModal
-          imageSrc={value}
+          imageSrc={pendingSrc || value}
           initialAspect={isSignature ? 2.5 : 1}
           initialShape={isSignature ? 'rect' : 'circle'}
-          onCancel={() => setIsCropping(false)}
-          onApply={(dataUrl) => {
-            onChange(dataUrl)
+          defaultAspect={storedCrop?.aspect}
+          defaultCircular={storedCrop?.circular}
+          onCancel={() => {
             setIsCropping(false)
-            toast.success(`${isSignature ? 'Signature' : 'Photo'} saved`, { id: 'content-library-save' })
+            setPendingSrc(null)
           }}
+          onApply={applyCrop}
         />
       )}
     </div>
@@ -993,6 +1025,8 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
           value={libraries[languages[0].key][slot.key]}
           onChange={(v) => onChange(slot.key, v)}
           variant={slot.key === 'signature' ? 'signature' : 'photo'}
+          cropMeta={libraries[languages[0].key][`${slot.key}CropMeta`]}
+          onCropMetaChange={(v) => onChange(`${slot.key}CropMeta`, v)}
         />
       </div>
     )

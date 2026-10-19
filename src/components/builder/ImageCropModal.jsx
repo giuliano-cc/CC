@@ -31,16 +31,37 @@ const CROP_PRESETS = (initialAspect) => [
 // locked to a preset aspect ratio), rotate in 90° steps, pick a shape
 // preset, remove the background. Applying commits the crop (and any
 // rotation/background removal) into a new, permanent image (see
-// utils/cropImage.js) — the original upload is not kept.
-export default function ImageCropModal({ imageSrc, initialAspect = 1, initialShape = 'rect', onApply, onCancel }) {
+// utils/cropImage.js) — the original upload is not kept — and reports
+// back which preset was used (`{ aspect, circular }`, via `onApply`'s
+// second argument) so a caller that remembers it can reopen the tool
+// pre-set the same way next time, e.g. when replacing this same photo.
+export default function ImageCropModal({
+  imageSrc,
+  initialAspect = 1,
+  initialShape = 'rect',
+  // The aspect/shape to start on, when different from initialAspect/
+  // initialShape above — e.g. a previously-used crop remembered for this
+  // same image slot (see imageFields.jsx). `initialAspect`/`initialShape`
+  // still define what the "Original" preset itself means (the block's own
+  // native ratio), so the two don't collapse into one pair of props.
+  defaultAspect,
+  defaultCircular,
+  onApply,
+  onCancel,
+}) {
+  const presets = CROP_PRESETS(initialAspect)
+  const startAspect = defaultAspect !== undefined ? defaultAspect : initialAspect
+  const startCircular = defaultCircular !== undefined ? defaultCircular : initialShape === 'circle'
   // The image actually being edited — starts as the upload, but "Remove
   // background" and "Rotate" each replace it in place (before any crop is
   // committed) so the result can still be cropped afterward in this same
   // pass, and so the crop rectangle always lines up with what's on screen.
   const [currentSrc, setCurrentSrc] = useState(imageSrc)
-  const [aspect, setAspect] = useState(initialAspect)
-  const [circularCrop, setCircularCrop] = useState(initialShape === 'circle')
-  const [activePreset, setActivePreset] = useState(initialShape === 'circle' ? 'Circle' : 'Original')
+  const [aspect, setAspect] = useState(startAspect)
+  const [circularCrop, setCircularCrop] = useState(startCircular)
+  const [activePreset, setActivePreset] = useState(
+    () => presets.find((p) => p.aspect === startAspect && p.circular === startCircular)?.label || 'Free',
+  )
   const [crop, setCrop] = useState()
   const [completedCrop, setCompletedCrop] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -81,7 +102,7 @@ export default function ImageCropModal({ imageSrc, initialAspect = 1, initialSha
     setIsSaving(true)
     try {
       const dataUrl = await getCroppedImageDataUrl(imgRef.current, completedCrop)
-      onApply(dataUrl)
+      onApply(dataUrl, { aspect, circular: circularCrop })
     } finally {
       setIsSaving(false)
     }

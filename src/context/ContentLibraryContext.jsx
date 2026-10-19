@@ -110,6 +110,15 @@ const STRUCTURED_LIST_KEYS = CONTENT_SLOTS.filter((s) =>
 // reading `library.photo`/`library.signature` unchanged.
 const IMAGE_SLOT_KEYS = CONTENT_SLOTS.filter((s) => s.type === 'image').map((s) => s.key)
 
+// Not a CONTENT_SLOTS entry of its own — no Content Library card, nothing
+// to type — just a small `{ aspect, circular }` memory of the shape/ratio
+// Photo/Signature's own "Crop image" button last used (see
+// ImageCropButton in blockProperties/imageFields.jsx and PhotoField
+// below), so replacing either with a new upload can reopen the crop tool
+// already set the same way instead of defaulting back to "Original"
+// every time.
+const IMAGE_CROP_META_KEYS = IMAGE_SLOT_KEYS.map((key) => `${key}CropMeta`)
+
 // Same idea, for plain-text slots whose VALUE doesn't vary by language
 // either: a person's own name, their street/ZIP/city/phone/email/website
 // and the social links they list, plus 'contact' itself (the plain-text
@@ -147,6 +156,7 @@ const SHARED_STRUCTURED_LIST_KEYS = ['skills', 'coverLetterRecipients', 'referen
 // signature — see SlotCard's single-column branch there.
 export const SHARED_SLOT_KEYS = [
   ...IMAGE_SLOT_KEYS,
+  ...IMAGE_CROP_META_KEYS,
   ...TEXT_SHARED_KEYS,
   ...SHARED_STRUCTURED_LIST_KEYS,
   ...SHARED_STRUCTURED_LIST_KEYS.map((key) => `${key}Items`),

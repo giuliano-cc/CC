@@ -468,7 +468,7 @@ function BlockPropertiesPanel({ block, onChange }) {
           </Field>
           {!block.imageSlot && (
             <>
-              <ImageUploadField onChange={onChange} />
+              <ImageUploadField block={block} onChange={onChange} />
               <Field label="or image URL">
                 <input
                   type="text"

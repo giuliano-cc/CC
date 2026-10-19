@@ -16,8 +16,25 @@ import FontPicker from '../FontPicker'
 import ImageCropModal from '../ImageCropModal'
 import { Field, inputClasses } from './fields'
 
-export function ImageUploadField({ onChange }) {
+// `cropMeta` is a small JSON blob — `{ aspect, circular }` — remembering
+// the shape/ratio a "Crop image" pass last used, so replacing the photo
+// later can reopen the crop tool already set the same way instead of
+// defaulting back to "Original" every time. Parsed defensively since it's
+// user/import-reachable storage, not a value this app alone ever writes.
+function safeParseCropMeta(json) {
+  if (!json) return null
+  try {
+    const parsed = JSON.parse(json)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+export function ImageUploadField({ block, onChange }) {
   const fileInputRef = useRef(null)
+  const [pendingSrc, setPendingSrc] = useState(null)
+  const storedCrop = safeParseCropMeta(block?.cropMeta)
 
   function handleFile(event) {
     const file = event.target.files?.[0]
@@ -25,7 +42,17 @@ export function ImageUploadField({ onChange }) {
     // Downscaled before it ever reaches state/localStorage — a raw upload
     // can be several MB, which alone can blow the ~5-10MB per-origin
     // storage quota and make every save silently fail from then on.
-    resizeImageFile(file, { maxDimension: 1000 }).then((dataUrl) => onChange({ src: dataUrl, imageSlot: null }))
+    resizeImageFile(file, { maxDimension: 1000 }).then((dataUrl) => {
+      if (storedCrop) {
+        // This block was already cropped once — treat this upload as a
+        // replacement photo and reopen the crop tool pre-set to the same
+        // aspect/shape, instead of silently swapping in the raw,
+        // uncropped image.
+        setPendingSrc(dataUrl)
+      } else {
+        onChange({ src: dataUrl, imageSlot: null })
+      }
+    })
     event.target.value = ''
   }
 
@@ -44,15 +71,35 @@ export function ImageUploadField({ onChange }) {
         className="flex items-center justify-center gap-1.5 rounded-md border border-slate-300 py-1.5 text-sm text-slate-600 transition hover:border-primary hover:text-primary"
       >
         <Upload size={14} />
-        Upload from computer
+        {storedCrop ? 'Replace image' : 'Upload from computer'}
       </button>
+      {pendingSrc && (
+        <ImageCropModal
+          imageSrc={pendingSrc}
+          initialAspect={block?.width && block?.height ? block.width / block.height : 1}
+          initialShape={block?.shape}
+          defaultAspect={storedCrop?.aspect}
+          defaultCircular={storedCrop?.circular}
+          onCancel={() => setPendingSrc(null)}
+          onApply={(dataUrl, meta) => {
+            onChange({ src: dataUrl, imageSlot: null, cropMeta: JSON.stringify(meta) })
+            setPendingSrc(null)
+          }}
+        />
+      )}
     </>
   )
 }
 
 // Crops whichever image is actually showing (an uploaded/URL src, or the
 // Content Library photo when imageSlot is bound) and writes the cropped
-// result back to wherever it came from.
+// result back to wherever it came from. A library-bound image's crop
+// shape/ratio is remembered on that same library slot (`${imageSlot}
+// CropMeta`, e.g. `photoCropMeta`) — the same key ContentLibraryPage.jsx's
+// PhotoField reads/writes — so it's remembered regardless of which of the
+// two crop entry points (this button, or the Content Library page) was
+// used last. A direct block.src image has nowhere shared to keep that
+// memory, so it's kept on the block itself (`block.cropMeta`).
 export function ImageCropButton({ block, onChange }) {
   const { getLibrary, updateSlot } = useContentLibrary()
   const [isCropping, setIsCropping] = useState(false)
@@ -60,6 +107,8 @@ export function ImageCropButton({ block, onChange }) {
   // see ContentLibraryContext.jsx), which every language's library resolves
   // to the same value, so no particular language needs to be passed here.
   const currentSrc = block.imageSlot ? getLibrary()[block.imageSlot] : block.src
+  const cropMetaKey = block.imageSlot ? `${block.imageSlot}CropMeta` : null
+  const storedCrop = safeParseCropMeta(cropMetaKey ? getLibrary()[cropMetaKey] : block.cropMeta)
   if (!currentSrc) return null
 
   return (
@@ -77,10 +126,16 @@ export function ImageCropButton({ block, onChange }) {
           imageSrc={currentSrc}
           initialAspect={block.width && block.height ? block.width / block.height : 1}
           initialShape={block.shape}
+          defaultAspect={storedCrop?.aspect}
+          defaultCircular={storedCrop?.circular}
           onCancel={() => setIsCropping(false)}
-          onApply={(dataUrl) => {
-            if (block.imageSlot) updateSlot(block.imageSlot, dataUrl)
-            else onChange({ src: dataUrl })
+          onApply={(dataUrl, meta) => {
+            if (block.imageSlot) {
+              updateSlot(block.imageSlot, dataUrl)
+              updateSlot(cropMetaKey, JSON.stringify(meta))
+            } else {
+              onChange({ src: dataUrl, cropMeta: JSON.stringify(meta) })
+            }
             setIsCropping(false)
           }}
         />
