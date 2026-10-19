@@ -49,6 +49,7 @@ export function parsePageDroppableId(id) {
 
 function Page({
   pageIndex,
+  pageCount,
   blocks,
   margins,
   gridOffsets,
@@ -284,6 +285,8 @@ function Page({
             onRemove={removeBlock}
             onAddNestedItem={addNestedItem}
             onChangeGeometry={(geometry) => updateBlock(block.id, geometry)}
+            pageIndex={pageIndex}
+            pageCount={pageCount}
           />
         )
       })}
@@ -457,6 +460,7 @@ export default function Canvas() {
             <div style={{ width: SHEET_WIDTH, height: SHEET_HEIGHT, transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
               <Page
                 pageIndex={pageIndex}
+                pageCount={pageCount}
                 // A block with repeatAcrossPages (see layoutFields.jsx's
                 // "Repeat on every page") renders on every page from this
                 // one shared block — its own `page` is just wherever it

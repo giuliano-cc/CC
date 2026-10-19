@@ -5,6 +5,7 @@ import {
   Columns3,
   Contact,
   GraduationCap,
+  Hash,
   Heading1,
   IdCard,
   Image as ImageIcon,
@@ -44,6 +45,7 @@ export const BLOCK_TYPES = {
   SHAPE: 'shape',
   DATE: 'date',
   MAP: 'map',
+  PAGE_NUMBER: 'page_number',
 }
 
 // Block types meant to fill their own box completely (a color fill, a
@@ -133,6 +135,7 @@ export const DEFAULT_BLOCK_SIZE = {
   [BLOCK_TYPES.SHAPE]: { width: 220, height: 140 },
   [BLOCK_TYPES.DATE]: { width: 220, height: 50 },
   [BLOCK_TYPES.MAP]: { width: 698, height: 480 },
+  [BLOCK_TYPES.PAGE_NUMBER]: { width: 140, height: 30 },
 }
 
 // Interchangeable visual styles for the Skills Chart block — click the
@@ -576,6 +579,27 @@ export const BLOCK_DEFINITIONS = [
       align: 'left',
       bold: false,
       italic: false,
+      color: null,
+      fontFamily: null,
+      fontSize: null,
+    },
+  },
+  {
+    type: BLOCK_TYPES.PAGE_NUMBER,
+    label: 'Page Number',
+    icon: Hash,
+    defaultProps: {
+      // {page}/{total} are replaced with this page's own 1-based number
+      // and the document's total page count at render time (see
+      // blocks/PageNumber.jsx) — re-evaluated per page, so the same block
+      // reads "Page 1/3" on page 1 and "Page 2/3" on page 2 even though
+      // it's the exact same block when it's also set to repeat across
+      // pages (see layoutFields.jsx's "Repeat on every page").
+      format: 'Page {page}/{total}',
+      align: 'center',
+      bold: false,
+      italic: false,
+      underline: false,
       color: null,
       fontFamily: null,
       fontSize: null,

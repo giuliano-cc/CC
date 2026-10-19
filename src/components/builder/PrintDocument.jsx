@@ -56,7 +56,7 @@ export default function PrintDocument({ blocks, globalStyle, pageCount }) {
                   EDGE_TO_EDGE_TYPES.includes(block.type) ? '' : 'p-2'
                 }`}
               >
-                <BlockRenderer block={block} globalStyle={globalStyle} />
+                <BlockRenderer block={block} globalStyle={globalStyle} pageIndex={pageIndex} pageCount={pageCount} />
               </div>
             </div>
           ))}

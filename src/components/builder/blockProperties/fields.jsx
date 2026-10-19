@@ -52,6 +52,7 @@ export const BLOCK_LABELS = {
   [BLOCK_TYPES.SHAPE]: 'Shape',
   [BLOCK_TYPES.DATE]: 'Date',
   [BLOCK_TYPES.MAP]: 'Locations Map',
+  [BLOCK_TYPES.PAGE_NUMBER]: 'Page Number',
 }
 
 // Generic "pick a Content Library slot" select, used for fields that bind

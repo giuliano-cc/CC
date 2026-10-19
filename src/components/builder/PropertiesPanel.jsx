@@ -153,11 +153,15 @@ function BlockPropertiesPanel({ block, onChange }) {
   const isHeading = block.type === BLOCK_TYPES.HEADING
   const isText = block.type === BLOCK_TYPES.TEXT
   const isImage = block.type === BLOCK_TYPES.IMAGE
-  const hasTypography = [BLOCK_TYPES.HEADING, BLOCK_TYPES.TEXT, BLOCK_TYPES.QUOTE, BLOCK_TYPES.DATE].includes(
-    block.type,
-  )
+  const hasTypography = [
+    BLOCK_TYPES.HEADING,
+    BLOCK_TYPES.TEXT,
+    BLOCK_TYPES.QUOTE,
+    BLOCK_TYPES.DATE,
+    BLOCK_TYPES.PAGE_NUMBER,
+  ].includes(block.type)
   const canBindContent =
-    (hasTypography && block.type !== BLOCK_TYPES.DATE) ||
+    (hasTypography && block.type !== BLOCK_TYPES.DATE && block.type !== BLOCK_TYPES.PAGE_NUMBER) ||
     block.type === BLOCK_TYPES.HEADER ||
     block.type === BLOCK_TYPES.FOOTER
 
@@ -383,20 +387,39 @@ function BlockPropertiesPanel({ block, onChange }) {
           </>
         )}
 
-      {showContent && !block.contentSlot && block.type !== BLOCK_TYPES.DATE && (
-        <Field label="Text">
-          <textarea
-            rows={3}
-            value={block.content}
-            onChange={(e) => onChange({ content: e.target.value })}
-            className={`${inputClasses} resize-none`}
+      {block.type === BLOCK_TYPES.PAGE_NUMBER && (
+        <Field label="Format">
+          <input
+            type="text"
+            value={block.format || 'Page {page}/{total}'}
+            onChange={(e) => onChange({ format: e.target.value })}
+            className={inputClasses}
           />
           <p className="mt-1 text-xs text-slate-400">
-            Tip: <code className="rounded bg-slate-100 px-1">[link text](https://example.com)</code> turns those
-            words into a clickable link.
+            <code className="rounded bg-slate-100 px-1">{'{page}'}</code> and{' '}
+            <code className="rounded bg-slate-100 px-1">{'{total}'}</code> are replaced with this page's own
+            number and the document's total page count.
           </p>
         </Field>
       )}
+
+      {showContent &&
+        !block.contentSlot &&
+        block.type !== BLOCK_TYPES.DATE &&
+        block.type !== BLOCK_TYPES.PAGE_NUMBER && (
+          <Field label="Text">
+            <textarea
+              rows={3}
+              value={block.content}
+              onChange={(e) => onChange({ content: e.target.value })}
+              className={`${inputClasses} resize-none`}
+            />
+            <p className="mt-1 text-xs text-slate-400">
+              Tip: <code className="rounded bg-slate-100 px-1">[link text](https://example.com)</code> turns those
+              words into a clickable link.
+            </p>
+          </Field>
+        )}
 
       {block.type === BLOCK_TYPES.TEXT &&
         !block.contentSlot &&

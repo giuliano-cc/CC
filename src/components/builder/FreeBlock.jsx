@@ -145,6 +145,8 @@ export default function FreeBlock({
   onRemove,
   onAddNestedItem,
   onChangeGeometry,
+  pageIndex = 0,
+  pageCount = 1,
 }) {
   const dragState = useRef(null)
 
@@ -444,6 +446,8 @@ export default function FreeBlock({
           }
           onUpdateBlock={onChangeGeometry}
           globalStyle={globalStyle}
+          pageIndex={pageIndex}
+          pageCount={pageCount}
         />
       </div>
 

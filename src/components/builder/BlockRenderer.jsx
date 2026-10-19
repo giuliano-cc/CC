@@ -9,6 +9,7 @@ import renderImageBlock from './blocks/Image'
 import renderDividerBlock from './blocks/Divider'
 import renderShapeBlock from './blocks/Shape'
 import renderDateBlock from './blocks/DateBlock'
+import renderPageNumberBlock from './blocks/PageNumber'
 import renderQuoteBlock from './blocks/Quote'
 import renderFooterBlock from './blocks/Footer'
 import renderSkillsChartBlock from './blocks/SkillsChart'
@@ -43,6 +44,7 @@ const BLOCK_RENDERERS = {
   [BLOCK_TYPES.DIVIDER]: renderDividerBlock,
   [BLOCK_TYPES.SHAPE]: renderShapeBlock,
   [BLOCK_TYPES.DATE]: renderDateBlock,
+  [BLOCK_TYPES.PAGE_NUMBER]: renderPageNumberBlock,
   [BLOCK_TYPES.QUOTE]: renderQuoteBlock,
   [BLOCK_TYPES.FOOTER]: renderFooterBlock,
   [BLOCK_TYPES.SKILLS_CHART]: renderSkillsChartBlock,
@@ -65,6 +67,8 @@ export default function BlockRenderer({
   onAddItem,
   onUpdateBlock,
   globalStyle = {},
+  pageIndex = 0,
+  pageCount = 1,
 }) {
   const { getLibrary, getTitleOverrides } = useContentLibrary()
   const library = getLibrary(globalStyle.contentLanguage)
@@ -85,6 +89,8 @@ export default function BlockRenderer({
       interactive={interactive}
       selectedId={selectedId}
       onSelectItem={onSelectItem}
+      pageIndex={pageIndex}
+      pageCount={pageCount}
     />
   )
 }
