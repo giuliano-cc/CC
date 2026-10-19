@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop'
+import ReactCrop, { centerCrop, convertToPixelCrop, makeAspectCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { Check, Eraser, Loader2, RotateCcw, RotateCw, X } from 'lucide-react'
 import { getCroppedImageDataUrl, rotateImageDataUrl } from '../../utils/cropImage'
@@ -63,16 +63,27 @@ export default function ImageCropModal({
     () => presets.find((p) => p.aspect === startAspect && p.circular === startCircular)?.label || 'Free',
   )
   const [crop, setCrop] = useState()
-  const [completedCrop, setCompletedCrop] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isRotating, setIsRotating] = useState(false)
   const [isRemovingBg, setIsRemovingBg] = useState(false)
   const [bgError, setBgError] = useState(false)
+  // Lets the corners/edges be placed more precisely on a small or
+  // detailed image: `zoom` scales the on-screen image up from its normal
+  // fit size (`baseSize`, captured once per image load) — the crop
+  // rectangle itself stays defined in percent (see `crop`'s `unit: '%'`),
+  // so it scales right along with the image instead of needing to be
+  // redrawn after zooming. The surrounding area becomes scrollable
+  // (`overflow-auto` below) to reach whichever corner is currently
+  // off-screen.
+  const [zoom, setZoom] = useState(1)
+  const [baseSize, setBaseSize] = useState(null)
   const imgRef = useRef(null)
 
   function onImageLoad(e) {
-    const { width, height } = e.currentTarget
-    setCrop(centeredCrop(width, height, aspect))
+    const { clientWidth, clientHeight } = e.currentTarget
+    setBaseSize({ width: clientWidth, height: clientHeight })
+    setZoom(1)
+    setCrop(centeredCrop(clientWidth, clientHeight, aspect))
   }
 
   function applyPreset(preset) {
@@ -91,17 +102,22 @@ export default function ImageCropModal({
       const rotated = await rotateImageDataUrl(currentSrc, degrees)
       setCurrentSrc(rotated)
       setCrop(undefined)
-      setCompletedCrop(null)
     } finally {
       setIsRotating(false)
     }
   }
 
+  // Computed fresh from the live rendered image size rather than reusing
+  // a pixel crop captured by an earlier onComplete callback — the crop
+  // rectangle's percent position is always current, but a cached PIXEL
+  // crop would go stale the moment `zoom` resizes the on-screen image
+  // without the user also redragging the selection.
   async function handleApply() {
-    if (!completedCrop || !imgRef.current) return
+    if (!crop || !imgRef.current) return
     setIsSaving(true)
     try {
-      const dataUrl = await getCroppedImageDataUrl(imgRef.current, completedCrop)
+      const pixelCrop = convertToPixelCrop(crop, imgRef.current.width, imgRef.current.height)
+      const dataUrl = await getCroppedImageDataUrl(imgRef.current, pixelCrop)
       onApply(dataUrl, { aspect, circular: circularCrop })
     } finally {
       setIsSaving(false)
@@ -139,11 +155,14 @@ export default function ImageCropModal({
           </button>
         </div>
 
-        <div className="relative flex flex-1 items-center justify-center overflow-auto bg-slate-900 p-4">
+        <div
+          className={`relative flex flex-1 overflow-auto bg-slate-900 p-4 ${
+            zoom > 1 ? 'items-start justify-start' : 'items-center justify-center'
+          }`}
+        >
           <ReactCrop
             crop={crop}
             onChange={(_, percentCrop) => setCrop(percentCrop)}
-            onComplete={(pixelCrop) => setCompletedCrop(pixelCrop)}
             aspect={aspect}
             circularCrop={circularCrop}
             minWidth={20}
@@ -154,13 +173,20 @@ export default function ImageCropModal({
                 a higher-specificity rule than any Tailwind utility class
                 here — only an inline style reliably wins that cascade, so
                 a tall portrait photo is still fully visible (and
-                selectable end to end) instead of overflowing the modal. */}
+                selectable end to end) instead of overflowing the modal.
+                Once `baseSize` is known (right after the image loads),
+                an explicit pixel size takes over so `zoom` can scale it
+                up beyond that normal fit size. */}
             <img
               ref={imgRef}
               src={currentSrc}
               alt=""
               onLoad={onImageLoad}
-              style={{ maxHeight: '60vh', maxWidth: '100%' }}
+              style={
+                baseSize
+                  ? { width: `${baseSize.width * zoom}px`, height: `${baseSize.height * zoom}px` }
+                  : { maxHeight: '60vh', maxWidth: '100%' }
+              }
             />
           </ReactCrop>
           {(isRemovingBg || isRotating) && (
@@ -174,6 +200,20 @@ export default function ImageCropModal({
         </div>
 
         <div className="flex shrink-0 flex-col gap-3 border-t border-slate-200 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="w-16 shrink-0 text-xs text-slate-500">Zoom</span>
+            <input
+              type="range"
+              min={1}
+              max={4}
+              step={0.1}
+              value={zoom}
+              disabled={!baseSize}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="flex-1"
+            />
+            <span className="w-10 shrink-0 text-right text-xs text-slate-400">{zoom.toFixed(1)}×</span>
+          </div>
           <div className="flex items-center gap-3">
             <span className="w-16 shrink-0 text-xs text-slate-500">Rotate</span>
             <button
@@ -241,7 +281,7 @@ export default function ImageCropModal({
             <button
               type="button"
               onClick={handleApply}
-              disabled={isSaving || !completedCrop}
+              disabled={isSaving || !crop}
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-70"
             >
               <Check size={15} />
