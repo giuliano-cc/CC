@@ -128,7 +128,19 @@ export default function ImageCropModal({ imageSrc, initialAspect = 1, initialSha
             minWidth={20}
             minHeight={20}
           >
-            <img ref={imgRef} src={currentSrc} alt="" onLoad={onImageLoad} className="max-h-[60vh] max-w-full" />
+            {/* react-image-crop's own stylesheet sets
+                `.ReactCrop__child-wrapper > img { max-height: inherit }`,
+                a higher-specificity rule than any Tailwind utility class
+                here — only an inline style reliably wins that cascade, so
+                a tall portrait photo is still fully visible (and
+                selectable end to end) instead of overflowing the modal. */}
+            <img
+              ref={imgRef}
+              src={currentSrc}
+              alt=""
+              onLoad={onImageLoad}
+              style={{ maxHeight: '60vh', maxWidth: '100%' }}
+            />
           </ReactCrop>
           {(isRemovingBg || isRotating) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/70 text-white">
