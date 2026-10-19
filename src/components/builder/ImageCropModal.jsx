@@ -1,35 +1,86 @@
-import { useState } from 'react'
-import Cropper from 'react-easy-crop'
+import { useRef, useState } from 'react'
+import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 import { Check, Eraser, Loader2, RotateCcw, RotateCw, X } from 'lucide-react'
-import { getCroppedImageDataUrl } from '../../utils/cropImage'
+import { getCroppedImageDataUrl, rotateImageDataUrl } from '../../utils/cropImage'
 import { removeImageBackground } from '../../utils/backgroundRemoval'
 
-// Full-screen crop tool: drag to reposition, slider to zoom/rotate, pick a
-// shape (rect free-form / square / circle) to match how the image will
-// actually display on the sheet. Applying commits the crop (and any
+// A centered starting rectangle for a given aspect (or, with no aspect,
+// 80% of the image either way) — same "recenter whenever the aspect
+// preset changes" shape the old slider-based tool had, just expressed as
+// an actual draggable/resizable selection rectangle instead of a crop
+// window the image pans/zooms underneath.
+function centeredCrop(mediaWidth, mediaHeight, aspect) {
+  const base = aspect
+    ? makeAspectCrop({ unit: '%', width: 80 }, aspect, mediaWidth, mediaHeight)
+    : { unit: '%', width: 80, height: 80 }
+  return centerCrop(base, mediaWidth, mediaHeight)
+}
+
+const CROP_PRESETS = (initialAspect) => [
+  { label: 'Free', aspect: undefined, circular: false },
+  { label: 'Original', aspect: initialAspect, circular: false },
+  { label: 'Square', aspect: 1, circular: false },
+  { label: 'Portrait', aspect: 3 / 4, circular: false },
+  { label: 'Wide', aspect: 16 / 9, circular: false },
+  { label: 'Circle', aspect: 1, circular: true },
+]
+
+// Full-screen crop tool: drag/resize a rectangular selection directly
+// over the image (react-image-crop — corner/edge handles, optionally
+// locked to a preset aspect ratio), rotate in 90° steps, pick a shape
+// preset, remove the background. Applying commits the crop (and any
 // rotation/background removal) into a new, permanent image (see
 // utils/cropImage.js) — the original upload is not kept.
 export default function ImageCropModal({ imageSrc, initialAspect = 1, initialShape = 'rect', onApply, onCancel }) {
   // The image actually being edited — starts as the upload, but "Remove
-  // background" replaces it in place (before any crop/rotation is
-  // committed) so the result can still be cropped/rotated afterward in
-  // this same pass.
+  // background" and "Rotate" each replace it in place (before any crop is
+  // committed) so the result can still be cropped afterward in this same
+  // pass, and so the crop rectangle always lines up with what's on screen.
   const [currentSrc, setCurrentSrc] = useState(imageSrc)
-  const [crop, setCrop] = useState({ x: 0, y: 0 })
-  const [zoom, setZoom] = useState(1)
-  const [rotation, setRotation] = useState(0)
   const [aspect, setAspect] = useState(initialAspect)
-  const [cropShape, setCropShape] = useState(initialShape === 'circle' ? 'round' : 'rect')
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
+  const [circularCrop, setCircularCrop] = useState(initialShape === 'circle')
+  const [activePreset, setActivePreset] = useState(initialShape === 'circle' ? 'Circle' : 'Original')
+  const [crop, setCrop] = useState()
+  const [completedCrop, setCompletedCrop] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isRotating, setIsRotating] = useState(false)
   const [isRemovingBg, setIsRemovingBg] = useState(false)
   const [bgError, setBgError] = useState(false)
+  const imgRef = useRef(null)
+
+  function onImageLoad(e) {
+    const { width, height } = e.currentTarget
+    setCrop(centeredCrop(width, height, aspect))
+  }
+
+  function applyPreset(preset) {
+    setAspect(preset.aspect)
+    setCircularCrop(preset.circular)
+    setActivePreset(preset.label)
+    if (imgRef.current) {
+      const { width, height } = imgRef.current
+      setCrop(centeredCrop(width, height, preset.aspect))
+    }
+  }
+
+  async function handleRotate(degrees) {
+    setIsRotating(true)
+    try {
+      const rotated = await rotateImageDataUrl(currentSrc, degrees)
+      setCurrentSrc(rotated)
+      setCrop(undefined)
+      setCompletedCrop(null)
+    } finally {
+      setIsRotating(false)
+    }
+  }
 
   async function handleApply() {
-    if (!croppedAreaPixels) return
+    if (!completedCrop || !imgRef.current) return
     setIsSaving(true)
     try {
-      const dataUrl = await getCroppedImageDataUrl(currentSrc, croppedAreaPixels, rotation)
+      const dataUrl = await getCroppedImageDataUrl(imgRef.current, completedCrop)
       onApply(dataUrl)
     } finally {
       setIsSaving(false)
@@ -67,91 +118,66 @@ export default function ImageCropModal({ imageSrc, initialAspect = 1, initialSha
           </button>
         </div>
 
-        <div className="relative flex-1 bg-slate-900">
-          <Cropper
-            image={currentSrc}
+        <div className="relative flex flex-1 items-center justify-center overflow-auto bg-slate-900 p-4">
+          <ReactCrop
             crop={crop}
-            zoom={zoom}
-            rotation={rotation}
+            onChange={(_, percentCrop) => setCrop(percentCrop)}
+            onComplete={(pixelCrop) => setCompletedCrop(pixelCrop)}
             aspect={aspect}
-            cropShape={cropShape}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onRotationChange={setRotation}
-            onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
-          />
-          {isRemovingBg && (
+            circularCrop={circularCrop}
+            minWidth={20}
+            minHeight={20}
+          >
+            <img ref={imgRef} src={currentSrc} alt="" onLoad={onImageLoad} className="max-h-[60vh] max-w-full" />
+          </ReactCrop>
+          {(isRemovingBg || isRotating) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/70 text-white">
               <Loader2 size={24} className="animate-spin" />
-              <p className="text-xs">Removing background — the first time can take a moment.</p>
+              {isRemovingBg && (
+                <p className="text-xs">Removing background — the first time can take a moment.</p>
+              )}
             </div>
           )}
         </div>
 
         <div className="flex shrink-0 flex-col gap-3 border-t border-slate-200 px-4 py-3">
           <div className="flex items-center gap-3">
-            <span className="w-16 shrink-0 text-xs text-slate-500">Zoom</span>
-            <input
-              type="range"
-              min={1}
-              max={4}
-              step={0.05}
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="flex-1"
-            />
-          </div>
-          <div className="flex items-center gap-3">
             <span className="w-16 shrink-0 text-xs text-slate-500">Rotate</span>
             <button
               type="button"
-              onClick={() => setRotation((r) => (r - 90 + 360) % 360)}
+              onClick={() => handleRotate(-90)}
+              disabled={isRotating}
               title="Rotate 90° left"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500 transition hover:border-primary hover:text-primary"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RotateCcw size={14} />
             </button>
-            <input
-              type="range"
-              min={0}
-              max={359}
-              value={rotation}
-              onChange={(e) => setRotation(Number(e.target.value))}
-              className="flex-1"
-            />
             <button
               type="button"
-              onClick={() => setRotation((r) => (r + 90) % 360)}
+              onClick={() => handleRotate(90)}
+              disabled={isRotating}
               title="Rotate 90° right"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500 transition hover:border-primary hover:text-primary"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RotateCw size={14} />
             </button>
+            <span className="text-xs text-slate-400">Drag the rectangle's corners/edges to select precisely.</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="w-16 shrink-0 text-xs text-slate-500">Shape</span>
             <div className="flex flex-1 flex-wrap items-center gap-1.5">
-              {[
-                { label: 'Original', aspectValue: initialAspect, shape: 'rect' },
-                { label: 'Square', aspectValue: 1, shape: 'rect' },
-                { label: 'Portrait', aspectValue: 3 / 4, shape: 'rect' },
-                { label: 'Wide', aspectValue: 16 / 9, shape: 'rect' },
-                { label: 'Circle', aspectValue: 1, shape: 'round' },
-              ].map((opt) => (
+              {CROP_PRESETS(initialAspect).map((preset) => (
                 <button
-                  key={opt.label}
+                  key={preset.label}
                   type="button"
-                  onClick={() => {
-                    setAspect(opt.aspectValue)
-                    setCropShape(opt.shape)
-                  }}
+                  onClick={() => applyPreset(preset)}
                   className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
-                    cropShape === opt.shape && aspect === opt.aspectValue
+                    activePreset === preset.label
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-slate-300 text-slate-600 hover:border-primary hover:text-primary'
                   }`}
                 >
-                  {opt.label}
+                  {preset.label}
                 </button>
               ))}
               <button
@@ -182,7 +208,7 @@ export default function ImageCropModal({ imageSrc, initialAspect = 1, initialSha
             <button
               type="button"
               onClick={handleApply}
-              disabled={isSaving}
+              disabled={isSaving || !completedCrop}
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-70"
             >
               <Check size={15} />
