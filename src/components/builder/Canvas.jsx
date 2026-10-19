@@ -7,6 +7,7 @@ import {
   Eye,
   EyeOff,
   Grid3x3,
+  ImageOff,
   LayoutTemplate,
   Minus,
   Plus,
@@ -58,6 +59,7 @@ function Page({
   showStructureGrid,
   structureGrid,
   preview,
+  hideLocked,
   zoom,
 }) {
   const {
@@ -257,32 +259,41 @@ function Page({
         </div>
       )}
 
-      {blocks.map((block) => (
-        <FreeBlock
-          key={block.id}
-          block={block}
-          isSelected={selectedIds.includes(block.id)}
-          isOnlySelected={selectedIds.length === 1 && selectedIds[0] === block.id}
-          selectedBlockId={selectedBlockId}
-          margins={margins}
-          siblings={blocks.filter((b) => b.id !== block.id && typeof b.x === 'number')}
-          globalStyle={globalStyle}
-          snapToGrid={showGrid}
-          gridOffsets={gridOffsets}
-          snapToGoldenRatio={showGoldenRatio}
-          goldenOffsets={goldenOffsets}
-          snapToA4Ratio={showA4Ratio}
-          snapToStructureGrid={showStructureGrid}
-          structureGrid={structureGrid}
-          zoom={zoom}
-          preview={preview}
-          onGuides={setGuides}
-          onSelect={selectBlock}
-          onRemove={removeBlock}
-          onAddNestedItem={addNestedItem}
-          onChangeGeometry={(geometry) => updateBlock(block.id, geometry)}
-        />
-      ))}
+      {blocks.map((block) => {
+        // "Hide locked images" (see Canvas()'s toolbar) is a temporary
+        // peek while editing, not a real change to the document — a
+        // locked block (see layoutFields.jsx's "Lock as background")
+        // simply isn't rendered here while it's on, so whatever's
+        // underneath/around it is easier to see; it still prints/
+        // exports normally, since PrintDocument.jsx never reads this.
+        if (hideLocked && block.locked) return null
+        return (
+          <FreeBlock
+            key={block.id}
+            block={block}
+            isSelected={selectedIds.includes(block.id)}
+            isOnlySelected={selectedIds.length === 1 && selectedIds[0] === block.id}
+            selectedBlockId={selectedBlockId}
+            margins={margins}
+            siblings={blocks.filter((b) => b.id !== block.id && typeof b.x === 'number')}
+            globalStyle={globalStyle}
+            snapToGrid={showGrid}
+            gridOffsets={gridOffsets}
+            snapToGoldenRatio={showGoldenRatio}
+            goldenOffsets={goldenOffsets}
+            snapToA4Ratio={showA4Ratio}
+            snapToStructureGrid={showStructureGrid}
+            structureGrid={structureGrid}
+            zoom={zoom}
+            preview={preview}
+            onGuides={setGuides}
+            onSelect={selectBlock}
+            onRemove={removeBlock}
+            onAddNestedItem={addNestedItem}
+            onChangeGeometry={(geometry) => updateBlock(block.id, geometry)}
+          />
+        )
+      })}
 
       {guides?.vLines.map((x) => (
         <div
@@ -316,6 +327,7 @@ export default function Canvas() {
   const [showGoldenRatio, setShowGoldenRatio] = useState(false)
   const [showA4Ratio, setShowA4Ratio] = useState(false)
   const [showStructureGrid, setShowStructureGrid] = useState(false)
+  const [hideLocked, setHideLocked] = useState(false)
   const [preview, setPreview] = useState(false)
   const [zoom, setZoom] = useState(1)
 
@@ -400,6 +412,23 @@ export default function Canvas() {
         >
           <LayoutTemplate size={16} />
         </button>
+        <button
+          type="button"
+          onClick={() => setHideLocked((v) => !v)}
+          disabled={preview}
+          title={
+            hideLocked
+              ? 'Show blocks locked as background'
+              : 'Hide blocks locked as background (a peek while editing — they still print/export normally)'
+          }
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-30 ${
+            hideLocked
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-slate-200 bg-white text-slate-500 hover:border-primary hover:text-primary'
+          }`}
+        >
+          <ImageOff size={16} />
+        </button>
         <div className="flex flex-col items-center gap-1 rounded-md border border-slate-200 bg-white p-1 shadow-sm">
           <button
             type="button"
@@ -446,6 +475,7 @@ export default function Canvas() {
                 showStructureGrid={showStructureGrid}
                 structureGrid={structureGrid}
                 preview={preview}
+                hideLocked={hideLocked}
                 zoom={zoom}
               />
             </div>
