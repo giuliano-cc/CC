@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { ArrowLeft, ChevronDown, ChevronUp, Copy, Crop, Download, Trash2, Upload, User } from 'lucide-react'
@@ -16,6 +16,7 @@ import {
   emptyReference,
   emptyRecipient,
   LANGUAGE_LEVELS,
+  moveArrayItem,
   parseChecklist,
   parseEntries,
   parseLanguages,
@@ -752,6 +753,41 @@ function EntryFieldLabel({ label, title, className = '', children }) {
   )
 }
 
+// The "#" position box next to a reorderable entry (currently just
+// Selected Works, see EntriesField's showNumber) — typing a new number
+// jumps the entry straight there instead of clicking ↑/↓ one step at a
+// time, which gets tedious moving something from, say, #10 to #1. Its
+// own draft state (rather than a plain controlled `value={position}`)
+// keeps what's being typed on screen while mid-edit, re-syncing to the
+// real position via the effect below once it isn't — both right after
+// this exact row's own move commits, and whenever some other row's move
+// shifts this one over instead.
+function EntryPositionInput({ position, max, onMoveTo }) {
+  const [draft, setDraft] = useState(String(position))
+  useEffect(() => setDraft(String(position)), [position])
+
+  function commit() {
+    const parsed = parseInt(draft, 10)
+    if (Number.isFinite(parsed)) onMoveTo(parsed)
+    else setDraft(String(position))
+  }
+
+  return (
+    <input
+      type="number"
+      min={1}
+      max={max}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+      }}
+      className={`${inputClasses} !w-14 shrink-0 text-center`}
+    />
+  )
+}
+
 // Repeatable Work Experience / Education entry: title (Job Role / Degree),
 // subtitle (Company / Institution), an optional location, a date range
 // with a "current/ongoing" flag, and a description (rendered as bullet
@@ -801,8 +837,19 @@ function EntriesField({
         <div key={item.id || i} className="flex flex-col gap-2 rounded-md border border-slate-200 p-2.5">
           <div className="flex items-end gap-1.5">
             {showNumber && (
-              <EntryFieldLabel label="#" title="This entry's number — follows this list's own order; use the ↑/↓ buttons to change it">
-                <div className={`${inputClasses} !w-10 shrink-0 text-center text-slate-400`}>{i + 1}</div>
+              <EntryFieldLabel label="#" title="This entry's position — type a number to jump it there, or use the ↑/↓ buttons">
+                {onMoveEntry ? (
+                  <EntryPositionInput
+                    position={i + 1}
+                    max={items.length}
+                    onMoveTo={(n) => {
+                      const target = Math.max(0, Math.min(items.length - 1, n - 1))
+                      if (target !== i) onMoveEntry(i, target - i)
+                    }}
+                  />
+                ) : (
+                  <div className={`${inputClasses} !w-14 shrink-0 text-center text-slate-400`}>{i + 1}</div>
+                )}
               </EntryFieldLabel>
             )}
             <EntryFieldLabel label={titleLabel} className="min-w-0 flex-1">
@@ -1122,8 +1169,7 @@ function SlotCard({ slot, libraries, languages, onChange, onBlur }) {
       const items = parseEntries(lib[itemsKey], lib[slotKey])
       const target = index + delta
       if (target < 0 || target >= items.length) return
-      const next = [...items]
-      ;[next[index], next[target]] = [next[target], next[index]]
+      const next = moveArrayItem(items, index, target)
       onChange(itemsKey, JSON.stringify(next), lang.key)
       onChange(slotKey, composeEntriesText(next), lang.key)
     })

@@ -5,6 +5,23 @@
 // editors in ContentLibraryPage read/write, so a checkbox or a language
 // level can be edited without losing the other rows' data.
 
+// Moves the item at `fromIndex` to `toIndex`, shifting everything between
+// them over by one — unlike swapping the two positions, this is correct
+// for a move of any distance (dragging entry #10 to #1 should push 1-9
+// down by one each, not just trade places with whatever's currently at
+// #1). A `delta` of ±1 (the ↑/↓ reorder buttons) happens to produce the
+// same result either way, which is why the swap-based version of this
+// worked fine until a typed "move to position #" field needed an
+// arbitrary distance to behave correctly too.
+export function moveArrayItem(items, fromIndex, toIndex) {
+  if (fromIndex === toIndex || fromIndex < 0 || fromIndex >= items.length) return items
+  const clampedTo = Math.max(0, Math.min(items.length - 1, toIndex))
+  const next = [...items]
+  const [moved] = next.splice(fromIndex, 1)
+  next.splice(clampedTo, 0, moved)
+  return next
+}
+
 // Checklist items: { text, visible, level }. `visible` controls whether
 // the item is included in the derived plain-text value (and therefore
 // shown on the CV) without having to delete it. `level` (0-100, optional)
