@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Lock, Trash2 } from 'lucide-react'
 import { BLOCK_TYPES, EDGE_TO_EDGE_TYPES } from '../../utils/blockTypes'
 import {
   a4RatioLinesX,
@@ -177,6 +177,13 @@ export default function FreeBlock({
       return
     }
     onSelect(block.id)
+
+    // A locked block ("Lock as background" — see layoutFields.jsx) stays
+    // selectable, so its Properties panel (and the "Lock as background"
+    // checkbox to undo it) is still reachable, but doesn't move — the
+    // whole point of locking it is to stop it from being accidentally
+    // dragged while working on whatever sits on top of it.
+    if (block.locked) return
 
     dragState.current = {
       mode: 'move',
@@ -423,8 +430,8 @@ export default function FreeBlock({
           preview
             ? 'border-transparent'
             : isSelected
-              ? 'cursor-move border-primary ring-2 ring-primary/20'
-              : 'cursor-move border-transparent hover:border-slate-200'
+              ? `border-primary ring-2 ring-primary/20 ${block.locked ? 'cursor-default' : 'cursor-move'}`
+              : `border-transparent hover:border-slate-200 ${block.locked ? 'cursor-default' : 'cursor-move'}`
         }`}
       >
         <BlockRenderer
@@ -440,7 +447,16 @@ export default function FreeBlock({
         />
       </div>
 
-      {!preview && (
+      {!preview && block.locked && isSelected && (
+        <div
+          title="Locked as background — uncheck “Lock as background” in the panel to move/resize it again"
+          className="pdf-ignore absolute -left-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-slate-600 text-white shadow"
+        >
+          <Lock size={12} />
+        </div>
+      )}
+
+      {!preview && !block.locked && (
         <button
           type="button"
           data-no-drag
@@ -456,6 +472,7 @@ export default function FreeBlock({
       )}
 
       {!preview &&
+        !block.locked &&
         isOnlySelected &&
         RESIZE_HANDLES.map((handle) => (
           <div

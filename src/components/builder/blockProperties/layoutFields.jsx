@@ -272,6 +272,23 @@ export function PositionSizeFields({ block, onChange }) {
           Bring to front
         </button>
       </div>
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={!!block.locked}
+          onChange={(e) => {
+            const locked = e.target.checked
+            onChange({ locked })
+            // A background only stays a background if it's actually
+            // behind everything else the moment it's locked — otherwise
+            // "lock" would just freeze it wherever it happened to be in
+            // the stacking order, which (for an image dropped in after
+            // its surrounding content) is usually on top.
+            if (locked) sendToBack(block.id)
+          }}
+        />
+        Lock as background (behind new blocks, can't be dragged/resized)
+      </label>
     </div>
   )
 }

@@ -305,10 +305,12 @@ export function BuilderProvider({
       } else {
         setSelectedIds([id])
       }
-      // A background Shape is deliberately placed behind other content (see
-      // addBlock/sendToBack) — auto-fronting it on every select/drag would
-      // undo that the moment you click it to change its color.
-      if (block?.type !== BLOCK_TYPES.SHAPE) bringToFront(id)
+      // A background Shape, or any block locked as a background (see
+      // layoutFields.jsx's "Lock as background"), is deliberately placed
+      // behind other content (see addBlock/sendToBack) — auto-fronting it
+      // on every select/drag would undo that the moment you click it to
+      // change its color or check its properties.
+      if (block?.type !== BLOCK_TYPES.SHAPE && !block?.locked) bringToFront(id)
     },
     [bringToFront],
   )
