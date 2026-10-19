@@ -263,9 +263,11 @@ export default function FreeBlock({
       }
       if (snapToA4Ratio) {
         // Same idea as the golden ratio guide above, but with no offset
-        // duplicate lines of its own.
-        Object.values(a4RatioLinesX(margins)).forEach((v) => xTargets.push(v, v - block.width, v - block.width / 2))
-        Object.values(a4RatioLinesY(margins)).forEach((v) => yTargets.push(v, v - block.height, v - block.height / 2))
+        // duplicate lines of its own, and no margins — the guide itself
+        // is anchored to the page's own edges and center, not the margin
+        // box.
+        Object.values(a4RatioLinesX()).forEach((v) => xTargets.push(v, v - block.width, v - block.width / 2))
+        Object.values(a4RatioLinesY()).forEach((v) => yTargets.push(v, v - block.height, v - block.height / 2))
       }
       if (snapToStructureGrid) {
         // Column/row edges are true reference lines like the golden
@@ -344,8 +346,8 @@ export default function FreeBlock({
     const goldenY = snapToGoldenRatio
       ? goldenSnapTargets(goldenRatioLinesY(margins), goldenRatioOffsetLinesY(margins, goldenOffsets))
       : []
-    const a4X = snapToA4Ratio ? Object.values(a4RatioLinesX(margins)) : []
-    const a4Y = snapToA4Ratio ? Object.values(a4RatioLinesY(margins)) : []
+    const a4X = snapToA4Ratio ? Object.values(a4RatioLinesX()) : []
+    const a4Y = snapToA4Ratio ? Object.values(a4RatioLinesY()) : []
     const columnX = snapToStructureGrid ? structureColumnLines(margins, structureGrid.columns, structureGrid.gutter) : []
     const rowY = snapToStructureGrid ? structureRowLines(margins, structureGrid.rows, structureGrid.gutter) : []
 

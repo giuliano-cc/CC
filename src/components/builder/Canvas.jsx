@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { useBuilder } from '../../context/BuilderContext'
 import {
-  a4ConstructionVariants,
+  a4Squares,
   goldenRatioLinesX,
   goldenRatioLinesY,
   goldenRatioOffsetLinesX,
@@ -192,67 +192,22 @@ function Page({
             />
           ))}
 
-      {/* A4 ratio guide: the classic square + diagonal + swung-arc
-          construction behind the 1:√2 ratio (the ratio the page itself
-          already is), not just a split line like the golden ratio guide
-          above — an SVG overlay, since CSS borders can't draw the arc.
-          Drawn once per corner of the margin box (see
-          a4ConstructionVariants) so the same reference is available for
-          a composition anchored at any of the four corners, not just
-          the top-left. Clipped to the page by the page's own
-          overflow-hidden, same as every other guide here. */}
+      {/* A4 ratio guide: the minimal construction behind the page's own
+          1:√2 ratio — two squares (each side = half the page height,
+          so each one's own diagonal is exactly the page's width), run
+          from the page's own top edge to its own bottom edge with no
+          margin inset, meeting exactly in the middle with neither a gap
+          nor an overlap. Centered horizontally, so left-right symmetry
+          is automatic; stacked top/bottom, so top-bottom symmetry is
+          too — no arc, no mirrored second copy needed. An SVG overlay
+          purely for convenience (plain divs could draw this, but the
+          diagonals need line elements regardless). Clipped to the page
+          by the page's own overflow-hidden, same as every other guide
+          here. */}
       {!preview &&
         showA4Ratio &&
         (() => {
-          const variants = a4ConstructionVariants(margins)
-          // The four variants above are already mirrored left-to-right
-          // (each orientation's mirrorX pair), but not top-to-bottom — the
-          // 'vertical' pair anchors at the top, the 'horizontal' pair at
-          // the bottom (see a4ConstructionVariants' own comment), so the
-          // construction reads top-heavy. A second copy of the exact same
-          // drawing, rotated 180° around the page's own center, turns that
-          // existing left-right symmetry into full left-right-AND-top-
-          // bottom symmetry — the top-anchored pair's rotated twin lands
-          // at the bottom and vice versa — without needing a second,
-          // separately-computed geometry.
-          const renderVariants = (keyPrefix) =>
-            variants.map(({ square, diagonal, arcCenter, landingPoint, sweepFlag }, i) => (
-              <g key={`${keyPrefix}-${i}`}>
-                <rect
-                  x={square.x}
-                  y={square.y}
-                  width={square.size}
-                  height={square.size}
-                  fill="none"
-                  stroke="rgb(14 165 233)"
-                  strokeWidth="1"
-                />
-                <line
-                  x1={diagonal.x1}
-                  y1={diagonal.y1}
-                  x2={diagonal.x2}
-                  y2={diagonal.y2}
-                  stroke="rgb(14 165 233)"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d={`M ${diagonal.x1} ${diagonal.y1} A ${square.size * Math.SQRT2} ${square.size * Math.SQRT2} 0 0 ${sweepFlag} ${landingPoint.x} ${landingPoint.y}`}
-                  fill="none"
-                  stroke="rgb(14 165 233)"
-                  strokeWidth="1"
-                  strokeDasharray="4 3"
-                />
-                <line
-                  x1={arcCenter.x}
-                  y1={arcCenter.y}
-                  x2={landingPoint.x}
-                  y2={landingPoint.y}
-                  stroke="rgb(14 165 233)"
-                  strokeWidth="1"
-                  strokeDasharray="2 2"
-                />
-              </g>
-            ))
+          const squares = a4Squares()
           return (
             <svg
               className="pdf-ignore pointer-events-none absolute inset-0 z-10"
@@ -260,10 +215,13 @@ function Page({
               height={SHEET_HEIGHT}
               viewBox={`0 0 ${SHEET_WIDTH} ${SHEET_HEIGHT}`}
             >
-              {renderVariants('base')}
-              <g transform={`rotate(180 ${SHEET_WIDTH / 2} ${SHEET_HEIGHT / 2})`}>
-                {renderVariants('mirror')}
-              </g>
+              {squares.map(({ x, y, size }, i) => (
+                <g key={i}>
+                  <rect x={x} y={y} width={size} height={size} fill="none" stroke="rgb(14 165 233)" strokeWidth="1" />
+                  <line x1={x} y1={y} x2={x + size} y2={y + size} stroke="rgb(14 165 233)" strokeWidth="1" />
+                  <line x1={x + size} y1={y} x2={x} y2={y + size} stroke="rgb(14 165 233)" strokeWidth="1" />
+                </g>
+              ))}
             </svg>
           )
         })()}

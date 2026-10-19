@@ -79,130 +79,40 @@ export function goldenRatioLinesY(margins) {
   return { top: margins.top + (height - a), bottom: margins.top + a }
 }
 
-// The classic compass-and-straightedge construction behind the ISO 216
-// ("A4") ratio (1:√2) — a square, its diagonal (length = side×√2 by
-// Pythagoras), and that diagonal swung via an arc until it lies flat,
-// landing exactly side×√2 from the square's own edge. Two orientations,
-// both sized to actually fit the margin box instead of overflowing it:
-//  - 'vertical': square on the box's own WIDTH, diagonal swung
-//    downward — for a true A4 margin box the landing line falls right
-//    on the box's bottom edge, since the page's own height already is
-//    width×√2.
-//  - 'horizontal': square on width/√2 (so ITS diagonal is exactly the
-//    box's width), diagonal swung sideways instead — the complementary
-//    derivation of the same ratio, landing on the box's own side edge.
-//    A square built on the full HEIGHT instead (the literal 90°
-//    rotation of the vertical case) would need to swing height×√2
-//    sideways — wider than the box itself, since a portrait page is
-//    taller than it is wide — so this is the version of "turn it
-//    sideways" that actually stays on the page.
-// `mirrorX`/`mirrorY` move which corner of the margin box the square
-// anchors to (and which way the arc swings), so a composition that
-// wants the square in a different corner has its own mirrored version
-// to align against — a4ConstructionVariants below returns a curated
-// set of these (both orientations, each mirrored) for the guide
-// overlay to draw together without every corner combination at once
-// (four fully-overlapping corners made the overlay unreadable).
-export function a4ConstructionGeometry(margins, { orientation = 'vertical', mirrorX = false, mirrorY = false } = {}) {
-  const boxLeft = margins.left
-  const boxRight = SHEET_WIDTH - margins.right
-  const boxTop = margins.top
-  const boxBottom = SHEET_HEIGHT - margins.bottom
-  const boxWidth = boxRight - boxLeft
-  const side = orientation === 'vertical' ? boxWidth : boxWidth / Math.SQRT2
-  const diagonal = side * Math.SQRT2
-
-  const squareX = mirrorX ? boxRight - side : boxLeft
-  const squareY = mirrorY ? boxBottom - side : boxTop
-
-  if (orientation === 'vertical') {
-    // Swings in Y: the anchor corner keeps its own X from mirrorX and
-    // Y from mirrorY; the diagonal's other end and the arc's center
-    // sit at the two corners diagonally related to it.
-    const anchorX = mirrorX ? squareX + side : squareX
-    const arcCenterX = mirrorX ? squareX : squareX + side
-    const diagonalStartY = mirrorY ? squareY : squareY + side
-    const arcCenterY = mirrorY ? squareY + side : squareY
-    const landingY = mirrorY ? arcCenterY - diagonal : arcCenterY + diagonal
-    return {
-      square: { x: squareX, y: squareY, size: side },
-      diagonal: { x1: anchorX, y1: diagonalStartY, x2: arcCenterX, y2: arcCenterY },
-      arcCenter: { x: arcCenterX, y: arcCenterY },
-      landingPoint: { x: arcCenterX, y: landingY },
-      sweepFlag: mirrorX === mirrorY ? 1 : 0,
-    }
-  }
-
-  // 'horizontal': same shape with X and Y swapped throughout — swings
-  // in X instead of Y.
-  const anchorY = mirrorY ? squareY + side : squareY
-  const arcCenterY = mirrorY ? squareY : squareY + side
-  const diagonalStartX = mirrorX ? squareX : squareX + side
-  const arcCenterX = mirrorX ? squareX + side : squareX
-  const landingX = mirrorX ? arcCenterX - diagonal : arcCenterX + diagonal
-  return {
-    square: { x: squareX, y: squareY, size: side },
-    diagonal: { x1: diagonalStartX, y1: anchorY, x2: arcCenterX, y2: arcCenterY },
-    arcCenter: { x: arcCenterX, y: arcCenterY },
-    landingPoint: { x: landingX, y: arcCenterY },
-    sweepFlag: mirrorX === mirrorY ? 0 : 1,
-  }
-}
-
-// Both orientations, each mirrored horizontally (left-anchored and
-// right-anchored) — the set of "different layout possibilities" the
-// guide overlay draws together: a tall sub-rectangle hanging from the
-// top-left or top-right corner, and a wide one doing the same from the
-// bottom-left/bottom-right, every one of them an exact A4-ratio shape
-// fitting inside the margin box. The two orientations are anchored to
-// opposite ends (top vs bottom) deliberately — both anchored at the
-// same corner would nest one construction's square inside the other's,
-// so the "turned sideways" one reads as hidden detail rather than a
-// construction in its own right.
-export function a4ConstructionVariants(margins) {
+// The classic, minimal way of visualizing the ISO 216 ("A4") 1:√2
+// ratio: since the page's own height is its width×√2, a square whose
+// side is half the page's height has a side of exactly width/√2 — and
+// a square's diagonal is its side×√2, so THIS square's diagonal is
+// exactly width/√2×√2 = the page's own width. Two such squares, stacked
+// to run from the page's own top edge to its own bottom edge (no margin
+// inset, so there's no few-millimeter gap at either end), meet exactly
+// in the middle — neither a gap nor an overlap — and both are centered
+// horizontally, so left-right symmetry is automatic rather than a
+// second mirrored copy to keep in sync. Just the two squares and their
+// corner-to-corner diagonals — no arc, nothing swung into place.
+export function a4Squares() {
+  const side = SHEET_HEIGHT / 2
+  const x = (SHEET_WIDTH - side) / 2
   return [
-    a4ConstructionGeometry(margins, { orientation: 'vertical', mirrorX: false }),
-    a4ConstructionGeometry(margins, { orientation: 'vertical', mirrorX: true }),
-    a4ConstructionGeometry(margins, { orientation: 'horizontal', mirrorX: false, mirrorY: true }),
-    a4ConstructionGeometry(margins, { orientation: 'horizontal', mirrorX: true, mirrorY: true }),
+    { x, y: 0, size: side },
+    { x, y: side, size: side },
   ]
 }
 
 // The construction's meaningful reference lines, in the same
 // {label: position} shape goldenRatioLinesX/Y use — for FreeBlock.jsx's
-// snapping (a block can align to either square's own far edge, or to
-// either variant's landing line) without needing to know about the
-// arc/diagonal geometry above. Also includes each line's own 180°-
-// mirrored counterpart (reflected through the page's center, same as the
-// guide overlay's rotated copy in Canvas.jsx) — otherwise only the top/
-// left half of what's actually drawn on screen was ever snappable,
-// leaving the bottom half of the now-symmetric guide with nothing to
-// snap to.
-export function a4RatioLinesX(margins) {
-  const [vL, vR, , hR] = a4ConstructionVariants(margins)
-  const vLeft = vL.square.x + vL.square.size
-  const vRight = vR.square.x
-  const hRight = hR.landingPoint.x
-  return {
-    vLeft,
-    vRight,
-    hRight,
-    vLeftMirror: SHEET_WIDTH - vLeft,
-    vRightMirror: SHEET_WIDTH - vRight,
-    hRightMirror: SHEET_WIDTH - hRight,
-  }
+// snapping. Both squares share the same left/right edges (they're the
+// same size, centered the same way), and meet at the page's exact
+// vertical center, so there's one of each to snap to rather than a
+// pair per square.
+export function a4RatioLinesX() {
+  const [square] = a4Squares()
+  return { left: square.x, right: square.x + square.size }
 }
 
-export function a4RatioLinesY(margins) {
-  const [vL, , hL] = a4ConstructionVariants(margins)
-  const vLanding = vL.landingPoint.y
-  const hEdge = hL.square.y + hL.square.size
-  return {
-    vLanding,
-    hEdge,
-    vLandingMirror: SHEET_HEIGHT - vLanding,
-    hEdgeMirror: SHEET_HEIGHT - hEdge,
-  }
+export function a4RatioLinesY() {
+  const [square] = a4Squares()
+  return { middle: square.y + square.size }
 }
 
 // A symmetric pair of lines duplicated from each exact golden ratio line
