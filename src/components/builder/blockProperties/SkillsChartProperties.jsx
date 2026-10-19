@@ -1,7 +1,15 @@
 import { useBuilder } from '../../../context/BuilderContext'
 import { CONTENT_SLOTS, useContentLibrary } from '../../../context/ContentLibraryContext'
 import { parseChecklist } from '../../../utils/contentLists'
-import { Field, inputClasses, LibraryItemOverridesField, TitleSizeField, TitleVisibilityFields, LevelDisplayField } from './fields'
+import {
+  Field,
+  inputClasses,
+  LibraryItemOverridesField,
+  PlainTextStyleFields,
+  TitleSizeField,
+  TitleVisibilityFields,
+  LevelDisplayField,
+} from './fields'
 
 export default function SkillsChartProperties({ block, onChange }) {
   const { globalStyle } = useBuilder()
@@ -129,6 +137,7 @@ export default function SkillsChartProperties({ block, onChange }) {
           )}
         </div>
       </Field>
+      <PlainTextStyleFields block={block} onChange={onChange} colorKey="labelColor" colorLabel="Label color" />
     </div>
   )
 }

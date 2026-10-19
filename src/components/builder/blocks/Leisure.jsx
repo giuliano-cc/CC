@@ -22,10 +22,13 @@ export default function renderLeisureBlock({ block, globalStyle, library, titleO
         <p
           className="text-sm leading-relaxed"
           style={{
-            fontFamily: resolveBodyFont(globalStyle),
-            fontSize: globalStyle.typographyScale?.p1?.sizePx
-              ? `${globalStyle.typographyScale.p1.sizePx}px`
-              : undefined,
+            fontFamily: block.fontFamily || resolveBodyFont(globalStyle),
+            fontSize: block.fontSize
+              ? `${block.fontSize}px`
+              : globalStyle.typographyScale?.p1?.sizePx
+                ? `${globalStyle.typographyScale.p1.sizePx}px`
+                : undefined,
+            color: block.color || undefined,
           }}
         >
           {items.join(', ')}
@@ -34,10 +37,13 @@ export default function renderLeisureBlock({ block, globalStyle, library, titleO
         <ul
           className="list-disc space-y-0.5 pl-5 text-sm leading-relaxed marker:text-slate-400"
           style={{
-            fontFamily: resolveBodyFont(globalStyle),
-            fontSize: globalStyle.typographyScale?.p1?.sizePx
-              ? `${globalStyle.typographyScale.p1.sizePx}px`
-              : undefined,
+            fontFamily: block.fontFamily || resolveBodyFont(globalStyle),
+            fontSize: block.fontSize
+              ? `${block.fontSize}px`
+              : globalStyle.typographyScale?.p1?.sizePx
+                ? `${globalStyle.typographyScale.p1.sizePx}px`
+                : undefined,
+            color: block.color || undefined,
           }}
         >
           {items.map((item, i) => (

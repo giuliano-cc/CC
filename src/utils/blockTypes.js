@@ -357,6 +357,9 @@ export const BLOCK_DEFINITIONS = [
       useLibrarySkills: false,
       librarySource: 'skills',
       color: null,
+      // The label text's own color — kept separate from `color` above
+      // (the bar/dot/tag fill) so changing one never changes the other.
+      labelColor: null,
       chartStyle: 'bars',
       dotSize: 10,
       dotCount: 5,
@@ -380,6 +383,7 @@ export const BLOCK_DEFINITIONS = [
       ],
       useLibraryLanguages: false,
       color: null,
+      labelColor: null,
       chartStyle: 'bars',
       dotSize: 10,
       dotCount: 5,
@@ -546,6 +550,7 @@ export const BLOCK_DEFINITIONS = [
       titleColor: null,
       fontFamily: null,
       fontSize: null,
+      color: null,
       items: ['Photography', 'Hiking', 'Reading'],
       list: true,
       useLibraryHobbies: false,
@@ -1161,6 +1166,63 @@ export function getTemplateTypographyStyles(template) {
           block.entryTitleTextTransform,
         )
       }
+      // The remaining block types below render real visible text that
+      // was previously invisible to this whole system — editable only
+      // per-block (where a field for it even existed), never from here,
+      // and in several cases (Leisure, the chart blocks) not actually
+      // wired to any field at all, so it silently stayed at whatever
+      // color/size the page's base text defaults to. None of these
+      // blocks have their own bold/italic/text-case fields, so a row
+      // for them still shows those controls (same row UI as every other
+      // row) but toggling them has no effect — size/color/font are the
+      // only three that actually do anything here.
+      if (block.type === BLOCK_TYPES.CONTACT_INFO) {
+        addRow(
+          'contactBody',
+          'Contact Info',
+          block.bodyFontSize || 14,
+          false,
+          block.bodyColor,
+          block.bodyFontFamily,
+          'contactBody',
+        )
+      }
+      if (block.type === BLOCK_TYPES.LEISURE) {
+        addRow('leisure', 'Leisure / Hobbies', block.fontSize || 14, false, block.color, block.fontFamily, 'leisure')
+      }
+      if (block.type === BLOCK_TYPES.SKILLS_CHART || block.type === BLOCK_TYPES.LANGUAGES_CHART) {
+        addRow(
+          'chartLabel',
+          'Chart labels (Technical Skills / Languages)',
+          block.fontSize || 12,
+          false,
+          block.labelColor,
+          block.fontFamily,
+          'chartLabel',
+        )
+      }
+      if (block.type === BLOCK_TYPES.EXPERIENCE || block.type === BLOCK_TYPES.EDUCATION) {
+        addRow(
+          'entriesBody',
+          'Entry body text (Experience / Education dates & description)',
+          block.bodyFontSize || 14,
+          false,
+          block.bodyColor,
+          block.bodyFontFamily,
+          'entriesBody',
+        )
+      }
+      if (block.type === BLOCK_TYPES.MAP) {
+        addRow(
+          'mapBody',
+          'Locations Map legend',
+          block.bodyFontSize || 14,
+          false,
+          block.bodyColor,
+          block.bodyFontFamily,
+          'mapBody',
+        )
+      }
       if (block.type === BLOCK_TYPES.COLUMNS) {
         block.columns?.forEach((column) => walk(column.items))
       }
@@ -1187,6 +1249,11 @@ export function matchesTypographyRow(block, row) {
   if (row.matchType === 'entryTitle') {
     return block.type === BLOCK_TYPES.EXPERIENCE || block.type === BLOCK_TYPES.EDUCATION || isEntriesBoundText(block)
   }
+  if (row.matchType === 'contactBody') return block.type === BLOCK_TYPES.CONTACT_INFO
+  if (row.matchType === 'leisure') return block.type === BLOCK_TYPES.LEISURE
+  if (row.matchType === 'chartLabel') return block.type === BLOCK_TYPES.SKILLS_CHART || block.type === BLOCK_TYPES.LANGUAGES_CHART
+  if (row.matchType === 'entriesBody') return block.type === BLOCK_TYPES.EXPERIENCE || block.type === BLOCK_TYPES.EDUCATION
+  if (row.matchType === 'mapBody') return block.type === BLOCK_TYPES.MAP
   return block.type === row.matchType
 }
 

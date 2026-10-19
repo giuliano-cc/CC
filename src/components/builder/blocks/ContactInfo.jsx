@@ -88,6 +88,7 @@ export default function renderContactInfoBlock({ block, globalStyle, library, ti
         style={{
           fontFamily: block.bodyFontFamily || resolveBodyFont(globalStyle),
           fontSize: `${contactFontSizePx}px`,
+          color: block.bodyColor || undefined,
           letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : undefined,
           backgroundColor: block.bgColor || undefined,
           lineHeight: contactLineHeight,

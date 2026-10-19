@@ -46,7 +46,7 @@ export default function renderMapBlock({ block, globalStyle, library, titleOverr
           leaderDirection={block.leaderDirection || 'sides'}
           bodyFont={block.bodyFontFamily || resolveBodyFont(globalStyle)}
           titleFont={block.entryTitleFontFamily || resolveTitleFont(globalStyle)}
-          textColor={globalStyle.textColor}
+          textColor={block.bodyColor || globalStyle.textColor}
           titleColor={block.entryTitleColor || null}
           titleFontSizePx={block.entryTitleFontSize || 16}
           titleBold={block.entryTitleBold}

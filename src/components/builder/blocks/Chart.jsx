@@ -8,13 +8,13 @@ import { sectionTitleStyle, titleTextTransformValue } from './shared'
 // bar/dots/pill AND the level text together used to be forced the moment a
 // custom level text was set, which crowded a plain percentage bar with
 // redundant text; now it's opt-in.
-function SkillBar({ label, level, levelText, levelDisplay = 'both', color }) {
+function SkillBar({ label, level, levelText, levelDisplay = 'both', color, labelStyle }) {
   const showText = levelDisplay !== 'visual'
   const showBar = levelDisplay !== 'text'
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="font-medium">{label}</span>
+        <span className="font-medium" style={labelStyle}>{label}</span>
         {showText && <span className="opacity-60">{levelText || `${level}%`}</span>}
       </div>
       {showBar && (
@@ -29,13 +29,13 @@ function SkillBar({ label, level, levelText, levelDisplay = 'both', color }) {
   )
 }
 
-function SkillDots({ label, level, levelText, levelDisplay = 'both', color, dotSize = 10, dotCount = 5 }) {
+function SkillDots({ label, level, levelText, levelDisplay = 'both', color, dotSize = 10, dotCount = 5, labelStyle }) {
   const filled = Math.round((Math.max(0, Math.min(100, level)) / 100) * dotCount)
   const showText = levelDisplay !== 'visual'
   const showDots = levelDisplay !== 'text'
   return (
     <div className="flex items-center justify-between text-xs">
-      <span className="font-medium">{label}</span>
+      <span className="font-medium" style={labelStyle}>{label}</span>
       <div className="flex items-center gap-2">
         {showText && <span className="opacity-60">{levelText || `${level}%`}</span>}
         {showDots && (
@@ -58,12 +58,14 @@ function SkillDots({ label, level, levelText, levelDisplay = 'both', color, dotS
   )
 }
 
-function SkillTag({ label, levelText, levelDisplay = 'both', color }) {
+function SkillTag({ label, levelText, levelDisplay = 'both', color, labelStyle }) {
   const showText = levelDisplay !== 'visual' && levelText
   return (
     <span
       className="rounded-full px-2.5 py-1 text-xs font-medium text-white"
-      style={{ backgroundColor: color }}
+      // The tag's own text is always white for contrast against its
+      // colored fill — only the font (not the color) follows labelStyle.
+      style={{ backgroundColor: color, fontFamily: labelStyle?.fontFamily, fontSize: labelStyle?.fontSize }}
     >
       {showText ? `${label}: ${levelText}` : label}
     </span>
@@ -84,7 +86,7 @@ function defaultLevelDisplay(chartStyle) {
   return chartStyle === 'bars' ? 'both' : 'visual'
 }
 
-export default function Chart({ block, items, onUpdateBlock, accentColor, titleFont, lang, titleOverrides }) {
+export default function Chart({ block, items, onUpdateBlock, accentColor, titleFont, lang, titleOverrides, labelStyle }) {
   const chartStyle = block.chartStyle || 'bars'
   const levelDisplay = block.levelDisplay || defaultLevelDisplay(chartStyle)
   const showTitle = block.title && block.showTitle !== false
@@ -121,6 +123,7 @@ export default function Chart({ block, items, onUpdateBlock, accentColor, titleF
               levelText={item.levelText}
               levelDisplay={levelDisplay}
               color={block.color || accentColor}
+              labelStyle={labelStyle}
             />
           ))}
         </div>
@@ -137,6 +140,7 @@ export default function Chart({ block, items, onUpdateBlock, accentColor, titleF
                 color={block.color || accentColor}
                 dotSize={block.dotSize}
                 dotCount={block.dotCount || 5}
+                labelStyle={labelStyle}
               />
             ) : (
               <SkillBar
@@ -146,6 +150,7 @@ export default function Chart({ block, items, onUpdateBlock, accentColor, titleF
                 levelText={item.levelText}
                 levelDisplay={levelDisplay}
                 color={block.color || accentColor}
+                labelStyle={labelStyle}
               />
             ),
           )}

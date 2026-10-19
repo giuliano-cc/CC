@@ -65,6 +65,7 @@ export default function renderEntriesBlock({ block, globalStyle, library, titleO
             : globalStyle.typographyScale?.p1?.sizePx
               ? `${globalStyle.typographyScale.p1.sizePx}px`
               : undefined,
+          color: block.bodyColor || undefined,
           letterSpacing: block.letterSpacing ? `${block.letterSpacing}px` : undefined,
           backgroundColor: block.bgColor || undefined,
           lineHeight: block.lineSpacing || undefined,

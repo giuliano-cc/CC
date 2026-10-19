@@ -1,5 +1,5 @@
 import { languageLevelText, parseLanguages } from '../../../utils/contentLists'
-import { resolveTitleFont } from './shared'
+import { resolveBodyFont, resolveTitleFont } from './shared'
 import Chart from './Chart'
 
 export default function renderLanguagesChartBlock({ block, globalStyle, library, titleOverrides, onUpdateBlock }) {
@@ -17,6 +17,11 @@ export default function renderLanguagesChartBlock({ block, globalStyle, library,
       titleFont={resolveTitleFont(globalStyle)}
       lang={globalStyle.contentLanguage}
       titleOverrides={titleOverrides}
+      labelStyle={{
+        fontFamily: block.fontFamily || resolveBodyFont(globalStyle),
+        fontSize: block.fontSize ? `${block.fontSize}px` : undefined,
+        color: block.labelColor || undefined,
+      }}
     />
   )
 }

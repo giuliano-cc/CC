@@ -1,4 +1,4 @@
-import { Field, inputClasses, TitleSizeField, TitleVisibilityFields } from './fields'
+import { Field, inputClasses, PlainTextStyleFields, TitleSizeField, TitleVisibilityFields } from './fields'
 
 export default function LeisureProperties({ block, onChange }) {
   const linesValue = (block.items || []).join('\n')
@@ -54,6 +54,7 @@ export default function LeisureProperties({ block, onChange }) {
           <option value="right">Right</option>
         </select>
       </Field>
+      <PlainTextStyleFields block={block} onChange={onChange} />
     </div>
   )
 }

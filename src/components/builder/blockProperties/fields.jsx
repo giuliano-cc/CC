@@ -196,6 +196,75 @@ export function BodyTextStyleFields({ block, onChange }) {
           />
         </Field>
       </div>
+      <Field label="Text color">
+        <div className="flex items-center gap-1.5">
+          <input
+            type="color"
+            value={block.bodyColor || '#1e293b'}
+            onChange={(e) => onChange({ bodyColor: e.target.value })}
+            className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
+          />
+          {block.bodyColor && (
+            <button
+              type="button"
+              onClick={() => onChange({ bodyColor: null })}
+              className="shrink-0 rounded-md px-1.5 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              title="Reset to inherit the document's own text color"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </Field>
+    </div>
+  )
+}
+
+// A lighter version of BodyTextStyleFields above (font/size/color only —
+// no line/letter spacing or background) for a block whose "body" is a
+// single run of plain text rather than full paragraphs: a chart's item
+// labels, Leisure's list. `colorKey` lets the same three fields write to
+// a block-specific field name (Leisure's own `color`, a chart's
+// `labelColor` — kept apart from its bar/dot/tag fill `color`).
+export function PlainTextStyleFields({ block, onChange, colorKey = 'color', colorLabel = 'Text color' }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Field label="Font">
+        <FontPicker value={block.fontFamily || ''} onChange={(v) => onChange({ fontFamily: v || null })} />
+      </Field>
+      <div className="flex items-center gap-1.5">
+        <Field label="Size (px)">
+          <input
+            type="number"
+            min={8}
+            max={24}
+            placeholder="auto"
+            value={block.fontSize || ''}
+            onChange={(e) => onChange({ fontSize: e.target.value ? Number(e.target.value) : null })}
+            className={inputClasses}
+          />
+        </Field>
+        <Field label={colorLabel}>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="color"
+              value={block[colorKey] || '#1e293b'}
+              onChange={(e) => onChange({ [colorKey]: e.target.value })}
+              className="h-9 w-full cursor-pointer rounded-md border border-slate-300"
+            />
+            {block[colorKey] && (
+              <button
+                type="button"
+                onClick={() => onChange({ [colorKey]: null })}
+                className="shrink-0 rounded-md px-1.5 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                title="Reset to inherit the document's own text color"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </Field>
+      </div>
     </div>
   )
 }

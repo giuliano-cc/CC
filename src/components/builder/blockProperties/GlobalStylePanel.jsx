@@ -155,6 +155,43 @@ export default function GlobalStylePanel() {
             if (italic !== undefined) translated.entryTitleItalic = italic
             if (textTransform !== undefined) translated.entryTitleTextTransform = textTransform
             updateBlock(block.id, translated)
+          } else if (['contactBody', 'entriesBody', 'mapBody'].includes(row.matchType)) {
+            // Contact Info/Experience/Education's own body text and the
+            // Locations Map legend all keep their size/font under a
+            // `body*`-prefixed name (so it never collides with a
+            // section-title field on the same block) — and none of them
+            // has a bold/italic/text-case field of its own at all, so
+            // those three are simply dropped here rather than written
+            // nowhere.
+            const { color, fontSize, fontFamily, bold, italic, textTransform, ...rest } = patch
+            void bold
+            void italic
+            void textTransform
+            const translated = { ...rest }
+            if (color !== undefined) translated.bodyColor = color
+            if (fontSize !== undefined) translated.bodyFontSize = fontSize
+            if (fontFamily !== undefined) translated.bodyFontFamily = fontFamily
+            updateBlock(block.id, translated)
+          } else if (row.matchType === 'chartLabel') {
+            // The chart's own `color` already means its bar/dot/tag fill
+            // (see Chart.jsx) — the label text's color is the separate
+            // `labelColor` field so changing one never changes the other.
+            const { color, bold, italic, textTransform, ...rest } = patch
+            void bold
+            void italic
+            void textTransform
+            const translated = { ...rest }
+            if (color !== undefined) translated.labelColor = color
+            updateBlock(block.id, translated)
+          } else if (row.matchType === 'leisure') {
+            // Leisure's fontFamily/fontSize/color already match these
+            // generic names directly — just drop the three fields it has
+            // no field for.
+            const { bold, italic, textTransform, ...rest } = patch
+            void bold
+            void italic
+            void textTransform
+            updateBlock(block.id, rest)
           } else {
             updateBlock(block.id, patch)
           }

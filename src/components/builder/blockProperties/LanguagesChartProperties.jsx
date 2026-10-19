@@ -1,5 +1,5 @@
 import { useBuilder } from '../../../context/BuilderContext'
-import { Field, inputClasses, TitleSizeField, TitleVisibilityFields, LevelDisplayField } from './fields'
+import { Field, inputClasses, PlainTextStyleFields, TitleSizeField, TitleVisibilityFields, LevelDisplayField } from './fields'
 
 export default function LanguagesChartProperties({ block, onChange }) {
   const { globalStyle } = useBuilder()
@@ -106,6 +106,7 @@ export default function LanguagesChartProperties({ block, onChange }) {
           )}
         </div>
       </Field>
+      <PlainTextStyleFields block={block} onChange={onChange} colorKey="labelColor" colorLabel="Label color" />
     </div>
   )
 }
