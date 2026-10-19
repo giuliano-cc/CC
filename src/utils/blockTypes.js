@@ -589,13 +589,18 @@ export const BLOCK_DEFINITIONS = [
     label: 'Page Number',
     icon: Hash,
     defaultProps: {
-      // {page}/{total} are replaced with this page's own 1-based number
-      // and the document's total page count at render time (see
-      // blocks/PageNumber.jsx) — re-evaluated per page, so the same block
-      // reads "Page 1/3" on page 1 and "Page 2/3" on page 2 even though
-      // it's the exact same block when it's also set to repeat across
-      // pages (see layoutFields.jsx's "Repeat on every page").
-      format: 'Page {page}/{total}',
+      // A plain label ("Page") plus a separately formatted number
+      // ("{page}/{total}", replaced with this page's own 1-based number
+      // and the document's total page count at render time — see
+      // blocks/PageNumber.jsx) — re-evaluated per page, so the same
+      // block reads "Page 1/3" on page 1 and "Page 2/3" on page 2 even
+      // when it's also set to repeat across pages (see layoutFields.jsx's
+      // "Repeat on every page"). `layout` places them side by side
+      // ('row', e.g. "Page 1/3") or on two lines ('stacked') — same
+      // row/stacked idea as Contact Info's own layout option.
+      label: 'Page',
+      numberFormat: '{page}/{total}',
+      layout: 'row',
       align: 'center',
       bold: false,
       italic: false,

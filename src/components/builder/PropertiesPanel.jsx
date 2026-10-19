@@ -388,19 +388,49 @@ function BlockPropertiesPanel({ block, onChange }) {
         )}
 
       {block.type === BLOCK_TYPES.PAGE_NUMBER && (
-        <Field label="Format">
-          <input
-            type="text"
-            value={block.format || 'Page {page}/{total}'}
-            onChange={(e) => onChange({ format: e.target.value })}
-            className={inputClasses}
-          />
-          <p className="mt-1 text-xs text-slate-400">
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Label">
+              <input
+                type="text"
+                value={block.label ?? 'Page'}
+                onChange={(e) => onChange({ label: e.target.value })}
+                className={inputClasses}
+              />
+            </Field>
+            <Field label="Number format">
+              <input
+                type="text"
+                value={block.numberFormat || '{page}/{total}'}
+                onChange={(e) => onChange({ numberFormat: e.target.value })}
+                className={inputClasses}
+              />
+            </Field>
+          </div>
+          <p className="-mt-2 text-xs text-slate-400">
             <code className="rounded bg-slate-100 px-1">{'{page}'}</code> and{' '}
             <code className="rounded bg-slate-100 px-1">{'{total}'}</code> are replaced with this page's own
             number and the document's total page count.
           </p>
-        </Field>
+          <Field label="Layout">
+            <select
+              value={block.layout || 'row'}
+              onChange={(e) => {
+                const layout = e.target.value
+                // Two stacked lines need roughly double a single line's
+                // height — without this, switching to Stacked on a block
+                // still sized for one line just clips the second line
+                // behind the block's own overflow-hidden edge.
+                const height = layout === 'stacked' ? Math.max(block.height, 50) : block.height
+                onChange({ layout, height })
+              }}
+              className={inputClasses}
+            >
+              <option value="row">In a row</option>
+              <option value="stacked">Stacked</option>
+            </select>
+          </Field>
+        </>
       )}
 
       {showContent &&
