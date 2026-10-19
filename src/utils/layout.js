@@ -172,15 +172,37 @@ export function a4ConstructionVariants(margins) {
 // {label: position} shape goldenRatioLinesX/Y use — for FreeBlock.jsx's
 // snapping (a block can align to either square's own far edge, or to
 // either variant's landing line) without needing to know about the
-// arc/diagonal geometry above.
+// arc/diagonal geometry above. Also includes each line's own 180°-
+// mirrored counterpart (reflected through the page's center, same as the
+// guide overlay's rotated copy in Canvas.jsx) — otherwise only the top/
+// left half of what's actually drawn on screen was ever snappable,
+// leaving the bottom half of the now-symmetric guide with nothing to
+// snap to.
 export function a4RatioLinesX(margins) {
   const [vL, vR, , hR] = a4ConstructionVariants(margins)
-  return { vLeft: vL.square.x + vL.square.size, vRight: vR.square.x, hRight: hR.landingPoint.x }
+  const vLeft = vL.square.x + vL.square.size
+  const vRight = vR.square.x
+  const hRight = hR.landingPoint.x
+  return {
+    vLeft,
+    vRight,
+    hRight,
+    vLeftMirror: SHEET_WIDTH - vLeft,
+    vRightMirror: SHEET_WIDTH - vRight,
+    hRightMirror: SHEET_WIDTH - hRight,
+  }
 }
 
 export function a4RatioLinesY(margins) {
   const [vL, , hL] = a4ConstructionVariants(margins)
-  return { vLanding: vL.landingPoint.y, hEdge: hL.square.y + hL.square.size }
+  const vLanding = vL.landingPoint.y
+  const hEdge = hL.square.y + hL.square.size
+  return {
+    vLanding,
+    hEdge,
+    vLandingMirror: SHEET_HEIGHT - vLanding,
+    hEdgeMirror: SHEET_HEIGHT - hEdge,
+  }
 }
 
 // A symmetric pair of lines duplicated from each exact golden ratio line
