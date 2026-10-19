@@ -1,4 +1,16 @@
-import { cropToCanvas } from 'react-image-crop'
+import { centerCrop, convertToPixelCrop, cropToCanvas, makeAspectCrop } from 'react-image-crop'
+
+// A centered starting rectangle for a given aspect (or, with no aspect,
+// 80% of the image either way) — shared by the interactive crop tool
+// (ImageCropModal.jsx, recentering whenever the aspect preset changes)
+// and autoCropImageDataUrl below (applying a remembered aspect with no
+// UI at all).
+export function centeredCrop(mediaWidth, mediaHeight, aspect) {
+  const base = aspect
+    ? makeAspectCrop({ unit: '%', width: 80 }, aspect, mediaWidth, mediaHeight)
+    : { unit: '%', width: 80, height: 80 }
+  return centerCrop(base, mediaWidth, mediaHeight)
+}
 
 function createImage(src) {
   return new Promise((resolve, reject) => {
@@ -49,4 +61,19 @@ export async function getCroppedImageDataUrl(imageElement, pixelCrop) {
   const canvas = document.createElement('canvas')
   await cropToCanvas(imageElement, canvas, pixelCrop)
   return canvas.toDataURL('image/png')
+}
+
+// Replaces a photo/signature/image with a new upload while reusing a
+// previously-used crop's aspect/shape, with no crop tool shown at all —
+// a straight "swap the picture, keep the framing" for a series of same-
+// shaped photos. Centers the same way the interactive tool's own
+// presets do; there's no remembered position to reuse (only aspect/
+// circular are kept — see imageFields.jsx/ContentLibraryPage.jsx), and a
+// new photo's subject may well sit differently anyway. The "Crop" button
+// is still there afterward for fine-tuning this particular photo.
+export async function autoCropImageDataUrl(imageSrc, { aspect } = {}) {
+  const image = await createImage(imageSrc)
+  const percentCrop = centeredCrop(image.naturalWidth, image.naturalHeight, aspect)
+  const pixelCrop = convertToPixelCrop(percentCrop, image.naturalWidth, image.naturalHeight)
+  return getCroppedImageDataUrl(image, pixelCrop)
 }

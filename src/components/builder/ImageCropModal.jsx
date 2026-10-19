@@ -1,21 +1,9 @@
 import { useRef, useState } from 'react'
-import ReactCrop, { centerCrop, convertToPixelCrop, makeAspectCrop } from 'react-image-crop'
+import ReactCrop, { convertToPixelCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { Check, Eraser, Loader2, RotateCcw, RotateCw, X } from 'lucide-react'
-import { getCroppedImageDataUrl, rotateImageDataUrl } from '../../utils/cropImage'
+import { centeredCrop, getCroppedImageDataUrl, rotateImageDataUrl } from '../../utils/cropImage'
 import { removeImageBackground } from '../../utils/backgroundRemoval'
-
-// A centered starting rectangle for a given aspect (or, with no aspect,
-// 80% of the image either way) — same "recenter whenever the aspect
-// preset changes" shape the old slider-based tool had, just expressed as
-// an actual draggable/resizable selection rectangle instead of a crop
-// window the image pans/zooms underneath.
-function centeredCrop(mediaWidth, mediaHeight, aspect) {
-  const base = aspect
-    ? makeAspectCrop({ unit: '%', width: 80 }, aspect, mediaWidth, mediaHeight)
-    : { unit: '%', width: 80, height: 80 }
-  return centerCrop(base, mediaWidth, mediaHeight)
-}
 
 const CROP_PRESETS = (initialAspect) => [
   { label: 'Free', aspect: undefined, circular: false },

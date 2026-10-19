@@ -12,6 +12,7 @@ import {
   setSvgTextStyle,
   setAllSvgTextStyles,
 } from '../../../utils/svgText'
+import { autoCropImageDataUrl } from '../../../utils/cropImage'
 import FontPicker from '../FontPicker'
 import ImageCropModal from '../ImageCropModal'
 import { Field, inputClasses } from './fields'
@@ -33,7 +34,7 @@ function safeParseCropMeta(json) {
 
 export function ImageUploadField({ block, onChange }) {
   const fileInputRef = useRef(null)
-  const [pendingSrc, setPendingSrc] = useState(null)
+  const [isReplacing, setIsReplacing] = useState(false)
   const storedCrop = safeParseCropMeta(block?.cropMeta)
 
   function handleFile(event) {
@@ -42,13 +43,21 @@ export function ImageUploadField({ block, onChange }) {
     // Downscaled before it ever reaches state/localStorage — a raw upload
     // can be several MB, which alone can blow the ~5-10MB per-origin
     // storage quota and make every save silently fail from then on.
-    resizeImageFile(file, { maxDimension: 1000 }).then((dataUrl) => {
+    resizeImageFile(file, { maxDimension: 1000 }).then(async (dataUrl) => {
       if (storedCrop) {
-        // This block was already cropped once — treat this upload as a
-        // replacement photo and reopen the crop tool pre-set to the same
-        // aspect/shape, instead of silently swapping in the raw,
-        // uncropped image.
-        setPendingSrc(dataUrl)
+        // This block was already cropped once — apply that same aspect
+        // straight to the replacement photo (centered — there's no
+        // remembered position, just the shape) instead of either keeping
+        // the raw, uncropped image or interrupting with the crop tool for
+        // what's meant to be a quick swap. "Crop" right below still opens
+        // it for fine-tuning this particular photo afterward.
+        setIsReplacing(true)
+        try {
+          const cropped = await autoCropImageDataUrl(dataUrl, storedCrop)
+          onChange({ src: cropped, imageSlot: null })
+        } finally {
+          setIsReplacing(false)
+        }
       } else {
         onChange({ src: dataUrl, imageSlot: null })
       }
@@ -68,25 +77,12 @@ export function ImageUploadField({ block, onChange }) {
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="flex items-center justify-center gap-1.5 rounded-md border border-slate-300 py-1.5 text-sm text-slate-600 transition hover:border-primary hover:text-primary"
+        disabled={isReplacing}
+        className="flex items-center justify-center gap-1.5 rounded-md border border-slate-300 py-1.5 text-sm text-slate-600 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Upload size={14} />
         {storedCrop ? 'Replace image' : 'Upload from computer'}
       </button>
-      {pendingSrc && (
-        <ImageCropModal
-          imageSrc={pendingSrc}
-          initialAspect={block?.width && block?.height ? block.width / block.height : 1}
-          initialShape={block?.shape}
-          defaultAspect={storedCrop?.aspect}
-          defaultCircular={storedCrop?.circular}
-          onCancel={() => setPendingSrc(null)}
-          onApply={(dataUrl, meta) => {
-            onChange({ src: dataUrl, imageSlot: null, cropMeta: JSON.stringify(meta) })
-            setPendingSrc(null)
-          }}
-        />
-      )}
     </>
   )
 }

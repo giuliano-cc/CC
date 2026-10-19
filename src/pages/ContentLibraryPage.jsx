@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { ArrowLeft, ChevronDown, ChevronUp, Copy, Crop, Download, Trash2, Upload, User } from 'lucide-react'
 import { CONTENT_SLOTS, SHARED_SLOT_KEYS, useContentLibrary } from '../context/ContentLibraryContext'
 import ImageCropModal from '../components/builder/ImageCropModal'
+import { autoCropImageDataUrl } from '../utils/cropImage'
 import { resizeImageFile } from '../utils/imageResize'
 import { SECTION_TITLE_DEFS } from '../utils/sectionTitles'
 import { formatSocialLinks, parseSocialLinks, SOCIAL_PLATFORMS } from '../utils/socialIcons'
@@ -67,7 +68,7 @@ const SECTIONS = [
 function PhotoField({ value, onChange, variant = 'photo', cropMeta, onCropMetaChange }) {
   const fileInputRef = useRef(null)
   const [isCropping, setIsCropping] = useState(false)
-  const [pendingSrc, setPendingSrc] = useState(null)
+  const [isReplacing, setIsReplacing] = useState(false)
   const isSignature = variant === 'signature'
   const storedCrop = (() => {
     if (!cropMeta) return null
@@ -85,13 +86,22 @@ function PhotoField({ value, onChange, variant = 'photo', cropMeta, onCropMetaCh
     // Downscaled before it ever reaches state/localStorage — a raw phone
     // photo can be several MB, which alone can blow the ~5-10MB per-origin
     // storage quota and make every save silently fail from then on.
-    resizeImageFile(file, { maxDimension: isSignature ? 700 : 900 }).then((dataUrl) => {
+    resizeImageFile(file, { maxDimension: isSignature ? 700 : 900 }).then(async (dataUrl) => {
       if (storedCrop) {
-        // Already cropped once before — treat this upload as a
-        // replacement photo/signature and reopen the crop tool pre-set to
-        // the same aspect/shape, instead of silently swapping in the raw,
-        // uncropped image.
-        setPendingSrc(dataUrl)
+        // Already cropped once before — apply that same aspect straight
+        // to the replacement photo/signature (centered — there's no
+        // remembered position, just the shape) instead of either keeping
+        // the raw, uncropped image or interrupting with the crop tool for
+        // what's meant to be a quick swap. "Crop" below still opens it
+        // for fine-tuning this particular photo afterward.
+        setIsReplacing(true)
+        try {
+          const cropped = await autoCropImageDataUrl(dataUrl, storedCrop)
+          onChange(cropped)
+          toast.success(`${isSignature ? 'Signature' : 'Photo'} saved`, { id: 'content-library-save' })
+        } finally {
+          setIsReplacing(false)
+        }
       } else {
         onChange(dataUrl)
         toast.success(`${isSignature ? 'Signature' : 'Photo'} saved`, { id: 'content-library-save' })
@@ -104,7 +114,6 @@ function PhotoField({ value, onChange, variant = 'photo', cropMeta, onCropMetaCh
     onChange(dataUrl)
     onCropMetaChange?.(JSON.stringify(meta))
     setIsCropping(false)
-    setPendingSrc(null)
     toast.success(`${isSignature ? 'Signature' : 'Photo'} saved`, { id: 'content-library-save' })
   }
 
@@ -125,7 +134,8 @@ function PhotoField({ value, onChange, variant = 'photo', cropMeta, onCropMetaCh
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
+        disabled={isReplacing}
+        className="flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Upload size={13} />
         {storedCrop ? `Replace ${isSignature ? 'signature' : 'photo'}` : `Upload ${isSignature ? 'signature' : 'photo'}`}
@@ -150,17 +160,14 @@ function PhotoField({ value, onChange, variant = 'photo', cropMeta, onCropMetaCh
           </button>
         </>
       )}
-      {(isCropping || pendingSrc) && (
+      {isCropping && (
         <ImageCropModal
-          imageSrc={pendingSrc || value}
+          imageSrc={value}
           initialAspect={isSignature ? 2.5 : 1}
           initialShape={isSignature ? 'rect' : 'circle'}
           defaultAspect={storedCrop?.aspect}
           defaultCircular={storedCrop?.circular}
-          onCancel={() => {
-            setIsCropping(false)
-            setPendingSrc(null)
-          }}
+          onCancel={() => setIsCropping(false)}
           onApply={applyCrop}
         />
       )}
