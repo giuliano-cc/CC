@@ -168,12 +168,14 @@ export function BuilderProvider({
     setPageCount((prev) => prev + 1)
   }, [])
 
-  // Removes the last page and any blocks on it (can't remove page 1).
+  // Removes the last page and any blocks on it (can't remove page 1) — a
+  // repeatAcrossPages block (see layoutFields.jsx) is kept regardless of
+  // its own `page`, since it's still showing on every remaining page.
   const removeLastPage = useCallback(() => {
     setPageCount((prev) => {
       if (prev <= 1) return prev
       const removedPage = prev - 1
-      setBlocks((blocksPrev) => blocksPrev.filter((b) => (b.page ?? 0) !== removedPage))
+      setBlocks((blocksPrev) => blocksPrev.filter((b) => b.repeatAcrossPages || (b.page ?? 0) !== removedPage))
       setSelectedIds([])
       return prev - 1
     })
@@ -181,7 +183,9 @@ export function BuilderProvider({
 
   // Inserts a copy of `pageIndex` right after it: every later page shifts
   // up by one to make room, and every block on `pageIndex` is cloned (with
-  // fresh ids — see cloneBlockWithNewIds) onto the new page.
+  // fresh ids — see cloneBlockWithNewIds) onto the new page. A
+  // repeatAcrossPages block is skipped — it already renders on the new
+  // page on its own, and cloning it too would show two of it everywhere.
   const duplicatePage = useCallback((pageIndex) => {
     setBlocks((prev) => {
       pushHistory(prev)
@@ -190,7 +194,7 @@ export function BuilderProvider({
         return p > pageIndex ? { ...b, page: p + 1 } : b
       })
       const clones = prev
-        .filter((b) => (b.page ?? 0) === pageIndex)
+        .filter((b) => (b.page ?? 0) === pageIndex && !b.repeatAcrossPages)
         .map((b) => ({ ...cloneBlockWithNewIds(b), page: pageIndex + 1 }))
       return [...shifted, ...clones]
     })

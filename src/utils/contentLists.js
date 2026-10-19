@@ -244,6 +244,14 @@ export function emptyRecipient() {
     id: `recipient-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     label: '',
     contactPerson: '',
+    // The contact person's job title (e.g. "Hiring Manager", "HR
+    // Director") — its own line, under the name, same as a signature
+    // block's "Name / Title" pattern.
+    title: '',
+    // Uppercases just the composed contactPerson line (see
+    // composeRecipientText below) — not the whole block's textTransform,
+    // which would also shout the company/address lines.
+    nameUpperCase: false,
     company: '',
     street: '',
     zip: '',
@@ -262,12 +270,14 @@ export function parseRecipients(itemsJson) {
 }
 
 // Composes one recipient's block onto separate lines — contact person,
-// company, then the street / "ZIP City" address pair — the same two-line
-// address shape Contact Info already uses, skipping any field left empty.
+// their title, company, then the street / "ZIP City" address pair — the
+// same two-line address shape Contact Info already uses, skipping any
+// field left empty.
 export function composeRecipientText(recipient) {
   if (!recipient) return ''
+  const name = recipient.nameUpperCase ? recipient.contactPerson?.toUpperCase() : recipient.contactPerson
   const zipCity = [recipient.zip, recipient.city].filter((v) => v?.trim()).join(' ')
-  return [recipient.contactPerson, recipient.company, recipient.street, zipCity]
+  return [name, recipient.title, recipient.company, recipient.street, zipCity]
     .filter((v) => v?.trim())
     .join('\n')
 }

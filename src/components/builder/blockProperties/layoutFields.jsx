@@ -289,6 +289,14 @@ export function PositionSizeFields({ block, onChange }) {
         />
         Lock as background (behind new blocks, can't be dragged/resized)
       </label>
+      <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={!!block.repeatAcrossPages}
+          onChange={(e) => onChange({ repeatAcrossPages: e.target.checked })}
+        />
+        Repeat on every page (same content and position, e.g. a header or footer)
+      </label>
     </div>
   )
 }

@@ -55,6 +55,7 @@ const SECTIONS = [
   { title: 'Contact & Links', keys: ['contact', 'socialLinks', 'qrValue'] },
   { title: 'Additional', keys: ['references', 'additionalInfo', 'hobbies'] },
   { title: 'Cover Letter', keys: ['coverLetterBody', 'coverLetterRecipients'] },
+  { title: 'Header & Footer', keys: ['pageHeader', 'pageFooter'] },
 ]
 
 // Shared by any 'image' Content Library slot (Profile Photo, Signature):
@@ -338,21 +339,39 @@ function RecipientsField({ itemsJson, onUpdate }) {
                 type="text"
                 value={item.contactPerson}
                 onChange={(e) => updateItem(i, { contactPerson: e.target.value })}
-                placeholder="Hiring Manager"
+                placeholder="Jane Doe"
                 className={inputClasses}
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">Company</span>
+              <span className="text-xs text-slate-500">Title</span>
               <input
                 type="text"
-                value={item.company}
-                onChange={(e) => updateItem(i, { company: e.target.value })}
-                placeholder="Company Name"
+                value={item.title}
+                onChange={(e) => updateItem(i, { title: e.target.value })}
+                placeholder="Hiring Manager"
                 className={inputClasses}
               />
             </label>
           </div>
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={!!item.nameUpperCase}
+              onChange={(e) => updateItem(i, { nameUpperCase: e.target.checked })}
+            />
+            Show contact person's name in ALL CAPS
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-slate-500">Company</span>
+            <input
+              type="text"
+              value={item.company}
+              onChange={(e) => updateItem(i, { company: e.target.value })}
+              placeholder="Company Name"
+              className={inputClasses}
+            />
+          </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs text-slate-500">Street & number</span>
             <input

@@ -31,7 +31,7 @@ export default function PrintDocument({ blocks, globalStyle, pageCount }) {
         }}
       >
         {positionedBlocks
-          .filter((block) => (block.page ?? 0) === pageIndex)
+          .filter((block) => (block.page ?? 0) === pageIndex || block.repeatAcrossPages)
           .map((block) => (
             <div
               key={block.id}

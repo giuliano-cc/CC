@@ -457,7 +457,13 @@ export default function Canvas() {
             <div style={{ width: SHEET_WIDTH, height: SHEET_HEIGHT, transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
               <Page
                 pageIndex={pageIndex}
-                blocks={blocks.filter((b) => (b.page ?? 0) === pageIndex)}
+                // A block with repeatAcrossPages (see layoutFields.jsx's
+                // "Repeat on every page") renders on every page from this
+                // one shared block — its own `page` is just wherever it
+                // started out, not which page it "belongs" to — so moving
+                // or restyling it on any page updates it everywhere at
+                // once, the way a document's header/footer usually works.
+                blocks={blocks.filter((b) => (b.page ?? 0) === pageIndex || b.repeatAcrossPages)}
                 margins={margins}
                 gridOffsets={gridOffsets}
                 globalStyle={globalStyle}

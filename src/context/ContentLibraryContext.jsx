@@ -93,6 +93,16 @@ export const CONTENT_SLOTS = [
   // every time the same template goes to a different company.
   { key: 'coverLetterRecipients', label: 'Cover Letter Recipients', type: 'recipients' },
   { key: 'signature', label: 'Signature', type: 'image' },
+  // Bind a Header/Footer block to these (same ContentSlotBinder every
+  // other bindable block already uses) to keep the same running header/
+  // footer text across every page of a template, and across templates
+  // too — every block bound to the same slot reads this one value, so
+  // editing it here updates all of them at once. See also
+  // layoutFields.jsx's "Repeat on every page", for keeping one page's
+  // Header/Footer block in sync across that same template's other pages
+  // without binding it to the library at all.
+  { key: 'pageHeader', label: 'Page Header', multiline: false },
+  { key: 'pageFooter', label: 'Page Footer', multiline: false },
 ]
 
 // Checklist/languages slots also keep a JSON-encoded "*Items" key (the
