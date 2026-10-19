@@ -60,11 +60,11 @@ const SECTIONS = [
 // Shared by any 'image' Content Library slot (Profile Photo, Signature):
 // `variant` picks the preview shape/crop defaults, since a face photo and
 // a signature scan are cropped very differently. `cropMeta`/
-// `onCropMetaChange` remember the aspect/shape this slot's "Crop" button
-// last used (a small `{ aspect, circular }` JSON blob — see
+// `onCropMetaChange` remember the crop this slot's "Crop" button last
+// used (a small `{ aspect, circular, cropPercent }` JSON blob — see
 // ContentLibraryContext.jsx's IMAGE_CROP_META_KEYS) so replacing the photo
-// with a new upload can reopen the crop tool pre-set the same way instead
-// of defaulting back to "Original" every time.
+// with a new upload can reuse that exact crop instead of defaulting back
+// to "Original" every time.
 function PhotoField({ value, onChange, variant = 'photo', cropMeta, onCropMetaChange }) {
   const fileInputRef = useRef(null)
   const [isCropping, setIsCropping] = useState(false)
@@ -88,12 +88,12 @@ function PhotoField({ value, onChange, variant = 'photo', cropMeta, onCropMetaCh
     // storage quota and make every save silently fail from then on.
     resizeImageFile(file, { maxDimension: isSignature ? 700 : 900 }).then(async (dataUrl) => {
       if (storedCrop) {
-        // Already cropped once before — apply that same aspect straight
-        // to the replacement photo/signature (centered — there's no
-        // remembered position, just the shape) instead of either keeping
-        // the raw, uncropped image or interrupting with the crop tool for
-        // what's meant to be a quick swap. "Crop" below still opens it
-        // for fine-tuning this particular photo afterward.
+        // Already cropped once before — apply that same crop rectangle
+        // straight to the replacement photo/signature (same position,
+        // same shape — see autoCropImageDataUrl) instead of either
+        // keeping the raw, uncropped image or interrupting with the crop
+        // tool for what's meant to be a quick swap. "Crop" below still
+        // opens it for fine-tuning this particular photo afterward.
         setIsReplacing(true)
         try {
           const cropped = await autoCropImageDataUrl(dataUrl, storedCrop)
@@ -167,6 +167,7 @@ function PhotoField({ value, onChange, variant = 'photo', cropMeta, onCropMetaCh
           initialShape={isSignature ? 'rect' : 'circle'}
           defaultAspect={storedCrop?.aspect}
           defaultCircular={storedCrop?.circular}
+          defaultCropPercent={storedCrop?.cropPercent}
           onCancel={() => setIsCropping(false)}
           onApply={applyCrop}
         />

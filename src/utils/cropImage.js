@@ -64,16 +64,21 @@ export async function getCroppedImageDataUrl(imageElement, pixelCrop) {
 }
 
 // Replaces a photo/signature/image with a new upload while reusing a
-// previously-used crop's aspect/shape, with no crop tool shown at all —
-// a straight "swap the picture, keep the framing" for a series of same-
-// shaped photos. Centers the same way the interactive tool's own
-// presets do; there's no remembered position to reuse (only aspect/
-// circular are kept — see imageFields.jsx/ContentLibraryPage.jsx), and a
-// new photo's subject may well sit differently anyway. The "Crop" button
-// is still there afterward for fine-tuning this particular photo.
-export async function autoCropImageDataUrl(imageSrc, { aspect } = {}) {
+// previously-used crop, with no crop tool shown at all — a straight
+// "swap the picture, keep the framing". `cropPercent` (the exact
+// rectangle last used, in percent — see ImageCropModal.jsx's `crop`
+// state) is reapplied as-is: for same-size screenshots/exports (e.g. a
+// consistent page mockup where only the inner content changes between
+// pages), that reproduces the exact same crop. Only falls back to a
+// freshly centered box at the remembered aspect when there's no
+// `cropPercent` yet (an older saved crop, from before this was
+// remembered) or the new image's proportions make the old rectangle not
+// applicable. The "Crop" button is still there afterward for fine-tuning
+// this particular photo.
+export async function autoCropImageDataUrl(imageSrc, { aspect, cropPercent } = {}) {
   const image = await createImage(imageSrc)
-  const percentCrop = centeredCrop(image.naturalWidth, image.naturalHeight, aspect)
+  const percentCrop =
+    cropPercent || centeredCrop(image.naturalWidth, image.naturalHeight, aspect)
   const pixelCrop = convertToPixelCrop(percentCrop, image.naturalWidth, image.naturalHeight)
   return getCroppedImageDataUrl(image, pixelCrop)
 }

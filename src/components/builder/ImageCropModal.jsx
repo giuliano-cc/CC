@@ -20,9 +20,10 @@ const CROP_PRESETS = (initialAspect) => [
 // preset, remove the background. Applying commits the crop (and any
 // rotation/background removal) into a new, permanent image (see
 // utils/cropImage.js) — the original upload is not kept — and reports
-// back which preset was used (`{ aspect, circular }`, via `onApply`'s
-// second argument) so a caller that remembers it can reopen the tool
-// pre-set the same way next time, e.g. when replacing this same photo.
+// back the crop that was used (`{ aspect, circular, cropPercent }`, via
+// `onApply`'s second argument) so a caller that remembers it can reopen
+// the tool pre-set the same way next time, e.g. when replacing this same
+// photo.
 export default function ImageCropModal({
   imageSrc,
   initialAspect = 1,
@@ -34,6 +35,11 @@ export default function ImageCropModal({
   // native ratio), so the two don't collapse into one pair of props.
   defaultAspect,
   defaultCircular,
+  // The exact rectangle (percent) a previous crop pass last used, when
+  // remembered — reopening the tool starts from that same selection
+  // instead of a freshly centered one, so a position the user fine-tuned
+  // isn't lost just because they're cropping a replacement photo.
+  defaultCropPercent,
   onApply,
   onCancel,
 }) {
@@ -71,7 +77,7 @@ export default function ImageCropModal({
     const { clientWidth, clientHeight } = e.currentTarget
     setBaseSize({ width: clientWidth, height: clientHeight })
     setZoom(1)
-    setCrop(centeredCrop(clientWidth, clientHeight, aspect))
+    setCrop(defaultCropPercent || centeredCrop(clientWidth, clientHeight, aspect))
   }
 
   function applyPreset(preset) {
@@ -106,7 +112,7 @@ export default function ImageCropModal({
     try {
       const pixelCrop = convertToPixelCrop(crop, imgRef.current.width, imgRef.current.height)
       const dataUrl = await getCroppedImageDataUrl(imgRef.current, pixelCrop)
-      onApply(dataUrl, { aspect, circular: circularCrop })
+      onApply(dataUrl, { aspect, circular: circularCrop, cropPercent: crop })
     } finally {
       setIsSaving(false)
     }

@@ -17,11 +17,11 @@ import FontPicker from '../FontPicker'
 import ImageCropModal from '../ImageCropModal'
 import { Field, inputClasses } from './fields'
 
-// `cropMeta` is a small JSON blob — `{ aspect, circular }` — remembering
-// the shape/ratio a "Crop image" pass last used, so replacing the photo
-// later can reopen the crop tool already set the same way instead of
-// defaulting back to "Original" every time. Parsed defensively since it's
-// user/import-reachable storage, not a value this app alone ever writes.
+// `cropMeta` is a small JSON blob — `{ aspect, circular, cropPercent }` —
+// remembering the crop a "Crop image" pass last used, so replacing the
+// photo later can reuse that exact rectangle instead of defaulting back
+// to "Original" every time. Parsed defensively since it's user/import-
+// reachable storage, not a value this app alone ever writes.
 function safeParseCropMeta(json) {
   if (!json) return null
   try {
@@ -45,12 +45,12 @@ export function ImageUploadField({ block, onChange }) {
     // storage quota and make every save silently fail from then on.
     resizeImageFile(file, { maxDimension: 1000 }).then(async (dataUrl) => {
       if (storedCrop) {
-        // This block was already cropped once — apply that same aspect
-        // straight to the replacement photo (centered — there's no
-        // remembered position, just the shape) instead of either keeping
-        // the raw, uncropped image or interrupting with the crop tool for
-        // what's meant to be a quick swap. "Crop" right below still opens
-        // it for fine-tuning this particular photo afterward.
+        // This block was already cropped once — apply that same crop
+        // rectangle straight to the replacement photo (same position,
+        // same shape — see autoCropImageDataUrl) instead of either
+        // keeping the raw, uncropped image or interrupting with the crop
+        // tool for what's meant to be a quick swap. "Crop" right below
+        // still opens it for fine-tuning this particular photo afterward.
         setIsReplacing(true)
         try {
           const cropped = await autoCropImageDataUrl(dataUrl, storedCrop)
@@ -124,6 +124,7 @@ export function ImageCropButton({ block, onChange }) {
           initialShape={block.shape}
           defaultAspect={storedCrop?.aspect}
           defaultCircular={storedCrop?.circular}
+          defaultCropPercent={storedCrop?.cropPercent}
           onCancel={() => setIsCropping(false)}
           onApply={(dataUrl, meta) => {
             if (block.imageSlot) {
